@@ -26,7 +26,7 @@ The file python_link.as must be placed in the TMInterface folder.
 The file example_script.py is a minimal functioning example showing how to open a connection.
 ```
 
-## Linesight workings (train.py)
+# Linesight workings (train.py)
 
 In the `train.py` file basically three things happen; 
 
@@ -61,7 +61,7 @@ rollout_results = {
 }
 ```
 
-### Open questions
+## Open questions
 
 - How exactly is data obtained from the race?
 - How exactly does a rollout work?; I think a race is simulated until timout?
