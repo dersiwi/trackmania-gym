@@ -9,9 +9,10 @@ from pathlib import Path
 
 class GameInstanceManager:
 
-    def __init__(self, TMLoader_path : str, TMLoader_profile_name : str, is_linux : bool = False):
+    def __init__(self, TMLoader_path : str, TMLoader_profile_name : str, path_to_plugin : str, is_linux : bool = False):
         self.TMLoader_path : str = TMLoader_path
         self.TMLoader_profile_name = TMLoader_profile_name
+        self.path_to_plugin = path_to_plugin
         self.is_linux = is_linux
         self.tmi_port = 8775
         self.tm_process_id = None
@@ -60,7 +61,7 @@ class GameInstanceManager:
 
         If process is not found within 10s after launching, ProcessLookupError is thrown.
         """
-        
+        assert os.path.exists(self.path_to_plugin), f"Python_Link.as was not found at '{self.path_to_plugin}'."
         tmi_process_id = int(subprocess.check_output(self.__get_launch_string()).decode().split("\r\n")[1])
         start_time = time.time()
         while self.tm_process_id is None:
@@ -113,5 +114,6 @@ class GameInstanceManager:
 if __name__ == "__main__":
 
     gmi = GameInstanceManager(Path(os.path.expanduser("~")) / "AppData" / "Local" / "TMLoader" / "TMLoader.exe",
+                              Path(os.path.expanduser("~")) / "OneDrive" / "Dokumente" / "TMInterface" /"Plugins" / "Python_Link.as",
                               "default")
     gmi.launch_game()
