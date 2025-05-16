@@ -120,7 +120,7 @@ class TMInterface:
     def unrequest_frame(self):
         self.sock.sendall(struct.pack("i", MessageType.C_UNREQUEST_FRAME))
 
-    def get_frame(self, width: int, height: int):
+    def get_frame(self, width: int, height: int) -> np.ndarray:
         frame_data = self.sock.recv(width * height * 4, socket.MSG_WAITALL)
         return np.frombuffer(frame_data, dtype=np.uint8).reshape((height, width, 4))
 
@@ -142,5 +142,10 @@ class TMInterface:
     def _respond_to_call(self, response_type):
         self.sock.sendall(struct.pack("i", np.int32(response_type)))
 
-    def _read_int32(self):
-        return struct.unpack("i", self.sock.recv(4, socket.MSG_WAITALL))[0]
+    def _read_int32(self) -> int:
+        """
+        Reads 4 bytes (32 bit) from tcp stream (MSG.WAITALL == waits until all 4 bytes are received before returning.)
+        """
+        bytes_from_tcp_stream = self.sock.recv(4, socket.MSG_WAITALL)
+        (integer, ) = struct.unpack("i", bytes_from_tcp_stream)
+        return integer
