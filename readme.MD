@@ -26,6 +26,42 @@ The file python_link.as must be placed in the TMInterface folder.
 The file example_script.py is a minimal functioning example showing how to open a connection.
 ```
 
+## Communication between game (server) and python (client)
+
+They communicate via binary protocol. The first message of the server is always the message type, the second is the payload of the message. 
+
+Theoretically, the trackmania instance is acting as a simulation, sending `SC_RUN_STEP_SYNC`-message everytime a simulation step is completed. 
+
+An example interaction is implemented in `example.py`.
+
+
+### Sending inputs to control car
+
+The car is controlled not via commands specified in the [TMInteraction mod-documentation](https://donadigo.com/tminterface/) (here, there are commands like `gas 50000` - they also work in the console inside the game when game is launched via modloader). [DISCLAIMER] i did not further explore controlling the car using such commands, since the input states work really well: 
+
+In linesight (i.e. in `tminterface2.py`) controlling the car is done using `set_input_state`, which takes a boolean for left, right, accelerate and brake, basically acting as if a key was pressed on the keyboard. This then sets the value of the control for the next simulation step.
+
+### Receiving Frames
+
+Actually quite straight-forward using tminterface2:
+
+```py
+if msgtype == int(MessageType.SC_RUN_STEP_SYNC): # simulation step is complete
+
+    _time = iface._read_int32()
+
+    iface.request_frame(IMG_W, IMG_H) #<--- imgs scaled automatically by trackmania
+    
+    # do other stuff like send inputs or commands here
+
+    iface._respond_to_call(msgtype)
+
+elif msgtype == int(MessageType.SC_REQUESTED_FRAME_SYNC): # collect frame
+
+    frame : np.npdarray = iface.get_frame(IMG_W, IMG_H)
+    iface._respond_to_call(msgtype)
+```
+
 # Linesight workings (train.py)
 
 In the `train.py` file basically three things happen; 
