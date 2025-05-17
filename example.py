@@ -63,7 +63,7 @@ def print_sim_state(ssD : SimStateData) -> None:
 
     cpData : CheckpointData = ssD.cp_data
     cp_times_structs : ArrayField[CheckpointTime] = cpData.cp_times  # This is likely a list of structs
-    
+
     cp_times = [cp_times_structs[i].time for i in range(cpData.cp_times_length)]
     print(f"   Checkpoint Times:    {cp_times}")
     print(f"    Checkpoints Passed:  {cpData.cp_states_length}")
@@ -82,7 +82,7 @@ def main(tmi_port : int, rqimgs : bool = False):
             except ConnectionRefusedError as e:
                 print(e)
 
-    #iface.execute_command("map ESL-Hockolicious.Challenge.Gbx")
+    iface.execute_command("map ESL-Hockolicious.Challenge.Gbx")
     
     frame_id = 0
     stepcount = 0 
@@ -148,7 +148,6 @@ def main(tmi_port : int, rqimgs : bool = False):
             iface.close()
 
         elif msgtype == int(MessageType.SC_ON_CONNECT_SYNC):
-
             iface._respond_to_call(msgtype)
 
         else:
@@ -171,7 +170,10 @@ if __name__ == "__main__":
                                 "default",
                                 Path(os.path.expanduser("~")) / "OneDrive" / "Dokumente" / "TMInterface" /"Plugins" / "Python_Link.as")
         GMI.launch_game()
-    main(args.tmi_port)
+    try:
+        main(args.tmi_port)
+    except TimeoutError as e:
+        print(e)
 
     if args.launch:
         GMI.close_game()
