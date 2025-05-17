@@ -1,9 +1,15 @@
-from typing import Any,List,Dict,Optional,Tuple,Union
+"""
+Custom Gymnasium Environment 
+https://gymnasium.farama.org/tutorials/gymnasium_basics/environment_creation/
+"""
+from typing import Any,Dict,Tuple
 import gymnasium as gym
-from gymnasium.spaces import Discrete, Box
 import numpy as np
 
-class TMNF_Env(gym.Env):
+from tminterface2 import TMInterface
+from game_instance_manager2 import GameInstanceManager
+
+class TMNF_Single_Agent_Env(gym.Env):
     """The reinforcement learning environment for Trackmania Nations Forever"""
 
     # init, step and reset have to be implemented for the class to be gym compatible
@@ -13,7 +19,10 @@ class TMNF_Env(gym.Env):
             img_width: int,
             img_height: int,
             port: str,
-            observations_space: gym.spaces.Dict):
+            observations_space: gym.spaces.Dict,
+            tmi: TMInterface,
+            gim: GameInstanceManager
+            ):
         """
         Initializes the custom Gymnasium environment.
         This constructor sets up the basic structure of the environment.
@@ -23,8 +32,11 @@ class TMNF_Env(gym.Env):
         self.img_width = img_width
         self.img_height = img_height
         self.img_shape = (3,img_height,img_width)
+        
         self.port = port
-
+        self.tmi = tmi 
+        self.gim = gim 
+        
         self.observation_space = observations_space
         """
         these are the inputs we will later give to the game engine ,
@@ -61,21 +73,21 @@ class TMNF_Env(gym.Env):
         # TODO i dont know if we should start the game and everything here or if we put in a somehwat controller class
         
 
-    def _get_info(self):
+    def _get_info(self) -> Dict[str,Any]:
         """
         Helper function for computing additional information (e.g. for debugging or logging)
         """
-        info = None 
+        info = {} 
         return info
     
-    def _get_obs(self):
+    def _get_obs(self) -> gym.spaces.Dict:
         """
         Helper function to translate the the environment's state into an observation
         """
         observations = None 
         return observations
 
-    def step(self, action):
+    def step(self, action) -> Tuple[gym.spaces.Dict,float,bool,bool,Dict[str,Any]]:
         """
         The `step` function is a core component of the Gymnasium environment API and contains 
         the main game logic, including state transitions and reward calculations.
@@ -112,7 +124,7 @@ class TMNF_Env(gym.Env):
         
         return observation, reward, terminated, truncated, info
     
-    def reset(self, seed = None, options = None):
+    def reset(self, seed = None, options = None)-> Tuple[gym.spaces.Dict,Dict[str,Any]]:
         """
         Resets the environment to start a new episode.
 
