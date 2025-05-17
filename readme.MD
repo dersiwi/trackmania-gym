@@ -64,6 +64,34 @@ elif msgtype == int(MessageType.SC_REQUESTED_FRAME_SYNC): # collect frame
     iface._respond_to_call(msgtype)
 ```
 
+### Getting Simulation state
+
+The simulation state queried from the game using `iface.get_simulation_state()` which returns a `SimStateData` object. The example-interaction queries simulation state and prints it to the console. This output looks like this: 
+
+```
+=== Simulation State Snapshot ===
+    Time:                786130 ms
+    Position:            [529.6427612304688, 49.354209899902344, 652.0673828125]
+    Velocity:            [50.89628219604492, -0.166009321808815, -0.7100085020065308]
+    Rotation (YawPitchRoll): [1.582823502445449, -0.0033017142612521374, -0.004220573944300383]
+    Display Speed:       183 units
+
+Input State:
+    Accelerate:          True
+    Brake:               False
+    Left:                False
+    Right:               False
+    Steer (analog):      0
+    Gas (analog):        0
+
+Race Progress:
+    Race Time:           783520 ms
+    Rewind Time:         783530 ms
+    Num Respawns:        0
+   Checkpoint Times:    [10850, 773920, -1]
+    Checkpoints Passed:  3
+```
+
 # Linesight workings (train.py)
 
 In the `train.py` file basically three things happen; 

@@ -14,7 +14,9 @@ from game_instance_manager2 import GameInstanceManager
 from pathlib import Path
 import os
 import numpy as np
+from tminterface.structs import CheckpointData, SimStateData, CheckpointTime
 
+from bytefield import ArrayField
 """
 used for width and height of image, if rqimgs is set
     -IMG_W, IMG_H : width and height of image
@@ -31,9 +33,41 @@ define a set of inputs to the game, like :  left: bool, right: bool, accelerate:
     - REPEAT : repeats the inputs from beginning once all inputs have been sent, if not, ends.
 """
 set1 = [(False, False, True, False)]
-inputset = set1
+inputset = None #set1
 INPUT_SET_FREQUENCY = 2
 REPEAT = True
+
+"""Gets simulation state in specified frequency and prints it to the console"""
+STATE_FREQUENCY = 10
+
+def print_sim_state(ssD : SimStateData) -> None:
+    print("\n=== Simulation State Snapshot ===")
+    print(f"    Time:                {ssD.time} ms")
+    print(f"    Position:            {ssD.position}")
+    print(f"    Velocity:            {ssD.velocity}")
+    print(f"    Rotation (YawPitchRoll): {ssD.yaw_pitch_roll}")
+    print(f"    Display Speed:       {ssD.display_speed} units")
+    
+    print("\nInput State:")
+    print(f"    Accelerate:          {ssD.input_accelerate}")
+    print(f"    Brake:               {ssD.input_brake}")
+    print(f"    Left:                {ssD.input_left}")
+    print(f"    Right:               {ssD.input_right}")
+    print(f"    Steer (analog):      {ssD.input_steer}")
+    print(f"    Gas (analog):        {ssD.input_gas}")
+    
+    print("\nRace Progress:")
+    print(f"    Race Time:           {ssD.race_time} ms")
+    print(f"    Rewind Time:         {ssD.rewind_time} ms")
+    print(f"    Num Respawns:        {ssD.num_respawns}")
+
+    cpData : CheckpointData = ssD.cp_data
+    cp_times_structs : ArrayField[CheckpointTime] = cpData.cp_times  # This is likely a list of structs
+    
+    cp_times = [cp_times_structs[i].time for i in range(cpData.cp_times_length)]
+    print(f"   Checkpoint Times:    {cp_times}")
+    print(f"    Checkpoints Passed:  {cpData.cp_states_length}")
+
 
 
 def main(tmi_port : int, rqimgs : bool = False):
@@ -48,6 +82,7 @@ def main(tmi_port : int, rqimgs : bool = False):
             except ConnectionRefusedError as e:
                 print(e)
 
+    #iface.execute_command("map ESL-Hockolicious.Challenge.Gbx")
     
     frame_id = 0
     stepcount = 0 
@@ -77,6 +112,11 @@ def main(tmi_port : int, rqimgs : bool = False):
                 inputcounter += 1
                 if inputcounter >= len(inputset) and REPEAT:
                     inputcounter = 0
+
+            if stepcount % STATE_FREQUENCY == 0:
+                ssD = iface.get_simulation_state()
+                print_sim_state(ssD)
+                
 
 
             # ============================ END ON RUN STEP ============================

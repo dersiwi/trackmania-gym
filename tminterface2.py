@@ -80,7 +80,7 @@ class TMInterface:
     def reset_camera(self):
         self.sock.sendall(struct.pack("i", MessageType.C_RESET_CAMERA))
 
-    def get_simulation_state(self):
+    def get_simulation_state(self) -> SimStateData:
         self.sock.sendall(struct.pack("i", MessageType.C_GET_SIMULATION_STATE))
         state_length = self._read_int32()
         state = SimStateData(self.sock.recv(state_length, socket.MSG_WAITALL))
@@ -88,12 +88,12 @@ class TMInterface:
         state.cp_data.resize(CheckpointData.cp_times_field, state.cp_data.cp_times_length)
         return state
 
-    def set_input_state(self, left: bool, right: bool, accelerate: bool, brake: bool):
+    def set_input_state(self, left: bool, right: bool, accelerate: bool, brake: bool) -> None:
         self.sock.sendall(
             struct.pack("iBBBB", MessageType.C_SET_INPUT_STATE, np.uint8(left), np.uint8(right), np.uint8(accelerate), np.uint8(brake))
         )
 
-    def give_up(self):
+    def give_up(self) -> None:
         self.sock.sendall(struct.pack("i", MessageType.C_GIVE_UP))
 
     def prevent_simulation_finish(self):
