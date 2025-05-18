@@ -2,7 +2,7 @@
 Custom Gymnasium Environment 
 https://gymnasium.farama.org/tutorials/gymnasium_basics/environment_creation/
 """
-from typing import Any,Dict,Tuple
+from typing import Any,Dict,Tuple,Optional
 import gymnasium as gym
 import numpy as np
 
@@ -12,6 +12,8 @@ from game_instance_manager2 import GameInstanceManager
 class TMNF_Single_Agent_Env(gym.Env):
     """The reinforcement learning environment for Trackmania Nations Forever"""
 
+    metadata = {"render.modes": ["human", "rgb_array"], "video.frames_per_second": 30}
+    
     # init, step and reset have to be implemented for the class to be gym compatible
 
     def __init__(
@@ -21,7 +23,8 @@ class TMNF_Single_Agent_Env(gym.Env):
             port: str,
             observations_space: gym.spaces.Dict,
             tmi: TMInterface,
-            gim: GameInstanceManager
+            gim: GameInstanceManager,
+            map_path : str,
             ):
         """
         Initializes the custom Gymnasium environment.
@@ -36,7 +39,7 @@ class TMNF_Single_Agent_Env(gym.Env):
         self.port = port
         self.tmi = tmi 
         self.gim = gim 
-        
+        self.map_path = map_path
         self.observation_space = observations_space
         """
         these are the inputs we will later give to the game engine ,
@@ -71,7 +74,6 @@ class TMNF_Single_Agent_Env(gym.Env):
         self.action_space = gym.spaces.Discrete(len(self.idx_to_action))
         
         # TODO i dont know if we should start the game and everything here or if we put in a somehwat controller class
-        
 
     def _get_info(self) -> Dict[str,Any]:
         """
@@ -151,3 +153,19 @@ class TMNF_Single_Agent_Env(gym.Env):
         info = self._get_info()
 
         return observation, info
+    
+    def render(self, mode = "human") -> Optional[np.array]:
+        """
+        This defines the render method. It supports:
+            - mode="human": The environment is continuously rendered in the current 
+            display or terminal, usually for human consumption.
+            
+            - mode="rgb_array": Return a single frame representing the current state
+            of the environment. A frame is a np.ndarray with shape (x, y, 3) .
+        """
+        if mode == "human" :
+            # TODO should we actually do here some render things ?
+            return None
+        if mode == "rgb_array":
+            # TODO retun the actual frame
+            return np.zeros(shape = self.img_shape)
