@@ -1,3 +1,19 @@
+# Table of Contents
+- [Setup and Communication](#setup-and-communication)
+  - [GameInstanceManager](#gameinstancemanager)
+  - [Create Python Link](#create-python-link)
+    - [Where to get this information?](#where-to-get-this-information)
+- [Communication between game (server) and python (client)](#communication-between-game-server-and-python-client)
+  - [Sending inputs to control car](#sending-inputs-to-control-car)
+  - [Receiving Frames](#receiving-frames)
+  - [Getting Simulation state](#getting-simulation-state)
+- [Linesight workings (train.py)](#linesight-workings-trainpy)
+  - [Worker Process(es)](#worker-processes)
+- [Gymnasium Environment](#gymnasium-environment)
+  - [Folder Structure](#folder-structure)
+- [Open questions](#open-questions)
+
+
 # Setup and Communication
 
 Downloaded TMNF, the modloader and installed TMInterface as wanted and described by donadigo [here](https://donadigo.com/tminterface/installation), 
@@ -126,7 +142,38 @@ rollout_results = {
     "furthest_zone_idx": 0,
 }
 ```
+# Gymnasium Environment
 
+This section explains how **TrackMania Nations Forever** is wrapped in a custom **Gymnasium environment**.  
+The Gymnasium API allows us to define a clean, modular reinforcement learning environment that is compatible with multiple RL algorithms and libraries. For an in depth tutorial on how to create environment instances see [here](https://gymnasium.farama.org/tutorials/gymnasium_basics/environment_creation/).
+
+## Folder Structure
+Everything related to the custom Gymnasium environment for
+TrackMania can be found in the `trackmania_env` folder. 
+The current structure is as follows:
+```
+trackmania_env
+├── envs
+│   ├── __init__.py
+│   └── single_agent_env.py
+├── __init__.py
+└── wrappers
+    └── __init__.py
+```
+The `envs` folder contains different environment implementations for TrackMania. 
+These can include single-agent environments, multi-agent setups, or other variations.
+This structure supports modularity by isolating the environment logic from the core game 
+communication. Since the interface to the game remains consistent across all environments, the 
+communication layer can be reused—allowing you to focus on customizing environment behavior 
+without duplicating low-level logic.
+
+The `wrappers` folder contains custom **wrapper classes**. Wrappers are a convenient way to modify an 
+existing environment’s behavior (e.g., altering observations, rewards, or rendering) without modifying 
+its core implementation.
+Using wrappers helps reduce boilerplate code and improves modularity. Wrappers can also be **chained together**. For more details, refer to the [Gymnasium documentation on wrappers](https://gymnasium.farama.org/api/wrappers/).
+
+$\color{red}\text{TODO: how the gym env works with the
+game instance manager and tminterface for all the mehtods}$ 
 ## Open questions
 
 - How exactly is data obtained from the race?
