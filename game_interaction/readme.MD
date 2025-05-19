@@ -18,6 +18,18 @@ more specifically; since this builds upon the [linesight repository](https://git
 
 For now, this class is responsible for launching and closing the game via PowerShell commands. (It launches the TMLoader).
 
+#### Running Headless on Linux.
+
+The idea is to use [Xvfb](https://de.linux-console.net/?p=15533) ([X virtual framebuffer](https://de.wikipedia.org/wiki/Xvfb)) and tell Wine to execute the game on that virtual display that does not need a monitor.
+
+```sh
+#Start a virtual display on :99 with 1280x720 resolution and 24-bit color + export variable
+Xvfb :99 -screen 0 1280x720x24 & export DISPLAY=:99
+#Launch tmnf inside Wine using the headless display
+WINEPREFIX=~/.wine_tm wine ~/.wine_tm/drive_c/TMNF/TmForever.exe
+``` 
+
+
 ### Create Python Link
 Now how to run python scripts using this setup?
 From what i undestand TMInterface has to launch a TCP-Socket, to which a python instance can connect. 

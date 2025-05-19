@@ -16,7 +16,7 @@ class GameInstanceManager:
 
 
     @staticmethod
-    def get_instance(TMLoader_path : str, path_to_plugin : str, TMLoader_profile_name : str = "default", linux : bool = False) -> GameInstanceManager:
+    def get_instance(TMLoader_path : str, path_to_plugin : str, TMLoader_profile_name : str = "default", linux : bool = False, headless : bool = False) -> GameInstanceManager:
         """
         The GameInstanceManager launches the game from the operating systems side via a system command (launch_game() and close_game() start and end tmnf processes.)
         To get an instance of the GameInstanceManager use this method and specify the operating system by setting linux accordingly.
@@ -31,21 +31,23 @@ class GameInstanceManager:
         - TMLoader_profile_name : name of the profile inside the TMLoader to be used; if none is specifeid the "default"-profile is used
         - path_to_plugin : path to the plugin aka. Python_Link.as that should be placed inside the trackmania-plugin folder
         - linux : set to true if on a linux operating system, set to false if on a windows operating system
+        - headless : if True, starts the game headless (i.e. with virtual monitor) - as of now this is highly experimental and only has an effect on linux.
         """
 
         if linux:
             # TODO get Lock.
-            return GameInstanceMangerLinux(TMLoader_path, TMLoader_profile_name, path_to_plugin, None)
+            return GameInstanceMangerLinux(TMLoader_path, TMLoader_profile_name, path_to_plugin, None, headless)
         else:
-            return GameInstanceManagerWindows(TMLoader_path, TMLoader_profile_name, path_to_plugin)
+            return GameInstanceManagerWindows(TMLoader_path, TMLoader_profile_name, path_to_plugin, headless)
 
 
-    def __init__(self, TMLoader_path : str, TMLoader_profile_name : str, path_to_plugin : str):
+    def __init__(self, TMLoader_path : str, TMLoader_profile_name : str, path_to_plugin : str, headless : bool):
         """Do not use this class directly. Instanciate via GameInstanceManager.get_instance()."""
 
         self.TMLoader_path : str = TMLoader_path
-        self.TMLoader_profile_name = TMLoader_profile_name
-        self.path_to_plugin = path_to_plugin
+        self.TMLoader_profile_name : str= TMLoader_profile_name
+        self.path_to_plugin : str = path_to_plugin
+        self.headless : bool = headless
         self.tmi_port = 8775
         self.tm_process_id = None
         self.tm_window_id  = None
@@ -91,8 +93,8 @@ class GameInstanceManager:
 
 class GameInstanceManagerWindows(GameInstanceManager):
 
-    def __init__(self, TMLoader_path, TMLoader_profile_name, path_to_plugin):
-        super().__init__(TMLoader_path, TMLoader_profile_name, path_to_plugin)
+    def __init__(self, TMLoader_path, TMLoader_profile_name, path_to_plugin, headless):
+        super().__init__(TMLoader_path, TMLoader_profile_name, path_to_plugin, headless)
 
     def __get_launch_string(self) -> str:
         launch_string = (
@@ -168,7 +170,7 @@ class GameInstanceManagerWindows(GameInstanceManager):
         self.latest_map_path_requested = -1
         self.msgtype_response_to_wakeup_TMI = None
         while not self.is_game_running():
-            time.sleep(0)
+            time.sleep(0.1)
 
         self._get_tm_window_id()
 
@@ -190,12 +192,41 @@ class GameInstanceManagerWindows(GameInstanceManager):
 
 class GameInstanceMangerLinux(GameInstanceManager):
 
-    def __init__(self, TMLoader_path, TMLoader_profile_name, path_to_plugin, game_spawning_lock : Lock):
-        from xdo import Xdo
-        super().__init__(TMLoader_path, TMLoader_profile_name, path_to_plugin)
+    
+    launched_xvfb : bool = False
+    xvfb_launch_dict : dict[str, str] = None
+
+    @staticmethod
+    def launch_xvfb(display_number : str = ":99", screen_number : str = "0", resolution : str = "1280x720x24") -> None:
+        """launches a virtual framebuffer process. And sets xvfb_launch_dict. 
+        
+        params
+        ------
+        - display_number : defines the number of the display
+        - screen_number : forms the full identifier for the display (display_number:screen_number, default : 99:0)
+        - resolution : resolution of the display in "[width]x[height]x[colordepth_in_bit]" (24 --> RGB, 8 bit for each channel)
+
+                
+        """
+        if GameInstanceMangerLinux.launched_xvfb: # TODO : does this make sense? But i think we only need one virtual display.
+            return 
+        xvfb_proc = subprocess.Popen(['Xvfb', display_number, '-screen', screen_number, resolution])
+        time.sleep(1)
+        GameInstanceMangerLinux.launched_xvfb = True
+        GameInstanceMangerLinux.xvfb_launch_dict = {"DISPLAY" : display_number}
+        print("Launched xvfb-process.")
+
+
+
+
+
+
+    def __init__(self, TMLoader_path, TMLoader_profile_name, path_to_plugin, game_spawning_lock : Lock, headless : bool):
+        super().__init__(TMLoader_path, TMLoader_profile_name, path_to_plugin, headless)
         self.game_spawning_lock : Lock = game_spawning_lock
 
     def _get_tm_window_id(self):
+        from xdo import Xdo
         self.tm_window_id = None
         while self.tm_window_id is None:  # This outer while is for the edge case where the window may not have had time to be launched
             window_search_depth = 1
@@ -226,18 +257,38 @@ class GameInstanceMangerLinux(GameInstanceManager):
             return process.name().startswith("TmForever")
         except psutil.NoSuchProcess:
             return False
-    
-    def launch_game(self):
-        self.game_spawning_lock.acquire()
-        pid_before = self._get_tm_pids()
-        os.system(str(self.TMLoader_path) + " " + str(self.tmi_port))
+
+    def __get_tmnf_process_id(self, timeout : int, pid_before : set):
+        launch_time = time.time()
         while True:
-            pid_after = self._get_tm_pids()
-            tmi_pid_candidates = set(pid_after) - set(pid_before)
-            if len(tmi_pid_candidates) > 0:
-                assert len(tmi_pid_candidates) == 1
-                break
-        self.tm_process_id = list(tmi_pid_candidates)[0]
+            time.sleep(0.25)
+            pid_after = set(self._get_tm_pids())
+            new_pids = pid_after - pid_before
+            if new_pids:
+                if len(new_pids) == 1:
+                    self.tm_process_id = new_pids.pop()
+                    break
+                else:
+                    print(f"[WARN] Multiple new PIDs detected: {new_pids}")
+                    self.tm_process_id = list(new_pids)[0]  # just pick the first one?
+                    break
+
+            if time.time() - launch_time > timeout:
+                raise TimeoutError(f"TMNF process did not launch within {timeout} seconds.")
+
+    def launch_game(self, timeout=10):
+        """Launches the game with timeout 10s to find process ids."""
+        with self.game_spawning_lock:
+            pid_before = set(self._get_tm_pids())
+
+            if self.headless:
+                GameInstanceMangerLinux.launch_xvfb()
+                process = subprocess.Popen(["wine", str(self.TMLoader_path), str(self.tmi_port)], env=GameInstanceMangerLinux.xvfb_launch_dict)
+            else:
+                process = subprocess.Popen(["wine", str(self.TMLoader_path), str(self.tmi_port)])
+
+            self.__get_tmnf_process_id(timeout, pid_before)
+            return self.tm_process_id
 
     def _get_gameprocess_killcommand(self) -> str:
         return "kill -9 " + str(self.tm_process_id)
