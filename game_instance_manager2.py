@@ -7,6 +7,8 @@ import win32process
 import win32gui 
 from pathlib import Path
 
+from tminterface2 import TMInterface
+
 class GameInstanceManager:
 
     def __init__(self, TMLoader_path : str, TMLoader_profile_name : str, path_to_plugin : str, is_linux : bool = False):
@@ -16,6 +18,21 @@ class GameInstanceManager:
         self.is_linux = is_linux
         self.tmi_port = 8775
         self.tm_process_id = None
+
+        self.tminterface = TMInterface(self.tmi_port)
+
+    def register_iface(self, timeout_in_s : int = 10) -> None:
+        """Calls self.tminterface.register(timeout). Is blocking as long as tminterface is not registered or ConnectionRefusedError."""
+        if not self.tminterface.registered:
+            while True:
+                try:
+                    self.tminterface.register(10)
+                    break
+                except ConnectionRefusedError as e:
+                    print(e)
+
+    def get_tminterface(self) -> TMInterface:
+        return self.tminterface
 
 
     def __get_launch_string(self) -> str:
@@ -110,6 +127,17 @@ class GameInstanceManager:
         while self.is_game_running():
             time.sleep(0.1)
 
+
+    """def request_map(self, map_path: str, zone_centers: npt.NDArray):
+        self.latest_map_path_requested = map_path
+        map_path = map_path.replace("/", "\\")
+        map_loader.hide_personal_record_replay(map_path, True)
+        self.iface.execute_command(f"map {map_path}")
+        self.UI_disabled = False
+        (
+            self.next_real_checkpoint_positions,
+            self.max_allowable_distance_to_real_checkpoint,
+        ) = map_loader.sync_virtual_and_real_checkpoints(zone_centers, map_path)"""
 
 if __name__ == "__main__":
 

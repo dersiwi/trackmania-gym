@@ -70,20 +70,12 @@ def print_sim_state(ssD : SimStateData) -> None:
 
 
 
-def main(tmi_port : int, rqimgs : bool = False):
+def main(iface : TMInterface, rqimgs : bool = False):
 
-    iface = TMInterface(tmi_port)
-
-    if not iface.registered:
-        while True:
-            try:
-                iface.register(10)
-                break
-            except ConnectionRefusedError as e:
-                print(e)
-
+    iface.execute_command(f"set autologin 1")
+    iface.execute_command(f"set auto_reload_plugins false")
+    iface.execute_command("set skip_map_load_screens true")
     iface.execute_command("map ESL-Hockolicious.Challenge.Gbx")
-    
     frame_id = 0
     stepcount = 0 
     inputcounter = 0
@@ -148,7 +140,14 @@ def main(tmi_port : int, rqimgs : bool = False):
             iface.close()
 
         elif msgtype == int(MessageType.SC_ON_CONNECT_SYNC):
+            print("--------------------On connect event.!--------------------------")
             iface._respond_to_call(msgtype)
+            iface.execute_command("set unfocused_fps_limit false")
+            
+            iface.execute_command("set disable_forced_camera true")
+            iface.execute_command("set autorewind false")
+            iface.execute_command("set auto_reload_plugins false")
+            iface.execute_command(f"set autologin 1")
 
         else:
             iface._respond_to_call(msgtype)
@@ -165,13 +164,19 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
+    GMI = GameInstanceManager(Path(os.path.expanduser("~")) / "AppData" / "Local" / "TMLoader" / "TMLoader.exe",
+                            "default",
+                            Path(os.path.expanduser("~")) / "OneDrive" / "Dokumente" / "TMInterface" /"Plugins" / "Python_Link.as")
+    
     if args.launch:
-        GMI = GameInstanceManager(Path(os.path.expanduser("~")) / "AppData" / "Local" / "TMLoader" / "TMLoader.exe",
-                                "default",
-                                Path(os.path.expanduser("~")) / "OneDrive" / "Dokumente" / "TMInterface" /"Plugins" / "Python_Link.as")
         GMI.launch_game()
+
+    GMI.register_iface()
+    iface = GMI.get_tminterface()
+
+
     try:
-        main(args.tmi_port)
+        main(iface)
     except TimeoutError as e:
         print(e)
 
