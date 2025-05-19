@@ -1,3 +1,4 @@
+from __future__ import annotations
 
 import subprocess
 import os
@@ -6,20 +7,32 @@ import psutil
 import win32process
 import win32gui 
 from pathlib import Path
+from multiprocessing.synchronize import Lock
 
 from game_interaction.tminterface2 import TMInterface
 
 class GameInstanceManager:
 
-    def __init__(self, TMLoader_path : str, TMLoader_profile_name : str, path_to_plugin : str, is_linux : bool = False):
+    @staticmethod
+    def get_instance(TMLoader_path : str, TMLoader_profile_name : str, path_to_plugin : str, linux : bool = False) -> GameInstanceManager:
+        if linux:
+            # TODO get Lock.
+            return GameInstanceMangerLinux(TMLoader_path, TMLoader_profile_name, path_to_plugin, None)
+        else:
+            return GameInstanceManagerWindows(TMLoader_path, TMLoader_profile_name, path_to_plugin)
+
+
+    def __init__(self, TMLoader_path : str, TMLoader_profile_name : str, path_to_plugin : str):
         self.TMLoader_path : str = TMLoader_path
         self.TMLoader_profile_name = TMLoader_profile_name
         self.path_to_plugin = path_to_plugin
-        self.is_linux = is_linux
         self.tmi_port = 8775
         self.tm_process_id = None
 
         self.tminterface = TMInterface(self.tmi_port)
+
+    def get_tminterface(self) -> TMInterface:
+        return self.tminterface
 
     def register_iface(self, timeout_in_s : int = 10) -> None:
         """Calls self.tminterface.register(timeout). Is blocking as long as tminterface is not registered or ConnectionRefusedError."""
@@ -31,9 +44,28 @@ class GameInstanceManager:
                 except ConnectionRefusedError as e:
                     print(e)
 
-    def get_tminterface(self) -> TMInterface:
-        return self.tminterface
+    def is_game_running(self) -> bool:
+        return (self.tm_process_id is not None) and (self.tm_process_id in (p.pid for p in psutil.process_iter()))
+    
+    def _get_gameprocess_killcommand(self) -> str:
+        raise NotImplementedError("Do not use this class directly.")
+    
+    def launch_game(self) -> None:
+        raise NotImplementedError()
+    
+    def close_game(self) -> None:
+        self.timeout_has_been_set = False
+        self.game_activated = False
+        assert self.tm_process_id is not None
+        os.system(self._get_gameprocess_killcommand())
+        while self.is_game_running():
+            time.sleep(0.1)
+    
 
+class GameInstanceManagerWindows(GameInstanceManager):
+
+    def __init__(self, TMLoader_path, TMLoader_profile_name, path_to_plugin):
+        super().__init__(TMLoader_path, TMLoader_profile_name, path_to_plugin)
 
     def __get_launch_string(self) -> str:
         launch_string = (
@@ -102,9 +134,6 @@ class GameInstanceManager:
             if time.time() - start_time > 10:
                 raise ProcessLookupError("Could not find process after more than 10s of searching.")
 
-    def is_game_running(self) -> bool:
-        return (self.tm_process_id is not None) and (self.tm_process_id in (p.pid for p in psutil.process_iter()))
-
     def launch_game(self):
         """Launches game. Sets process and window-id for tmi."""
         self.tm_process_id = None
@@ -118,15 +147,9 @@ class GameInstanceManager:
 
         self._get_tm_window_id()
 
-    def close_game(self):
-        """Kills game-process. Is blockig as long as self.is_game_running() is true."""
-        self.timeout_has_been_set = False
-        self.game_activated = False
-        assert self.tm_process_id is not None
-        os.system(f"taskkill /PID {self.tm_process_id} /f")
-        while self.is_game_running():
-            time.sleep(0.1)
 
+    def _get_gameprocess_killcommand(self) -> str:
+        return f"taskkill /PID {self.tm_process_id} /f"
 
     """def request_map(self, map_path: str, zone_centers: npt.NDArray):
         self.latest_map_path_requested = map_path
@@ -138,6 +161,61 @@ class GameInstanceManager:
             self.next_real_checkpoint_positions,
             self.max_allowable_distance_to_real_checkpoint,
         ) = map_loader.sync_virtual_and_real_checkpoints(zone_centers, map_path)"""
+
+
+class GameInstanceMangerLinux(GameInstanceManager):
+
+    def __init__(self, TMLoader_path, TMLoader_profile_name, path_to_plugin, game_spawning_lock : Lock):
+        from xdo import Xdo
+        super().__init__(TMLoader_path, TMLoader_profile_name, path_to_plugin)
+        self.game_spawning_lock : Lock = game_spawning_lock
+
+    def _get_tm_window_id(self):
+        self.tm_window_id = None
+        while self.tm_window_id is None:  # This outer while is for the edge case where the window may not have had time to be launched
+            window_search_depth = 1
+            while True:  # This inner while is to try and find the right depth of the window in Xdo().search_windows()
+                c1 = set(Xdo().search_windows(winname=b"TrackMania Modded", max_depth=window_search_depth + 1))
+                c2 = set(Xdo().search_windows(winname=b"TrackMania Modded", max_depth=window_search_depth))
+                c1 = {w_id for w_id in c1 if Xdo().get_pid_window(w_id) == self.tm_process_id}
+                c2 = {w_id for w_id in c2 if Xdo().get_pid_window(w_id) == self.tm_process_id}
+                c1_diff_c2 = c1.difference(c2)
+                if len(c1_diff_c2) == 1:
+                    self.tm_window_id = c1_diff_c2.pop()
+                    break
+                elif (
+                    len(c1_diff_c2) == 0 and len(c1) > 0
+                ) or window_search_depth >= 10:  # 10 is an arbitrary cutoff in this search we do not fully understand
+                    print(
+                        "Warning: Worker could not find the window of the game it just launched, stopped at window_search_depth",
+                        window_search_depth,
+                    )
+                    break
+                window_search_depth += 1
+
+    def _get_tm_pids(self) -> list[int]:
+        return [process.pid for process in psutil.process_iter() if self._is_tm_process(process)]
+    
+    def _is_tm_process(self, process: psutil.Process) -> bool:
+        try:
+            return process.name().startswith("TmForever")
+        except psutil.NoSuchProcess:
+            return False
+    
+    def launch_game(self):
+        self.game_spawning_lock.acquire()
+        pid_before = self._get_tm_pids()
+        os.system(str(self.TMLoader_path) + " " + str(self.tmi_port))
+        while True:
+            pid_after = self._get_tm_pids()
+            tmi_pid_candidates = set(pid_after) - set(pid_before)
+            if len(tmi_pid_candidates) > 0:
+                assert len(tmi_pid_candidates) == 1
+                break
+        self.tm_process_id = list(tmi_pid_candidates)[0]
+
+    def _get_gameprocess_killcommand(self) -> str:
+        return "kill -9 " + str(self.tm_process_id)
 
 if __name__ == "__main__":
 
