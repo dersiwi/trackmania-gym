@@ -7,12 +7,13 @@ The first message from the server is always the type of message, while the secon
 Each message has to be acknowledged by the client.
 """
 import argparse
+import sys, os
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))) # TODO : <- i don't want this here and it shouldnt have to be here!!!
 
 #from trackmania_rl.tmi_interaction.tminterface2 import MessageType, TMInterface
-from tminterface2 import MessageType, TMInterface
-from game_instance_manager2 import GameInstanceManager
+from game_interaction.tminterface2 import MessageType, TMInterface
+from game_interaction.game_instance_manager2 import GameInstanceManager
 from pathlib import Path
-import os
 import numpy as np
 from tminterface.structs import CheckpointData, SimStateData, CheckpointTime
 

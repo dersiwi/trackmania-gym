@@ -6,8 +6,8 @@ from typing import Any,Dict,Tuple,Optional
 import gymnasium as gym
 import numpy as np
 
-from tminterface2 import TMInterface
-from game_instance_manager2 import GameInstanceManager
+from game_interaction.tminterface2 import TMInterface
+from game_interaction.game_instance_manager2 import GameInstanceManager
 
 class TMNF_Single_Agent_Env(gym.Env):
     """The reinforcement learning environment for Trackmania Nations Forever"""

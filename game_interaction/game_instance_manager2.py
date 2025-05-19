@@ -7,7 +7,7 @@ import win32process
 import win32gui 
 from pathlib import Path
 
-from tminterface2 import TMInterface
+from game_interaction.tminterface2 import TMInterface
 
 class GameInstanceManager:
 
