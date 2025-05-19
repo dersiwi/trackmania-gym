@@ -12,9 +12,27 @@ from multiprocessing.synchronize import Lock
 from game_interaction.tminterface2 import TMInterface
 
 class GameInstanceManager:
+    
+
 
     @staticmethod
-    def get_instance(TMLoader_path : str, TMLoader_profile_name : str, path_to_plugin : str, linux : bool = False) -> GameInstanceManager:
+    def get_instance(TMLoader_path : str, path_to_plugin : str, TMLoader_profile_name : str = "default", linux : bool = False) -> GameInstanceManager:
+        """
+        The GameInstanceManager launches the game from the operating systems side via a system command (launch_game() and close_game() start and end tmnf processes.)
+        To get an instance of the GameInstanceManager use this method and specify the operating system by setting linux accordingly.
+
+        The GameInstanceManager also sets instanciates a TMInterface, which can be accessed directly or via get_tminterface().
+
+
+        params
+        ------
+
+        - TMLoader_path : path to the TMLoader executable
+        - TMLoader_profile_name : name of the profile inside the TMLoader to be used; if none is specifeid the "default"-profile is used
+        - path_to_plugin : path to the plugin aka. Python_Link.as that should be placed inside the trackmania-plugin folder
+        - linux : set to true if on a linux operating system, set to false if on a windows operating system
+        """
+
         if linux:
             # TODO get Lock.
             return GameInstanceMangerLinux(TMLoader_path, TMLoader_profile_name, path_to_plugin, None)
@@ -23,15 +41,21 @@ class GameInstanceManager:
 
 
     def __init__(self, TMLoader_path : str, TMLoader_profile_name : str, path_to_plugin : str):
+        """Do not use this class directly. Instanciate via GameInstanceManager.get_instance()."""
+
         self.TMLoader_path : str = TMLoader_path
         self.TMLoader_profile_name = TMLoader_profile_name
         self.path_to_plugin = path_to_plugin
         self.tmi_port = 8775
         self.tm_process_id = None
-
+        self.tm_window_id  = None
         self.tminterface = TMInterface(self.tmi_port)
 
+        assert os.path.exists(self.path_to_plugin), f"Python_Link.as was not found at '{self.path_to_plugin}'."
+
+
     def get_tminterface(self) -> TMInterface:
+        """Get the TMInterface instance associated with this game-instance."""
         return self.tminterface
 
     def register_iface(self, timeout_in_s : int = 10) -> None:
@@ -48,12 +72,15 @@ class GameInstanceManager:
         return (self.tm_process_id is not None) and (self.tm_process_id in (p.pid for p in psutil.process_iter()))
     
     def _get_gameprocess_killcommand(self) -> str:
+        """Returns correct killcommand for the process according to the operating system."""
         raise NotImplementedError("Do not use this class directly.")
     
     def launch_game(self) -> None:
+        """Launches a tmnf process. Also sets self.tm_process_id and self.tm_window_id."""
         raise NotImplementedError()
     
     def close_game(self) -> None:
+        """Kills tmnf process according to set self.tm_process_id. self.launch_game() has to be called beforehand. """
         self.timeout_has_been_set = False
         self.game_activated = False
         assert self.tm_process_id is not None
@@ -110,7 +137,6 @@ class GameInstanceManagerWindows(GameInstanceManager):
 
         If process is not found within 10s after launching, ProcessLookupError is thrown.
         """
-        assert os.path.exists(self.path_to_plugin), f"Python_Link.as was not found at '{self.path_to_plugin}'."
         tmi_process_id = int(subprocess.check_output(self.__get_launch_string()).decode().split("\r\n")[1])
         start_time = time.time()
         while self.tm_process_id is None:
@@ -135,7 +161,6 @@ class GameInstanceManagerWindows(GameInstanceManager):
                 raise ProcessLookupError("Could not find process after more than 10s of searching.")
 
     def launch_game(self):
-        """Launches game. Sets process and window-id for tmi."""
         self.tm_process_id = None
         self._run_launchstring_and_set_process_id()
 

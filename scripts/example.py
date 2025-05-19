@@ -155,9 +155,8 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-    GMI = GameInstanceManager.get_instance(Path(os.path.expanduser("~")) / "AppData" / "Local" / "TMLoader" / "TMLoader.exe",
-                            "default",
-                            Path(os.path.expanduser("~")) / "OneDrive" / "Dokumente" / "TMInterface" /"Plugins" / "Python_Link.as",
+    GMI = GameInstanceManager.get_instance(TMLoader_path = Path(os.path.expanduser("~")) / "AppData" / "Local" / "TMLoader" / "TMLoader.exe",
+                            path_to_plugin = Path(os.path.expanduser("~")) / "OneDrive" / "Dokumente" / "TMInterface" /"Plugins" / "Python_Link.as",
                             linux = False)
     
     if args.launch:
