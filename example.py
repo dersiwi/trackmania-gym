@@ -72,10 +72,6 @@ def print_sim_state(ssD : SimStateData) -> None:
 
 def main(iface : TMInterface, rqimgs : bool = False):
 
-    iface.execute_command(f"set autologin 1")
-    iface.execute_command(f"set auto_reload_plugins false")
-    iface.execute_command("set skip_map_load_screens true")
-    iface.execute_command("map ESL-Hockolicious.Challenge.Gbx")
     frame_id = 0
     stepcount = 0 
     inputcounter = 0
@@ -141,14 +137,8 @@ def main(iface : TMInterface, rqimgs : bool = False):
 
         elif msgtype == int(MessageType.SC_ON_CONNECT_SYNC):
             print("--------------------On connect event.!--------------------------")
+            iface.on_connect_event()
             iface._respond_to_call(msgtype)
-            iface.execute_command("set unfocused_fps_limit false")
-            
-            iface.execute_command("set disable_forced_camera true")
-            iface.execute_command("set autorewind false")
-            iface.execute_command("set auto_reload_plugins false")
-            iface.execute_command(f"set autologin 1")
-
         else:
             iface._respond_to_call(msgtype)
             pass

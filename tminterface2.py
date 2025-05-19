@@ -149,3 +149,12 @@ class TMInterface:
         bytes_from_tcp_stream = self.sock.recv(4, socket.MSG_WAITALL)
         (integer, ) = struct.unpack("i", bytes_from_tcp_stream)
         return integer
+    
+    def on_connect_event(self, user_profile : int = 1, map_to_load : str = "ESL-Hockolicious.Challenge.Gbx") -> None:
+        """Executes command for game-initialization. Basically prompts the game to directly enter into the loaded map."""
+        self.execute_command(f"set autologin {user_profile}")
+        self.execute_command("set unfocused_fps_limit false")
+        self.execute_command("set disable_forced_camera true")
+        self.execute_command("set autorewind false")
+        self.execute_command("set auto_reload_plugins true")
+        self.execute_command(f"map {map_to_load}")
