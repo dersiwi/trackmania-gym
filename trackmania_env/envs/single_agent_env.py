@@ -22,9 +22,9 @@ class TMNF_Single_Agent_Env(gym.Env):
             img_height: int,
             port: str,
             observations_space: gym.spaces.Dict,
-            tmi: TMInterface,
             gim: GameInstanceManager,
-            map_path : str,
+            map_to_load : str,
+            user_profile : int
             ):
         """
         Initializes the custom Gymnasium environment.
@@ -37,15 +37,16 @@ class TMNF_Single_Agent_Env(gym.Env):
         self.img_shape = (3,img_height,img_width)
         
         self.port = port
-        self.tmi = tmi 
         self.gim = gim 
-        self.map_path = map_path
+        self.map_to_load = map_to_load
+        self.user_profile = user_profile
         self.observation_space = observations_space
+        
         """
         these are the inputs we will later give to the game engine ,
         copied from linesightrl /config_files/inputs_list.py
         """
-        self.action_map = {
+        self.action_map = [
         # 0 Forward
         {"left": False,"right": False,"accelerate": True,"brake": False,}, 
         # 1 Forward left
@@ -70,11 +71,16 @@ class TMNF_Single_Agent_Env(gym.Env):
         {"left": True,"right": False,"accelerate": True,"brake": True,},
         # 11 Brake and accelerate right
         {"left": False,"right": True,"accelerate": True,"brake": True,},
-        }
-        self.action_space = gym.spaces.Discrete(len(self.idx_to_action))
+        ]
+        self.action_space = gym.spaces.Discrete(len(self.action_map))
         
         # TODO i dont know if we should start the game and everything here or if we put in a somehwat controller class
+        self.gim.launch_game(timeout = 20)
+        gim.register_iface()
+        self.tmi : TMInterface = self.gim.get_tminterface()
+        self.tmi.on_connect_event(user_profile=self.user_profile,map_to_load=self.map_to_load)
 
+        
     def _get_info(self) -> Dict[str,Any]:
         """
         Helper function for computing additional information (e.g. for debugging or logging)
