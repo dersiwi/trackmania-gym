@@ -78,8 +78,8 @@ class TMNF_Single_Agent_Env(gym.Env):
         self.gim.launch_game(timeout = 20)
         gim.register_iface()
         self.tmi : TMInterface = self.gim.get_tminterface()
+        msgtype = self.tmi._read_int32()
         self.tmi.on_connect_event(user_profile=self.user_profile,map_to_load=self.map_to_load)
-
         
     def _get_info(self) -> Dict[str,Any]:
         """
