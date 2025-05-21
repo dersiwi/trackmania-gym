@@ -5,8 +5,8 @@ https://gymnasium.farama.org/tutorials/gymnasium_basics/environment_creation/
 from typing import Any,Dict,Tuple,Optional
 import gymnasium as gym
 import numpy as np
-
-from game_interaction.tminterface2 import TMInterface
+import time 
+from game_interaction.tminterface2 import TMInterface, MessageType
 from game_interaction.game_instance_manager2 import GameInstanceManager
 
 class TMNF_Single_Agent_Env(gym.Env):
@@ -24,7 +24,8 @@ class TMNF_Single_Agent_Env(gym.Env):
             observations_space: gym.spaces.Dict,
             gim: GameInstanceManager,
             map_to_load : str,
-            user_profile : int
+            user_profile : int,
+            color_channels : int = 3
             ):
         """
         Initializes the custom Gymnasium environment.
@@ -34,7 +35,8 @@ class TMNF_Single_Agent_Env(gym.Env):
         """
         self.img_width = img_width
         self.img_height = img_height
-        self.img_shape = (3,img_height,img_width)
+        self.color_channels= color_channels
+        self.img_shape = (self.color_channels,img_height,img_width)
         
         self.port = port
         self.gim = gim 
@@ -76,10 +78,14 @@ class TMNF_Single_Agent_Env(gym.Env):
         
         # TODO i dont know if we should start the game and everything here or if we put in a somehwat controller class
         self.gim.launch_game(timeout = 20)
+        while not self.gim.is_game_running(): time.sleep(0)
+        
         gim.register_iface()
         self.tmi : TMInterface = self.gim.get_tminterface()
-        msgtype = self.tmi._read_int32()
+        
+        _msgtype = self.tmi._read_int32()
         self.tmi.on_connect_event(user_profile=self.user_profile,map_to_load=self.map_to_load)
+        self.tmi._respond_to_call(MessageType.SC_ON_CONNECT_SYNC)
         
     def _get_info(self) -> Dict[str,Any]:
         """
@@ -88,11 +94,54 @@ class TMNF_Single_Agent_Env(gym.Env):
         info = {} 
         return info
     
-    def _get_obs(self) -> gym.spaces.Dict:
+    def _get_obs(self) -> Dict:
         """
         Helper function to translate the the environment's state into an observation
         """
-        observations = None 
+        image = None
+        game_states = None
+       
+        while True:
+            msgtype = self.tmi._read_int32()
+
+            if msgtype == int(MessageType.SC_RUN_STEP_SYNC):
+                _ = self.tmi._read_int32()  # Discard simulation time
+                game_states = self.tmi.get_simulation_state() 
+                # Request Frame
+                self.tmi.request_frame(self.img_width, self.img_height)
+                self.tmi._respond_to_call(msgtype)
+
+            elif msgtype == int(MessageType.SC_REQUESTED_FRAME_SYNC):
+                image = self.tmi.get_frame(self.img_width, self.img_height) # this is apparently in BRGA
+                self.tmi._respond_to_call(msgtype)
+                break
+
+            elif msgtype == int(MessageType.C_SHUTDOWN):
+                self.tmi.close()
+                break
+
+            else:
+                # Acknowledge all other messages but ignore their contents
+                self.tmi._respond_to_call(msgtype)
+        
+        assert (image is not None) and (game_states is not None)
+        """
+        TODO should the BRGA be converted into another color space ?
+        And should this happen here or before we feed it to the NN
+        """
+        # TODO we need here a somewhat filter method to only get the relevant state informatios from the engine  
+            # Extract relevant parts of game_states (mocked here)
+        gear = game_states.scene_mobil.engine.gear
+        speed = game_states.scene_mobil.max_linear_speed
+        burnout_state = game_states.scene_mobil.burnout_state  
+        velocity = game_states.velocity
+        observations = {
+        "image": image,
+        "gear": gear,
+        "max_linear_speed": speed,
+        "burnout_state": burnout_state,
+        "velocity": velocity
+        }
         return observations
 
     def step(self, action) -> Tuple[gym.spaces.Dict,float,bool,bool,Dict[str,Any]]:
@@ -120,7 +169,7 @@ class TMNF_Single_Agent_Env(gym.Env):
         observation =  self._get_obs(); 
            
         # TODO check if episode terminated and or tuncated
-        # terminated if reached the goal, truncated measn that a timelimit has been reached but MDP is not in a terminal state 
+        # terminated if reached the goal, truncated means that a timelimit has been reached but MDP is not in a terminal state 
         terminated = False
         truncated = False
         
