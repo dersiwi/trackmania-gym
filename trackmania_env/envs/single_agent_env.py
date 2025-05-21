@@ -49,30 +49,31 @@ class TMNF_Single_Agent_Env(gym.Env):
         copied from linesightrl /config_files/inputs_list.py
         """
         self.action_map = [
+        # (left, right, accelerate, brake)
         # 0 Forward
-        {"left": False,"right": False,"accelerate": True,"brake": False,}, 
+        (False,False,True,False), 
         # 1 Forward left
-        {"left": True,"right": False,"accelerate": True,"brake": False,},
+        (True,False,True,False),
         # 2 Forward right
-        {"left": False,"right": True,"accelerate": True,"brake": False,},
+        (False,True,True,False),
         # 3 Nothing
-        {"left": False,"right": False,"accelerate": False,"brake": False,},
+        (False,False,False,False),
         # 4 Nothing left
-        {"left": True,"right": False,"accelerate": False,"brake": False,},
+        (True,False,False,False),
         # 5 Nothing right
-        {"left": False,"right": True,"accelerate": False,"brake": False,},
+        (False,True,False,False),
         # 6 Brake
-        {"left": False,"right": False,"accelerate": False,"brake": True,},
+        (False,False,False,True),
         # 7 Brake left
-        {"left": True,"right": False,"accelerate": False,"brake": True,},
+        (True,False,False,True),
         # 8 Brake right
-        {"left": False,"right": True,"accelerate": False,"brake": True,},
+        (False,True,False,True),
         # 9 Brake and accelerate
-        {"left": False,"right": False,"accelerate": True,"brake": True,},
+        (False,False,True,True),
         # 10 Brake and accelerate left
-        {"left": True,"right": False,"accelerate": True,"brake": True,},
+        (True,False,True,True),
         # 11 Brake and accelerate right
-        {"left": False,"right": True,"accelerate": True,"brake": True,},
+        (False,True,True,True),
         ]
         self.action_space = gym.spaces.Discrete(len(self.action_map))
         
@@ -103,8 +104,10 @@ class TMNF_Single_Agent_Env(gym.Env):
        
         while True:
             msgtype = self.tmi._read_int32()
+            
+            if (image is not None) and (game_states is not None): break
 
-            if msgtype == int(MessageType.SC_RUN_STEP_SYNC):
+            elif msgtype == int(MessageType.SC_RUN_STEP_SYNC):
                 _ = self.tmi._read_int32()  # Discard simulation time
                 game_states = self.tmi.get_simulation_state() 
                 # Request Frame
@@ -114,7 +117,6 @@ class TMNF_Single_Agent_Env(gym.Env):
             elif msgtype == int(MessageType.SC_REQUESTED_FRAME_SYNC):
                 image = self.tmi.get_frame(self.img_width, self.img_height) # this is apparently in BRGA
                 self.tmi._respond_to_call(msgtype)
-                break
 
             elif msgtype == int(MessageType.C_SHUTDOWN):
                 self.tmi.close()
@@ -162,12 +164,55 @@ class TMNF_Single_Agent_Env(gym.Env):
         truncated (bool): Whether the episode ended due to a time limit or other external cutoff.
         info (dict): A dictionary with additional information (e.g. for debugging or logging).
         """
-        input_to_tmi = self.action_map[action]
-        # TODO send the action via tminterface here
         
-        # TODO recieve data from the simulator via tmi
-        observation =  self._get_obs(); 
-           
+        (left,right,accelerate,brake) = self.action_map[action]
+        game_states = None 
+        image = None
+        observation = None
+        # TODO send the action via tminterface here
+        self.tmi._respond_to_call(MessageType.SC_RUN_STEP_SYNC)
+        while True:
+            msgtype = self.tmi._read_int32()
+        
+        # ============================================= READ INCOMING MESSAGES
+            if (image is not None): break #and (game_states is not None): break
+                
+            elif msgtype == int(MessageType.SC_RUN_STEP_SYNC): # simulation step is complete
+
+            # ============================ BEGIN ON RUN STEP ============================
+
+                self.tmi.request_frame(self.img_width, self.img_height)
+                self.tmi.set_input_state(left, right, accelerate, brake)
+                self.tmi.set_speed(60)
+                #game_states = self.tmi.get_simulation_state()
+                
+            # ============================ END ON RUN STEP ============================
+                self.tmi._respond_to_call(msgtype)
+
+            elif msgtype == int(MessageType.SC_REQUESTED_FRAME_SYNC):
+                image = self.tmi.get_frame(self.img_width, self.img_height) # this is apparently in BRGA
+                self.tmi._respond_to_call(msgtype)
+    
+    
+            elif msgtype == int(MessageType.C_SHUTDOWN):
+                self.tmi.close()
+            else:
+                # Acknowledge all other messages but ignore their contents
+                self.tmi._respond_to_call(msgtype)
+        
+        # TODO recieve data from the simulator via tmi. NEED TO RETHINK THIS WHOLE MESS
+        #observation =  self._get_obs(); 
+        #gear = game_states.scene_mobil.engine.gear
+        #speed = game_states.scene_mobil.max_linear_speed
+        #burnout_state = game_states.scene_mobil.burnout_state  
+        #velocity = game_states.velocity
+        #observation = {
+        #"image": image,
+        #"gear": gear,
+        #"max_linear_speed": speed,
+        #"burnout_state": burnout_state,
+        #"velocity": velocity
+        #}
         # TODO check if episode terminated and or tuncated
         # terminated if reached the goal, truncated means that a timelimit has been reached but MDP is not in a terminal state 
         terminated = False

@@ -6,6 +6,7 @@ from pathlib import Path
 import os
 import gymnasium as gym
 from contextlib import redirect_stdout
+import numpy as np
 
 if __name__ == "__main__":
     home_dir = os.environ['HOME']
@@ -35,3 +36,5 @@ if __name__ == "__main__":
                 print(k)
                 print(v)
                 print("-"*20)
+    for i in range(20):
+        tm_env.step(np.random.randint(0,12))
