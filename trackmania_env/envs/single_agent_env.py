@@ -183,7 +183,7 @@ class TMNF_Single_Agent_Env(gym.Env):
 
                 self.tmi.request_frame(self.img_width, self.img_height)
                 self.tmi.set_input_state(left, right, accelerate, brake)
-                self.tmi.set_speed(60)
+                self.tmi.set_speed(1)
                 #game_states = self.tmi.get_simulation_state()
                 
             # ============================ END ON RUN STEP ============================

@@ -36,5 +36,5 @@ if __name__ == "__main__":
                 print(k)
                 print(v)
                 print("-"*20)
-    for i in range(20):
+    for i in range(100):
         tm_env.step(np.random.randint(0,12))
