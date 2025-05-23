@@ -275,17 +275,27 @@ class GameInstanceMangerLinux(GameInstanceManager):
 
             if time.time() - launch_time > timeout:
                 raise TimeoutError(f"TMNF process did not launch within {timeout} seconds.")
-
+            
+    def __get_launch_cmds(self):
+        return [
+            "wine",
+            str(self.TMLoader_path),
+            "run",
+            "TmForever",
+            str(self.TMLoader_profile_name),
+            f"/configstring=set custom_port {self.tmi_port}",
+        ]
+        
     def launch_game(self, timeout=10):
         """Launches the game with timeout 10s to find process ids."""
         with self.game_spawning_lock:
             pid_before = set(self._get_tm_pids())
-
+            launch_cmds = self.__get_launch_cmds()
             if self.headless:
                 GameInstanceMangerLinux.launch_xvfb()
-                process = subprocess.Popen(["wine", str(self.TMLoader_path), str(self.tmi_port)], env=GameInstanceMangerLinux.xvfb_launch_dict)
+                process = subprocess.Popen(launch_cmds, env=GameInstanceMangerLinux.xvfb_launch_dict)
             else:
-                process = subprocess.Popen(["wine", str(self.TMLoader_path), str(self.tmi_port)])
+                process = subprocess.Popen(launch_cmds)
 
             self.__get_tmnf_process_id(timeout, pid_before)
             return self.tm_process_id

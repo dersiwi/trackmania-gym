@@ -5,8 +5,8 @@ https://gymnasium.farama.org/tutorials/gymnasium_basics/environment_creation/
 from typing import Any,Dict,Tuple,Optional
 import gymnasium as gym
 import numpy as np
-
-from game_interaction.tminterface2 import TMInterface
+import time 
+from game_interaction.tminterface2 import TMInterface, MessageType
 from game_interaction.game_instance_manager2 import GameInstanceManager
 
 class TMNF_Single_Agent_Env(gym.Env):
@@ -22,9 +22,10 @@ class TMNF_Single_Agent_Env(gym.Env):
             img_height: int,
             port: str,
             observations_space: gym.spaces.Dict,
-            tmi: TMInterface,
             gim: GameInstanceManager,
-            map_path : str,
+            map_to_load : str,
+            user_profile : int,
+            color_channels : int = 3
             ):
         """
         Initializes the custom Gymnasium environment.
@@ -34,47 +35,59 @@ class TMNF_Single_Agent_Env(gym.Env):
         """
         self.img_width = img_width
         self.img_height = img_height
-        self.img_shape = (3,img_height,img_width)
+        self.color_channels= color_channels
+        self.img_shape = (self.color_channels,img_height,img_width)
         
         self.port = port
-        self.tmi = tmi 
         self.gim = gim 
-        self.map_path = map_path
+        self.map_to_load = map_to_load
+        self.user_profile = user_profile
         self.observation_space = observations_space
+        
         """
         these are the inputs we will later give to the game engine ,
         copied from linesightrl /config_files/inputs_list.py
         """
-        self.action_map = {
+        self.action_map = [
+        # (left, right, accelerate, brake)
         # 0 Forward
-        {"left": False,"right": False,"accelerate": True,"brake": False,}, 
+        (False,False,True,False), 
         # 1 Forward left
-        {"left": True,"right": False,"accelerate": True,"brake": False,},
+        (True,False,True,False),
         # 2 Forward right
-        {"left": False,"right": True,"accelerate": True,"brake": False,},
+        (False,True,True,False),
         # 3 Nothing
-        {"left": False,"right": False,"accelerate": False,"brake": False,},
+        (False,False,False,False),
         # 4 Nothing left
-        {"left": True,"right": False,"accelerate": False,"brake": False,},
+        (True,False,False,False),
         # 5 Nothing right
-        {"left": False,"right": True,"accelerate": False,"brake": False,},
+        (False,True,False,False),
         # 6 Brake
-        {"left": False,"right": False,"accelerate": False,"brake": True,},
+        (False,False,False,True),
         # 7 Brake left
-        {"left": True,"right": False,"accelerate": False,"brake": True,},
+        (True,False,False,True),
         # 8 Brake right
-        {"left": False,"right": True,"accelerate": False,"brake": True,},
+        (False,True,False,True),
         # 9 Brake and accelerate
-        {"left": False,"right": False,"accelerate": True,"brake": True,},
+        (False,False,True,True),
         # 10 Brake and accelerate left
-        {"left": True,"right": False,"accelerate": True,"brake": True,},
+        (True,False,True,True),
         # 11 Brake and accelerate right
-        {"left": False,"right": True,"accelerate": True,"brake": True,},
-        }
-        self.action_space = gym.spaces.Discrete(len(self.idx_to_action))
+        (False,True,True,True),
+        ]
+        self.action_space = gym.spaces.Discrete(len(self.action_map))
         
         # TODO i dont know if we should start the game and everything here or if we put in a somehwat controller class
-
+        self.gim.launch_game(timeout = 20)
+        while not self.gim.is_game_running(): time.sleep(0)
+        
+        gim.register_iface()
+        self.tmi : TMInterface = self.gim.get_tminterface()
+        
+        _msgtype = self.tmi._read_int32()
+        self.tmi.on_connect_event(user_profile=self.user_profile,map_to_load=self.map_to_load)
+        self.tmi._respond_to_call(MessageType.SC_ON_CONNECT_SYNC)
+        
     def _get_info(self) -> Dict[str,Any]:
         """
         Helper function for computing additional information (e.g. for debugging or logging)
@@ -82,11 +95,55 @@ class TMNF_Single_Agent_Env(gym.Env):
         info = {} 
         return info
     
-    def _get_obs(self) -> gym.spaces.Dict:
+    def _get_obs(self) -> Dict:
         """
         Helper function to translate the the environment's state into an observation
         """
-        observations = None 
+        image = None
+        game_states = None
+       
+        while True:
+            msgtype = self.tmi._read_int32()
+            
+            if (image is not None) and (game_states is not None): break
+
+            elif msgtype == int(MessageType.SC_RUN_STEP_SYNC):
+                _ = self.tmi._read_int32()  # Discard simulation time
+                game_states = self.tmi.get_simulation_state() 
+                # Request Frame
+                self.tmi.request_frame(self.img_width, self.img_height)
+                self.tmi._respond_to_call(msgtype)
+
+            elif msgtype == int(MessageType.SC_REQUESTED_FRAME_SYNC):
+                image = self.tmi.get_frame(self.img_width, self.img_height) # this is apparently in BRGA
+                self.tmi._respond_to_call(msgtype)
+
+            elif msgtype == int(MessageType.C_SHUTDOWN):
+                self.tmi.close()
+                break
+
+            else:
+                # Acknowledge all other messages but ignore their contents
+                self.tmi._respond_to_call(msgtype)
+        
+        assert (image is not None) and (game_states is not None)
+        """
+        TODO should the BRGA be converted into another color space ?
+        And should this happen here or before we feed it to the NN
+        """
+        # TODO we need here a somewhat filter method to only get the relevant state informatios from the engine  
+            # Extract relevant parts of game_states (mocked here)
+        gear = game_states.scene_mobil.engine.gear
+        speed = game_states.scene_mobil.max_linear_speed
+        burnout_state = game_states.scene_mobil.burnout_state  
+        velocity = game_states.velocity
+        observations = {
+        "image": image,
+        "gear": gear,
+        "max_linear_speed": speed,
+        "burnout_state": burnout_state,
+        "velocity": velocity
+        }
         return observations
 
     def step(self, action) -> Tuple[gym.spaces.Dict,float,bool,bool,Dict[str,Any]]:
@@ -107,14 +164,57 @@ class TMNF_Single_Agent_Env(gym.Env):
         truncated (bool): Whether the episode ended due to a time limit or other external cutoff.
         info (dict): A dictionary with additional information (e.g. for debugging or logging).
         """
-        input_to_tmi = self.action_map[action]
-        # TODO send the action via tminterface here
         
-        # TODO recieve data from the simulator via tmi
-        observation =  self._get_obs(); 
-           
+        (left,right,accelerate,brake) = self.action_map[action]
+        game_states = None 
+        image = None
+        observation = None
+        # TODO send the action via tminterface here
+        self.tmi._respond_to_call(MessageType.SC_RUN_STEP_SYNC)
+        while True:
+            msgtype = self.tmi._read_int32()
+        
+        # ============================================= READ INCOMING MESSAGES
+            if (image is not None): break #and (game_states is not None): break
+                
+            elif msgtype == int(MessageType.SC_RUN_STEP_SYNC): # simulation step is complete
+
+            # ============================ BEGIN ON RUN STEP ============================
+
+                self.tmi.request_frame(self.img_width, self.img_height)
+                self.tmi.set_input_state(left, right, accelerate, brake)
+                self.tmi.set_speed(1)
+                #game_states = self.tmi.get_simulation_state()
+                
+            # ============================ END ON RUN STEP ============================
+                self.tmi._respond_to_call(msgtype)
+
+            elif msgtype == int(MessageType.SC_REQUESTED_FRAME_SYNC):
+                image = self.tmi.get_frame(self.img_width, self.img_height) # this is apparently in BRGA
+                self.tmi._respond_to_call(msgtype)
+    
+    
+            elif msgtype == int(MessageType.C_SHUTDOWN):
+                self.tmi.close()
+            else:
+                # Acknowledge all other messages but ignore their contents
+                self.tmi._respond_to_call(msgtype)
+        
+        # TODO recieve data from the simulator via tmi. NEED TO RETHINK THIS WHOLE MESS
+        #observation =  self._get_obs(); 
+        #gear = game_states.scene_mobil.engine.gear
+        #speed = game_states.scene_mobil.max_linear_speed
+        #burnout_state = game_states.scene_mobil.burnout_state  
+        #velocity = game_states.velocity
+        #observation = {
+        #"image": image,
+        #"gear": gear,
+        #"max_linear_speed": speed,
+        #"burnout_state": burnout_state,
+        #"velocity": velocity
+        #}
         # TODO check if episode terminated and or tuncated
-        # terminated if reached the goal, truncated measn that a timelimit has been reached but MDP is not in a terminal state 
+        # terminated if reached the goal, truncated means that a timelimit has been reached but MDP is not in a terminal state 
         terminated = False
         truncated = False
         
