@@ -1,7 +1,7 @@
 from game_interaction.tminterface2 import MessageType, TMInterface
 import numpy as np
 import time
-
+import logging
 class TMIProcessWrapper:
 
     """
@@ -54,6 +54,11 @@ class TMIProcessWrapper:
 
         self._send_action = False
         self.action : tuple[bool, bool, bool, bool] = None
+
+        self.logger = logging.getLogger(self.__class__.__name__)
+        self.logger.info("TMIProcessWrapper initialized")
+
+        self.__run_sync_loop = True
     
 
     def request_image(self, continuously : bool = False) -> int:
@@ -82,7 +87,7 @@ class TMIProcessWrapper:
         
 
     def __receive_frame(self):
-        print("Reiving frame")
+        self.logger.debug("Receiving frame.")
         frame = self.iface.get_frame(self.img_width, self.img_height)
         self.requested_images[self.img_idx] = frame
 
@@ -98,7 +103,7 @@ class TMIProcessWrapper:
 
 
     def __request_frame(self):
-        print("Requesting frame.")
+        self.logger.debug("Requesting frame from game instance.")
         self.iface.request_frame(self.img_width, self.img_height)
         self._req_in_progress = True
 
@@ -109,22 +114,32 @@ class TMIProcessWrapper:
 
 
     def act(self, action : tuple[bool, bool, bool, bool]) -> int:
+        self.logger.debug(f"act() method is called with action: {action}")
         self.action = action
         self._send_action = True
         self._anticipated_simulation_step_of_execution = self.simulation_steps + 1
         return self._anticipated_simulation_step_of_execution
     
     def __send_action(self) -> None:
+        self.logger.debug(f"Sending Action {self.action}")
+
         left, right, acc, brake = self.action
         if not self._anticipated_simulation_step_of_execution == self.sim_step_count:
-            print(f"[WARNING] : Anticipated to execute action on simulation step {self._anticipated_simulation_step_of_execution}, but actual simulation step was {self.sim_step_count}")
+            self.logger.warning(f"Anticipated to execute action on simulation step {self._anticipated_simulation_step_of_execution}, but actual simulation step was {self.sim_step_count}")
         self.iface.set_input_state(left, right, acc, brake)
         self._send_action = False
 
-    def syncloop(self):
+    def stop_sync_loop(self) -> None:
+        """Stops running syncloop(). May result in timeout-error."""
+        self.__run_sync_loop = False
 
-        while True:
-            print(self.sim_step_count)
+    def syncloop(self):
+        self.logger.info("Started syncloop.")
+
+        while self.__run_sync_loop:
+            if self.sim_step_count % 50 == 0:
+                self.logger.debug(f"Sim-Step-Count at {self.sim_step_count}")
+
             msgtype = self.iface._read_int32()
             
             # ============================================= READ INCOMING MESSAGES
@@ -142,17 +157,6 @@ class TMIProcessWrapper:
 
                 if self._send_action:
                     self.__send_action()
-                    
-
-
-                """if stepcount % self.img_req_frequency == 0:
-                if not inputset is None and inputcounter < len(inputset) and stepcount % INPUT_SET_FREQUENCY == 0:
-                    # server should not reply to this command.
-                    (left, right, acc, brake) = inputset[inputcounter]
-                    inputcounter += 1
-                    if inputcounter >= len(inputset) and REPEAT:
-                        inputcounter = 0
-                """                    
 
                 # ============================ END ON RUN STEP ============================
                 self.iface._respond_to_call(msgtype)

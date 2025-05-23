@@ -14,6 +14,7 @@ from tminterface.structs import CheckpointData, SimStateData, CheckpointTime
 import time
 
 from bytefield import ArrayField
+import logging
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -31,6 +32,19 @@ if __name__ == "__main__":
         tmloader = Path(os.path.expanduser("~")) / "AppData" / "Local" / "TMLoader" / "TMLoader.exe"
         plugin = Path(os.path.expanduser("~")) / "OneDrive" / "Dokumente" / "TMInterface" /"Plugins" / "Python_Link.as"
 
+
+
+    logging.basicConfig(
+        level=logging.DEBUG,
+        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+        handlers=[
+            logging.FileHandler("logs/app.log"),
+            logging.StreamHandler()
+        ]
+    )
+
+    
+
     GMI = GameInstanceManager.get_instance(TMLoader_path = tmloader,
                             path_to_plugin = plugin,
                             linux = args.linux)
@@ -46,11 +60,12 @@ if __name__ == "__main__":
         tmiprocess = TMIProcessWrapper(iface, 180, 160, img_req_frequency=3)
         p = Process(target=tmiprocess.syncloop)
         p.start()
+        time.sleep(10)
         for i in range(10):
             idx = tmiprocess.request_image()
             img = tmiprocess.get_imgage_blocking(idx)
             print("Got an image!")
-            
+
             
         p.join()
         
