@@ -5,14 +5,13 @@ from trackmania_env.envs.single_agent_env2 import TMNF_Single_Agent_Env
 from game_interaction.game_instance_manager2 import GameInstanceManager
 from game_interaction.run_multiprocess_wrapper import run_wrapper
 from game_interaction.process_wrapper import TMIProcessWrapper
+from utils.scriptargs import get_argparser
+
 from pathlib import Path
 import os
 import gymnasium as gym
 from contextlib import redirect_stdout
 import numpy as np
-import argparse
-from utils.scriptargs import get_argparser
-
 from multiprocessing import Queue, Process
 
 if __name__ == "__main__":
