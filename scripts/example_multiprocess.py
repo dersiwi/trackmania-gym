@@ -1,4 +1,3 @@
-from multiprocessing import Process
 
 import argparse
 import sys, os
@@ -12,9 +11,17 @@ from pathlib import Path
 import numpy as np
 from tminterface.structs import CheckpointData, SimStateData, CheckpointTime
 import time
+from multiprocessing import Process, Queue
+from queue import Full
 
 from bytefield import ArrayField
 import logging
+
+
+def run_wrapper(iface, cmd_q, res_q, img_w, img_h): # apparently its better to run process like this to avoid pickel issues or smth?
+    wrapper = TMIProcessWrapper(iface, command_queue=cmd_q, response_queue=res_q, img_width=img_w, img_height=img_h)
+    wrapper.syncloop()
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -43,6 +50,8 @@ if __name__ == "__main__":
         ]
     )
 
+    logger = logging.getLogger("examplescript")
+
     
 
     GMI = GameInstanceManager.get_instance(TMLoader_path = tmloader,
@@ -55,22 +64,34 @@ if __name__ == "__main__":
     GMI.register_iface()
     iface = GMI.get_tminterface()
 
+    # instanciate a SyncManager.
+    control_queue = Queue() # queue for commands to send to TMIProcessWrapper
+    response_queue = Queue() # answers (payload) from TMIProcess Wrapper
 
+    p = Process(target=run_wrapper, args=(iface, control_queue, response_queue, 180, 160))
+    
+    p.start()
+
+    #interact with process here
+    cmd_id = 1
     try:
-        tmiprocess = TMIProcessWrapper(iface, 180, 160, img_req_frequency=3)
-        p = Process(target=tmiprocess.syncloop)
-        p.start()
-        time.sleep(10)
-        for i in range(10):
-            idx = tmiprocess.request_image()
-            img = tmiprocess.get_imgage_blocking(idx)
-            print("Got an image!")
+        print("Putting img request command")
+        control_queue.put_nowait(TMIProcessWrapper.IPCCommands.get_req_img_command(cmd_id))
+        imgpack = response_queue.get(timeout=10)
+        print("Received image.")
+        print(imgpack["sim_state"])
+        print(imgpack["sim_step"])
+        print(imgpack["status"])
+        print(imgpack["cmd_id"])
 
-            
-        p.join()
-        
-    except TimeoutError as e:
-        print(e)
+        control_queue.put_nowait(TMIProcessWrapper.IPCCommands.get_end_syncloop_command(cmd_id + 1))
+    except Full:
+        print("Queue is full.")
+
+
+
+    p.join()
+    
 
     if args.launch:
         GMI.close_game()

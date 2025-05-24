@@ -1,38 +1,51 @@
 from game_interaction.tminterface2 import MessageType, TMInterface
 import numpy as np
 import time
-import logging
+import logging, os
+
+from multiprocessing import Queue
+from queue import Empty
+
 class TMIProcessWrapper:
 
     """
     TMIProcessWrapper encompasses the interaction between python (client) and trackmania instance (server) as a seperately executable process. 
     After initialization, the syncloop method can be started and runs the communication to not cause timeouts or blockings in other processes.
 
-    Methods
-    --------
-    
-    While this is running, the methodds
-        - request_image
-        - get_image
-        - get_simstate
-        - get_image_and_simstate
-        - act
-
-    can be used to interact with the (this class and) trackmania instance.
-
-    Inner Workings
-    --------------
-    TODO
+    In order to accomplish this, a command and response queue are set-up for Inter-Process-Communication (IPC).
     """
 
+    class IPCCommands:
+        """Helper class to get commands in order to have one place where commands are generated."""
 
-    def __init__(self, tminterface : TMInterface,  img_width : int, img_height : int, img_req_frequency : int, img_store_capacity : int = 100):
+        ACT = 0
+        REQ_IMG = 1
+        END_SYNCLOOP = 2
+
+        @staticmethod
+        def get_act_command(command_id : int, action : tuple[bool, bool, bool, bool]) -> dict[str, any]:
+            """Creates command for IPC communication for request_image()"""
+            return {"cmd_id" : command_id, "cmd" : TMIProcessWrapper.IPCCommands.ACT, "args" : action}
+            
+        @staticmethod
+        def get_req_img_command(command_id : int, continuous : bool = False) -> dict[str, any]:
+            """Creates command for IPC communication for request_image()"""
+            return {"cmd_id" : command_id, "cmd" : TMIProcessWrapper.IPCCommands.REQ_IMG, "args" : continuous}
+        
+        @staticmethod
+        def get_end_syncloop_command(command_id : int) -> dict[str, any]:
+            """Returns command to end syncloop execution."""
+            return {"cmd_id" : command_id, "cmd" : TMIProcessWrapper.IPCCommands.END_SYNCLOOP, "args" : None}
+
+
+    def __init__(self, tminterface : TMInterface, command_queue : Queue, response_queue : Queue, img_width : int, img_height : int, img_store_capacity : int = 100):
 
         self.iface : TMInterface = tminterface
+        self.command_queue : Queue = command_queue
+        self.response_queue : Queue = response_queue
 
-
-        self.img_req_frequency : int = img_req_frequency
-
+        self._act_cmd_id = -1
+        self._req_img_cmd_id = -1
 
         self.img_width = img_width
         self.img_height = img_height
@@ -40,84 +53,65 @@ class TMIProcessWrapper:
         
         self.img_store_capacity : int = img_store_capacity
 
-        self.simulation_steps : list[int] = [0 for i in range(img_store_capacity)]
-        self.requested_sim_states : list[any] = [None for i in range(img_store_capacity)]
-
         self._req_img : bool = False
         self.__continuous_image_request : bool = False
         self._req_in_progress : bool = False
         """If True, request was sent to the tm-server but no image received yet."""
-        self.requested_images : list[np.ndarray] = [None for i in range(img_store_capacity)]
-        self.img_idx = 0
 
         self.sim_step_count = 0
 
         self._send_action = False
         self.action : tuple[bool, bool, bool, bool] = None
-
+        
         self.logger = logging.getLogger(self.__class__.__name__)
         self.logger.info("TMIProcessWrapper initialized")
 
         self.__run_sync_loop = True
     
 
-    def request_image(self, continuously : bool = False) -> int:
+    def request_image(self, continuously : bool = False, cmd_id : int = -1):
         """Request an image with the specified image and width (specified in class initialization)
         
-        If continuously is True, request_image does not have to be called again and again, but rather always requests images."""
+        If continuously is True, request_image does not have to be called again and again, but rather always requests images.
+        
+        cmd_id : command-id for IPC; used internally only."""
         self.__continuous_image_request = continuously
         self._req_img = True
-        return self.img_idx
-
-    def get_image(self, idx : int) -> np.ndarray:
-        """Returns the requested image according to given index (idx).
-        When calling request_imgage"""
-        return self.requested_images[idx]
-    
-    def get_imgage_blocking(self, idx : int) -> np.ndarray:
-        while self.requested_images[idx] is None:
-            time.sleep(0.00001)
-        return self.requested_images[idx]
-    
-    def get_simstate(self, idx : int) -> any:
-        return self.requested_sim_states[idx]
-    
-    def get_image_and_simstate(self, idx) -> tuple[np.ndarray, any, int]:
-        return self.requested_images[idx], self.requested_sim_states[idx], self.simulation_steps[idx]
+        self._req_img_cmd_id = cmd_id
+        self.__img_req_step_count = self.sim_step_count
         
-
     def __receive_frame(self):
         self.logger.debug("Receiving frame.")
         frame = self.iface.get_frame(self.img_width, self.img_height)
-        self.requested_images[self.img_idx] = frame
 
-        assert self.simulation_steps[self.img_idx] == self.sim_step_count, f"This sould still be the same stepcount as when the image was requested, \
-            but stepcount of image-receive was {self.sim_step_count} and stepcount of image-request was {self.simulation_steps[self.img_idx]}"
-        
+
         self._req_in_progress = False
+        self.logger.warning(f"Image was requested in stepcount {self.__img_req_step_count} and was received in {self.sim_step_count}")
 
         #if self.__continuous_image_request is True, self._req_img just stays True, if its false, its reset to false and self.request_image() has to be called again.
         self._req_img = self.__continuous_image_request
 
-        self.img_idx = (self.img_idx + 1) % self.img_store_capacity
+        ssD = self.iface.get_simulation_state()
 
+        if not self._req_img_cmd_id == -1:
+            self.response_queue.put_nowait({"cmd_id" : self._req_img_cmd_id, "status" : 0, 
+                                            "img" : frame,
+                                            "sim_state" : ssD,
+                                            "sim_step": self.sim_step_count})
 
     def __request_frame(self):
         self.logger.debug("Requesting frame from game instance.")
         self.iface.request_frame(self.img_width, self.img_height)
         self._req_in_progress = True
 
-        ssD = self.iface.get_simulation_state()
-        self.requested_sim_states[self.img_idx] = ssD
-
-        self.simulation_steps[self.img_idx] = self.sim_step_count
-
-
-    def act(self, action : tuple[bool, bool, bool, bool]) -> int:
+    def act(self, action : tuple[bool, bool, bool, bool], cmd_id : int = -1) -> int:
+        """Sends action to trackmania game. action : to be sen @self.iface.set_input_state for more info. 
+        cmd_id : used internally for IPC."""
         self.logger.debug(f"act() method is called with action: {action}")
         self.action = action
         self._send_action = True
-        self._anticipated_simulation_step_of_execution = self.simulation_steps + 1
+        self._anticipated_simulation_step_of_execution = self.sim_step_count + 1
+        self._act_cmd_id = cmd_id
         return self._anticipated_simulation_step_of_execution
     
     def __send_action(self) -> None:
@@ -129,15 +123,57 @@ class TMIProcessWrapper:
         self.iface.set_input_state(left, right, acc, brake)
         self._send_action = False
 
+        if not self._act_cmd_id == -1:
+            self.response_queue.put_nowait({"cmd_id" : self._act_cmd_id, "status" : 0})
+
     def stop_sync_loop(self) -> None:
         """Stops running syncloop(). May result in timeout-error."""
         self.__run_sync_loop = False
 
-    def syncloop(self):
+    def _reconfigure_logger(self, log_file : str):
+        """This has to be called when executing because this is a sperate process from the main process, therefore needs own log-config."""
+
+        logging.basicConfig(
+            level=logging.DEBUG,
+            format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+            handlers=[
+                logging.FileHandler(log_file),
+                logging.StreamHandler()
+            ]
+        )
+        self.logger = logging.getLogger(__name__)
+        self.logger.debug("Logger configured in subprocess.")
+
+    def check_command_queue(self) -> None:
+        """Checks command queue for ICP and handles command appropriately."""
+        # first get command
+        assert self.command_queue is not None
+        try:
+            cmd = self.command_queue.get_nowait()
+        except Empty:
+            return
+        
+        # now handle command
+        cmd_id : int = cmd["cmd_id"]
+        assert not cmd_id == -1, "Command id cannot be -1 as this is used as an internal error-code."
+        
+        if cmd["cmd"] == TMIProcessWrapper.IPCCommands.ACT:
+            self.act(cmd["args"], cmd_id)
+        elif cmd["cmd"] == TMIProcessWrapper.IPCCommands.REQ_IMG:
+            self.request_image(cmd["args"], cmd_id)
+        elif cmd["cmd"] == TMIProcessWrapper.IPCCommands.END_SYNCLOOP:
+            self.stop_sync_loop()
+            self.response_queue.put_nowait({"cmd_id" : cmd_id, "status" : 0})
+        else:
+            self.response_queue.put_nowait({"cmd_id" : cmd_id, "status" : -1, "error" : "NoSuchCommand"})
+
+
+    def syncloop(self, logfilepath = "logs/tmi_process.log"):
+        self._reconfigure_logger(logfilepath)
         self.logger.info("Started syncloop.")
 
         while self.__run_sync_loop:
-            if self.sim_step_count % 50 == 0:
+            if self.sim_step_count % 500 == 0:
                 self.logger.debug(f"Sim-Step-Count at {self.sim_step_count}")
 
             msgtype = self.iface._read_int32()
@@ -152,7 +188,7 @@ class TMIProcessWrapper:
 
                 # ============================ BEGIN ON RUN STEP ============================
 
-                if self._req_img and not self._req_in_progress and self.sim_step_count % self.img_req_frequency == 0:
+                if self._req_img and not self._req_in_progress:
                     self.__request_frame()
 
                 if self._send_action:
@@ -184,11 +220,13 @@ class TMIProcessWrapper:
                 self.iface.close()
 
             elif msgtype == int(MessageType.SC_ON_CONNECT_SYNC):
-                print("--------------------On connect event.!--------------------------")
+                self.logger.info("On connect event. Reuesting map.")
                 self.iface.on_connect_event()
                 self.iface._respond_to_call(msgtype)
             else:
                 self.iface._respond_to_call(msgtype)
+
+            self.check_command_queue()
         
 
         
