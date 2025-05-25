@@ -157,8 +157,9 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     if args.linux:
-        tmloader = None
-        plugin = None
+        home_dir = os.environ['HOME']
+        tmloader = Path(home_dir) / ".wine" / "drive_c" / "Program_Files_x86" / "TmNationsForever" / "TMLoader.exe"
+        plugin = Path(home_dir) / "Documents" / "TMInterface" /  "Plugins" / "Python_Link.as"
     else:
         tmloader = Path(os.path.expanduser("~")) / "AppData" / "Local" / "TMLoader" / "TMLoader.exe"
         plugin = Path(os.path.expanduser("~")) / "OneDrive" / "Dokumente" / "TMInterface" /"Plugins" / "Python_Link.as"

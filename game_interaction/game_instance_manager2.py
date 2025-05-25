@@ -4,11 +4,12 @@ import subprocess
 import os
 import time 
 import psutil
-import win32process
-import win32gui 
+if os.name == 'nt': 
+    import win32process
+    import win32gui 
 from pathlib import Path
-from multiprocessing.synchronize import Lock
-
+#from multiprocessing.synchronize import Lock
+from torch.multiprocessing import Lock
 from game_interaction.tminterface2 import TMInterface
 
 class GameInstanceManager:
@@ -36,7 +37,7 @@ class GameInstanceManager:
 
         if linux:
             # TODO get Lock.
-            return GameInstanceMangerLinux(TMLoader_path, TMLoader_profile_name, path_to_plugin, None, headless)
+            return GameInstanceMangerLinux(TMLoader_path, TMLoader_profile_name, path_to_plugin, Lock(), headless)
         else:
             return GameInstanceManagerWindows(TMLoader_path, TMLoader_profile_name, path_to_plugin, headless)
 
