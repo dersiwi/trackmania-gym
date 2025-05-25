@@ -95,3 +95,11 @@ if __name__ == "__main__":
         threshold=0.5,
         expected=True
     )
+
+    test_case(
+        name="Unequal movement",
+        buffer_size=5,
+        positions=[[0, 0, 0], [0.1, 0, 0], [0.1, 0, 0], [0.1, 0, 0], [2.5, 0, 0]],
+        threshold=2,
+        expected=True
+    )
