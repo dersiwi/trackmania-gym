@@ -2,7 +2,7 @@
 Custom Gymnasium Environment 
 https://gymnasium.farama.org/tutorials/gymnasium_basics/environment_creation/
 """
-from typing import Any,Dict,Tuple,Optional
+from typing import Any,Dict,Tuple,Optional,List
 
 import gymnasium as gym
 import numpy as np
@@ -10,15 +10,14 @@ import time
 from queue import Queue
 from tminterface.structs import CheckpointData, SimStateData, CheckpointTime
 
-
 from game_interaction.tminterface2 import TMInterface, MessageType
 from game_interaction.game_instance_manager2 import GameInstanceManager
 from game_interaction.process_wrapper import TMIProcessWrapper
 
 from trackmania_env.envs.actionmap import ACTION_MAP
+from trackmania_env.envs.observations_builder import make_gym_space_dict
 
 import logging
-
 
 class TMNF_Single_Agent_Env(gym.Env):
     """The reinforcement learning environment for Trackmania Nations Forever"""
@@ -31,7 +30,7 @@ class TMNF_Single_Agent_Env(gym.Env):
             self,
             img_width: int,
             img_height: int,
-            observations_space: gym.spaces.Dict,
+            observations_list : List[str],
             gim: GameInstanceManager,
             command_queue : Queue,
             response_queue : Queue,
@@ -48,7 +47,7 @@ class TMNF_Single_Agent_Env(gym.Env):
         self.img_shape = (self.color_channels,img_height,img_width)
         
         self.gim = gim 
-        self.observation_space = observations_space
+        self.observation_space = make_gym_space_dict(observations_list)
 
         self.command_queue = command_queue
         self.response_queue = response_queue

@@ -51,7 +51,13 @@ if __name__ == "__main__":
     tm_env = TMNF_Single_Agent_Env(
         img_width=IMG_WIDTH,
         img_height=IMG_HEIHGT,
-        observations_space=  gym.spaces.Dict(spaces={"agent": gym.spaces.Box(0, 4, shape=(2,), dtype=int)}),
+        observations_list= [
+            "position",
+            "velocity",
+            "yaw_pitch_roll",
+            "scene_mobil_field.sync_vehicle_state_field.speed_forward",
+            "scene_mobil_field.input_steer",
+            "scene_mobil_field.engine_field.gear"],
         gim=GIM,
         command_queue=control_queue,
         response_queue=response_queue)
