@@ -1,4 +1,7 @@
 import argparse
+import logging
+from pathlib import Path
+import os
 
 def get_argparser() -> None:
     parser = argparse.ArgumentParser()
@@ -9,3 +12,25 @@ def get_argparser() -> None:
 
     args = parser.parse_args()
     return args
+
+
+def config_logging() -> None:
+    logging.basicConfig(
+        level=logging.DEBUG,
+        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+        handlers=[
+            logging.FileHandler("logs/app.log"),
+            logging.StreamHandler()
+        ]
+    )
+
+def get_paths(linux : bool = False) -> tuple[str, str]:
+    """Return paths to tm-loader and to plugin"""
+    if linux:
+        home_dir = os.environ['HOME']
+        tmloader = Path(home_dir) / ".wine" / "drive_c" / "Program_Files_x86" / "TmNationsForever" / "TMLoader.exe"
+        plugin = Path(home_dir) / "Documents" / "TMInterface" /  "Plugins" / "Python_Link.as"
+    else:
+        tmloader = Path(os.path.expanduser("~")) / "AppData" / "Local" / "TMLoader" / "TMLoader.exe"
+        plugin = Path(os.path.expanduser("~")) / "OneDrive" / "Dokumente" / "TMInterface" /"Plugins" / "Python_Link.as"
+    return tmloader, plugin

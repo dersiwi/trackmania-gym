@@ -17,6 +17,7 @@ from queue import Full
 from bytefield import ArrayField
 import logging
 
+from utils.scriptargs import get_argparser, config_logging, get_paths
 
 def run_wrapper(iface, cmd_q, res_q, img_w, img_h): # apparently its better to run process like this to avoid pickel issues or smth?
     wrapper = TMIProcessWrapper(iface, command_queue=cmd_q, response_queue=res_q, img_width=img_w, img_height=img_h)
@@ -24,35 +25,11 @@ def run_wrapper(iface, cmd_q, res_q, img_w, img_h): # apparently its better to r
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--tmi_port", "-p", type=int, default=8775)
-    parser.add_argument("--launch", "-l", action="store_true",  default=False)
-    parser.add_argument("--linux", "-u", action="store_true",  default=False)
-    parser.add_argument("--reqimgs", "-imgs", action="store_true",  help="If set, requests images each simulation step and stores them in the current directory in a /frame folder. [WARNING : This is a ton of frames, even for short amounts of running it.]", default=False)
-
-    args = parser.parse_args()
-
-    if args.linux:
-        tmloader = None
-        plugin = None
-    else:
-        tmloader = Path(os.path.expanduser("~")) / "AppData" / "Local" / "TMLoader" / "TMLoader.exe"
-        plugin = Path(os.path.expanduser("~")) / "OneDrive" / "Dokumente" / "TMInterface" /"Plugins" / "Python_Link.as"
-
-
-
-    logging.basicConfig(
-        level=logging.DEBUG,
-        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-        handlers=[
-            logging.FileHandler("logs/app.log"),
-            logging.StreamHandler()
-        ]
-    )
-
+    args = get_argparser()
+    tmloader, plugin = get_paths(args.linux)
+    config_logging()
     logger = logging.getLogger("examplescript")
 
-    
 
     GMI = GameInstanceManager.get_instance(TMLoader_path = tmloader,
                             path_to_plugin = plugin,
