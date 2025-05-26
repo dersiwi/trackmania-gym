@@ -5,6 +5,8 @@ https://gymnasium.farama.org/tutorials/gymnasium_basics/environment_creation/
 from typing import Any,Dict,Tuple,Optional,List
 
 import gymnasium as gym
+from gymnasium.spaces import Box,Discrete 
+from numpy import uint8,int32,float32,inf
 import numpy as np
 import time 
 from queue import Queue
@@ -15,7 +17,7 @@ from game_interaction.game_instance_manager2 import GameInstanceManager
 from game_interaction.process_wrapper import TMIProcessWrapper
 
 from trackmania_env.envs.actionmap import ACTION_MAP
-from trackmania_env.envs.observations_builder import make_gym_space_dict
+
 
 import logging
 
@@ -30,11 +32,17 @@ class TMNF_Single_Agent_Env(gym.Env):
             self,
             img_width: int,
             img_height: int,
-            observations_list : List[str],
             gim: GameInstanceManager,
             command_queue : Queue,
             response_queue : Queue,
-            color_channels : int = 3):
+            color_channels : int = 3,
+            observation_space = gym.spaces.Dict({
+                "image" : gym.spaces.Box(low=0, high=255, shape=(3,100,100), dtype=np.uint8),
+                "velocity": Box(-inf, inf, (3,), float32),
+                "yaw_pitch_roll": Box(-inf, inf, (3,), float32) ,
+                "position": Box(-inf, inf, (3,), float32),
+                "scene_mobil_field.engine_field.gear": Box(-inf, inf, (), float32),
+            }),):
         """
         Initializes the custom Gymnasium environment.
         This constructor sets up the basic structure of the environment.
@@ -47,7 +55,7 @@ class TMNF_Single_Agent_Env(gym.Env):
         self.img_shape = (self.color_channels,img_height,img_width)
         
         self.gim = gim 
-        self.observation_space = make_gym_space_dict(observations_list)
+        self.observation_space = observation_space
 
         self.command_queue = command_queue
         self.response_queue = response_queue
@@ -87,17 +95,11 @@ class TMNF_Single_Agent_Env(gym.Env):
         sim_step : int = imgs_and_simstate["sim_step"]
 
         # TODO Issue #3 and #4
-
-        gear = game_states.scene_mobil.engine.gear
-        speed = game_states.scene_mobil.max_linear_speed
-        burnout_state = game_states.scene_mobil.burnout_state  
-        velocity = game_states.velocity
+        # TODO what is with sim_step ?
+        # the wrapper classes will do the filtering
         observations = {
         "image": image,
-        "gear": gear,
-        "max_linear_speed": speed,
-        "burnout_state": burnout_state,
-        "velocity": velocity
+        "SimStateData": game_states,
         }
         return observations
 

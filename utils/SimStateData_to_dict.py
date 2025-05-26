@@ -3,15 +3,27 @@ import numpy as np
 from bytefield import FloatField, IntegerField, BooleanField, ArrayField, ByteArrayField, StructField
 from typing import List
 from tminterface.structs import SimStateData
-banned = []
+banned = ["last_field"]
 def flatten_struct(cls, prefix=""):
     """Flatten a ByteStruct class into a dict of {flat_name: gym.spaces.Box}."""
     instance = cls()  # instantiate to access resolved fields
     flat_dict = {}
-    members = [(attr,getattr(instance, attr)) for attr in dir(instance) if not callable(getattr(instance, attr)) and not attr.startswith("__")]
+    members = [(attr,getattr(instance, attr)) 
+                for attr in dir(instance) 
+                if not callable(getattr(instance, attr)) 
+                and not attr.startswith("__")]
+    # and not (attr.endswith("_field") and attr[:-6] in dir(instance))
     for (name,field) in members:
-        
+
+        # sadly need to harcode since i can not figue out the random substrings that get added to the fields 
+        #if "last" not in name:
+        #    name = name.replace("_field", "")
+        #if "names" in name:
+        #    name = name.replace("_names", "")
+
         full_name = f"{prefix}.{name}" if prefix else name
+        if full_name in ("player_info.last", "dyna.last"):
+            print(0)
         if (not isinstance(field, (
             IntegerField,
             FloatField,
@@ -27,6 +39,8 @@ def flatten_struct(cls, prefix=""):
         
         if isinstance(field, StructField):
             sub_cls = field.struct_type
+            #TODO hier das mit field rausmachen 
+            full_name = full_name.replace("_field","")
             flat_dict.update(flatten_struct(sub_cls, prefix=full_name))
             
         elif isinstance(field, ArrayField):
@@ -48,6 +62,8 @@ def flatten_struct(cls, prefix=""):
                 flat_dict[full_name] = gym.spaces.Box(low=low, high=high, shape=(), dtype=dtype)
             
         elif isinstance(field, ByteArrayField):
+            if full_name.endswith("last") :
+                full_name = full_name+"field"
             flat_dict[full_name] = gym.spaces.Box(low=0, high=255, shape=(field.size,), dtype=np.uint8)
         
         elif isinstance(field,List):
@@ -56,7 +72,7 @@ def flatten_struct(cls, prefix=""):
             low = 0 if dtype == np.bool_ else -np.inf
             high = 1 if dtype == np.bool_ else np.inf
             flat_dict[full_name] = gym.spaces.Box(low=low, high=high, shape=(np.shape(field)), dtype=dtype)
-            
+    flat_dict["image"] = gym.spaces.Box(low=0, high=255, shape=(3,100,100), dtype=np.uint8)       
     return flat_dict
 
 def get_numpy_dtype(field_type):

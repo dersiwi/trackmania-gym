@@ -6,6 +6,8 @@ from game_interaction.game_instance_manager2 import GameInstanceManager
 from game_interaction.run_multiprocess_wrapper import run_wrapper
 from game_interaction.process_wrapper import TMIProcessWrapper
 from utils.scriptargs import get_argparser
+from trackmania_env.wrappers.observations_filter import ObservationFilter
+from simstate_space_dict import simstate_space_dict
 
 from pathlib import Path
 import os
@@ -51,18 +53,26 @@ if __name__ == "__main__":
     tm_env = TMNF_Single_Agent_Env(
         img_width=IMG_WIDTH,
         img_height=IMG_HEIHGT,
-        observations_list= [
-            "position",
-            "velocity",
-            "yaw_pitch_roll",
-            "scene_mobil_field.sync_vehicle_state_field.speed_forward",
-            "scene_mobil_field.input_steer",
-            "scene_mobil_field.engine_field.gear"],
         gim=GIM,
         command_queue=control_queue,
         response_queue=response_queue)
     
-
+    # TODO wrap here the env with observation filter wrapper
+    observations_list= [
+            "image",
+            "position",
+            "velocity",
+            "yaw_pitch_roll",
+            "scene_mobil.sync_vehicle_state.speed_forward",
+            "scene_mobil.input_steer",
+            "scene_mobil.async_vehicle_state.is_turbo",
+            "scene_mobil.engine.gear",
+            "scene_mobil.async_vehicle_state.rest",
+            "player_info.last",
+            ]
+    # stress test to make sure all fields work
+    observations_list = list(simstate_space_dict.keys())
+    tm_env = ObservationFilter(tm_env,observations_list)
     
     obs: gym.spaces.Dict = tm_env._get_obs()
     with open('out.txt', 'w') as f:
