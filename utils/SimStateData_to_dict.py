@@ -38,8 +38,7 @@ def flatten_struct(cls, prefix=""):
             or (full_name in banned)): continue
         
         if isinstance(field, StructField):
-            sub_cls = field.struct_type
-            #TODO hier das mit field rausmachen 
+            sub_cls = field.struct_type 
             full_name = full_name.replace("_field","")
             flat_dict.update(flatten_struct(sub_cls, prefix=full_name))
             
@@ -72,7 +71,9 @@ def flatten_struct(cls, prefix=""):
             low = 0 if dtype == np.bool_ else -np.inf
             high = 1 if dtype == np.bool_ else np.inf
             flat_dict[full_name] = gym.spaces.Box(low=low, high=high, shape=(np.shape(field)), dtype=dtype)
-    flat_dict["image"] = gym.spaces.Box(low=0, high=255, shape=(3,100,100), dtype=np.uint8)       
+    # tminterface by default returns a BGRA image so 4 dimensional
+    #TODO a global config would be helpfull in order to set the width and height of the image
+    flat_dict["image"] = gym.spaces.Box(low=0, high=255, shape=(4,100,100), dtype=np.uint8)       
     return flat_dict
 
 def get_numpy_dtype(field_type):

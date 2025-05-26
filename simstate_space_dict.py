@@ -13,7 +13,7 @@ simstate_space_dict = {
     "cp_data.reserved": Box(-inf, inf, (), float32)  ,
     "cp_data.reserved_field": Box(-2147483648, 2147483647, (), int32)  ,
     "cp_data.size": Box(-inf, inf, (), float32)  ,
-    "image": Box(0, 255, (3, 100, 100), uint8)  ,
+    "image": Box(0, 255, (4, 100, 100), uint8)  ,
     "display_speed": Box(-inf, inf, (), float32)  ,
     "dyna.current_state.last_field": Box(-2147483648, 2147483647, (), int32)  ,
     "dyna.current_state.master_offset": Box(-inf, inf, (), float32)  ,
