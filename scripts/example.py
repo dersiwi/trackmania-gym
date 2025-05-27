@@ -8,16 +8,17 @@ Each message has to be acknowledged by the client.
 """
 import argparse
 import sys, os
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))) # TODO : <- i don't want this here and it shouldnt have to be here!!!
-
-#from trackmania_rl.tmi_interaction.tminterface2 import MessageType, TMInterface
-from game_interaction.tminterface2 import MessageType, TMInterface
-from game_interaction.game_instance_manager2 import GameInstanceManager
 from pathlib import Path
 import numpy as np
-from tminterface.structs import CheckpointData, SimStateData, CheckpointTime
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))) # TODO : <- i don't want this here and it shouldnt have to be here!!!
 
-from bytefield import ArrayField
+
+from game_interaction.tminterface2 import MessageType, TMInterface
+from game_interaction.game_instance_manager2 import GameInstanceManager
+from utils.print_simstate import print_sim_state
+from utils.scriptargs import get_paths, get_argparser, config_logging
+
+
 """
 used for width and height of image, if rqimgs is set
     -IMG_W, IMG_H : width and height of image
@@ -41,33 +42,7 @@ REPEAT = True
 """Gets simulation state in specified frequency and prints it to the console"""
 STATE_FREQUENCY = 10
 
-def print_sim_state(ssD : SimStateData) -> None:
-    print("\n=== Simulation State Snapshot ===")
-    print(f"    Time:                {ssD.time} ms")
-    print(f"    Position:            {ssD.position}")
-    print(f"    Velocity:            {ssD.velocity}")
-    print(f"    Rotation (YawPitchRoll): {ssD.yaw_pitch_roll}")
-    print(f"    Display Speed:       {ssD.display_speed} units")
-    
-    print("\nInput State:")
-    print(f"    Accelerate:          {ssD.input_accelerate}")
-    print(f"    Brake:               {ssD.input_brake}")
-    print(f"    Left:                {ssD.input_left}")
-    print(f"    Right:               {ssD.input_right}")
-    print(f"    Steer (analog):      {ssD.input_steer}")
-    print(f"    Gas (analog):        {ssD.input_gas}")
-    
-    print("\nRace Progress:")
-    print(f"    Race Time:           {ssD.race_time} ms")
-    print(f"    Rewind Time:         {ssD.rewind_time} ms")
-    print(f"    Num Respawns:        {ssD.num_respawns}")
 
-    cpData : CheckpointData = ssD.cp_data
-    cp_times_structs : ArrayField[CheckpointTime] = cpData.cp_times  # This is likely a list of structs
-
-    cp_times = [cp_times_structs[i].time for i in range(cpData.cp_times_length)]
-    print(f"   Checkpoint Times:    {cp_times}")
-    print(f"    Checkpoints Passed:  {cpData.cp_states_length}")
 
 
 
@@ -148,26 +123,13 @@ def main(iface : TMInterface, rqimgs : bool = False):
     
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--tmi_port", "-p", type=int, default=8775)
-    parser.add_argument("--launch", "-l", action="store_true",  default=False)
-    parser.add_argument("--linux", "-u", action="store_true",  default=False)
-    parser.add_argument("--reqimgs", "-imgs", action="store_true",  help="If set, requests images each simulation step and stores them in the current directory in a /frame folder. [WARNING : This is a ton of frames, even for short amounts of running it.]", default=False)
-
-    args = parser.parse_args()
-
-    if args.linux:
-        home_dir = os.environ['HOME']
-        tmloader = Path(home_dir) / ".wine" / "drive_c" / "Program_Files_x86" / "TmNationsForever" / "TMLoader.exe"
-        plugin = Path(home_dir) / "Documents" / "TMInterface" /  "Plugins" / "Python_Link.as"
-    else:
-        tmloader = Path(os.path.expanduser("~")) / "AppData" / "Local" / "TMLoader" / "TMLoader.exe"
-        plugin = Path(os.path.expanduser("~")) / "OneDrive" / "Dokumente" / "TMInterface" /"Plugins" / "Python_Link.as"
+    args = get_argparser
+    tmloader, plugin = get_paths(args.linux)
 
     GMI = GameInstanceManager.get_instance(TMLoader_path = tmloader,
-                            path_to_plugin = plugin,
-                            linux = args.linux)
-    
+                                path_to_plugin = plugin,
+                                linux = args.linux)
+        
     if args.launch:
         GMI.launch_game()
 
