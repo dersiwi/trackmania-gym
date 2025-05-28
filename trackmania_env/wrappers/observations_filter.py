@@ -9,7 +9,6 @@ class ObservationFilter(ObservationWrapper):
     def __init__(self, env,observations_list):
         super().__init__(env)
         self.observation_list = observations_list
-        # TODO I think that we need to have images in the sim_state_dict so we easily define the oberservations spaces here 
         self.observation_space = self.make_gym_space_dict(observations_list) 
 
     # step() and reset() are unnecessary to implement since the ObservationWrapper automatically defines them like that 
@@ -32,14 +31,12 @@ class ObservationFilter(ObservationWrapper):
             if s == "image": 
                 obs[s] = observation[s]
             else: 
-                if "cp_states_length" in s:
-                    print(1)
                 obs[s] = self.get_value_SimStateData(s,observation["SimStateData"])
         return obs
     
     def _get_obs(self)-> Dict:
         """This function should actually never be used for learning or inference 
-        since we got the observation function. Mainly used it for logging or debugging"""
+        since we got the observation function. Mainly use it for logging or debugging"""
         return self.observation(self.env._get_obs())
 
     def make_gym_space_dict(self,observations_list:List[str])-> gym.spaces.Dict:

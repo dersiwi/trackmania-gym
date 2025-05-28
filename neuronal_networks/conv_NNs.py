@@ -1,6 +1,6 @@
 import torch.nn as nn
 import torchvision.models as models
-
+import torch 
 class PrebuiltResNet(nn.Module):
     """
     A  wrapper for loading pretrained ResNet models from torchvision.
@@ -33,4 +33,12 @@ class PrebuiltResNet(nn.Module):
         # Replace the classification head
         self.model.fc = nn.Linear(in_features,out_dims)
     def forward(self, x):
+        # we defined images to be of shape (w,h,c)
+        # everything down there is ugly need to fix that 
+        if x.dtype == torch.uint8:
+            x = x.float()
+        x = x.permute(2,0,1)
+
+        if x.ndim == 3:
+            x = x.unsqueeze(0)
         return self.model(x)

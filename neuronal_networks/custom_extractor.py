@@ -1,7 +1,7 @@
 """Implementation of a custom feature extractor
 https://stable-baselines3.readthedocs.io/en/master/guide/custom_policy.html#multiple-inputs-and-dictionary-observations"""
 import gymnasium as gym
-import torch as th
+import torch 
 from torch import nn
 
 from stable_baselines3.common.torch_layers import BaseFeaturesExtractor
@@ -35,23 +35,31 @@ class TMN_Extractor(BaseFeaturesExtractor):
         super().__init__(observation_space, features_dim=1)
 
         extractors: dict[str, nn.Module] = {}
-
+        #  pytroch ModuleDict cant handel dots in key so we remove the dots but later we must know what the orginal key was 
+        self.key_mappings: dict[str,str] = {}
         total_concat_size = 0
         for key, subspace in observation_space.spaces.items():
             if key == "image":
                 extractors[key] = vision_model
                 total_concat_size += vision_model_out_dim
+                self.key_mappings[key] = key
             else:
                 """
                 TODO do we really need to project down ? 
                 Should our final feature vector be not that long ? -> could leed to not good training  
                 see https://bmild.github.io/fourfeat/index.html
                 """
+                # pytroch ModuleDict cant handel dots in key 
+                new_key = key.replace('.',"")
+                self.key_mappings[new_key] = key
                 if len(subspace.shape) == 1 and subspace.shape[0] > 50 :
-                    extractors[key] = nn.Linear(subspace.shape[0], subspace.shape[0] //4)
+                    extractors[new_key] = nn.Linear(subspace.shape[0], subspace.shape[0] //4)
                     total_concat_size += subspace.shape[0] //4
-                else: 
-                    extractors[key] = nn.Flatten()
+                elif len(subspace.shape) <= 1:
+                    extractors[new_key] = nn.Identity()
+                    total_concat_size += gym.spaces.utils.flatdim(subspace)
+                else:
+                    extractors[new_key] = nn.Flatten()
                     total_concat_size += gym.spaces.utils.flatdim(subspace)
 
         self.extractors = nn.ModuleDict(extractors)
@@ -59,9 +67,14 @@ class TMN_Extractor(BaseFeaturesExtractor):
         # Update the features dim manually
         self._features_dim = total_concat_size
 
-    def forward(self, observations: dict[str, th.Tensor]) -> th.Tensor:
+    def forward(self, observations: dict[str, torch.Tensor]) -> torch.Tensor:
         encoded_tensor_list = []
-
         for key, extractor in self.extractors.items():
-            encoded_tensor_list.append(extractor(observations[key]))
-        return th.cat(encoded_tensor_list, dim=1)
+            tensor = extractor(observations[self.key_mappings[key]])
+            if key == "image" :
+                tensor = tensor[0]
+            tensor = torch.tensor(tensor, dtype= torch.float)
+            if len(tensor.shape) < 1 :
+                tensor = tensor.unsqueeze(0)
+            encoded_tensor_list.append(tensor)
+        return torch.cat(encoded_tensor_list, dim=-1)
