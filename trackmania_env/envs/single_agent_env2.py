@@ -16,6 +16,7 @@ from game_interaction.tminterface2 import TMInterface, MessageType
 from game_interaction.game_instance_manager2 import GameInstanceManager
 from game_interaction.process_wrapper import TMIProcessWrapper
 
+from trackmania_env.envs.position_buffer import PositionBuffer
 from trackmania_env.envs.actionmap import ACTION_MAP
 
 
@@ -32,9 +33,10 @@ class TMNF_Single_Agent_Env(gym.Env):
             self,
             img_width: int,
             img_height: int,
-            gim: GameInstanceManager,
             command_queue : Queue,
             response_queue : Queue,
+            position_buffer_size : int = 20,
+            position_moved_threshold : float = 0.2,
             color_channels : int = 3,
             observation_space = gym.spaces.Dict({
                 "image" : gym.spaces.Box(low=0, high=255, shape=(3,100,100), dtype=np.uint8),
@@ -54,13 +56,15 @@ class TMNF_Single_Agent_Env(gym.Env):
         self.color_channels= color_channels
         self.img_shape = (self.color_channels,img_height,img_width)
         
-        self.gim = gim 
         self.observation_space = observation_space
 
         self.command_queue = command_queue
         self.response_queue = response_queue
         self.__ipc_cmd_id = 0
         self.__ipc_timeout : int = 10
+
+        self.position_buffer = PositionBuffer(position_buffer_size)
+        self.position_buffer_threshold = position_moved_threshold
 
         self.logger = logging.getLogger(self.__class__.__name__)
         
@@ -70,6 +74,9 @@ class TMNF_Single_Agent_Env(gym.Env):
         """
         
         self.action_space = gym.spaces.Discrete(len(ACTION_MAP))
+
+        self.actions = []
+        """list of actions that may be stored later."""
     
         
     def _get_info(self) -> Dict[str,Any]:
@@ -124,6 +131,8 @@ class TMNF_Single_Agent_Env(gym.Env):
         
         (left,right,accelerate,brake) = ACTION_MAP[action]
 
+        self.actions.append((left,right,accelerate,brake))
+
         # send the action via tminterface here
         self.command_queue.put(TMIProcessWrapper.IPCCommands.get_act_command(self.__ipc_cmd_id, (left,right,accelerate,brake)))
         res = self.response_queue.get(timeout=self.__ipc_timeout)
@@ -132,14 +141,18 @@ class TMNF_Single_Agent_Env(gym.Env):
 
 
         observations = self._get_obs()
+        ssD : SimStateData = observations["SimStateData"]
+
+        self.position_buffer.add(ssD.position)
+        race_finished = ssD.player_info.race_finished
 
 
         # TODO check if episode terminated and or tuncated, terminated if reached the goal, truncated means that a timelimit has been reached but MDP is not in a terminal state
-        terminated = False
+        terminated = not self.position_buffer.moved_more_than_threshold(self.position_buffer_threshold)
         truncated = False
         
         # TODO calculate reward
-        reward = 0.
+        reward = self.position_buffer.distance_moved()
         
         # TODO also store some info for logging or debugging
         info = self._get_info() 
@@ -189,3 +202,8 @@ class TMNF_Single_Agent_Env(gym.Env):
         if mode == "rgb_array":
             # TODO retun the actual frame
             return np.zeros(shape = self.img_shape)
+        
+
+    def store_actions(self, filename : str):
+        with open(filename, "w") as file:
+            file.write(f"{self.actions}\n")

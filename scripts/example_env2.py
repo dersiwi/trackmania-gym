@@ -12,13 +12,17 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))) 
 
 
 from trackmania_env.envs.single_agent_env2 import TMNF_Single_Agent_Env
+from trackmania_env.envs.actionmap import get_reverse_action_map
+from trackmania_env.wrappers.observations_filter import ObservationFilter
+
+
 from game_interaction.game_instance_manager2 import GameInstanceManager
 from game_interaction.run_multiprocess_wrapper import run_wrapper
 from game_interaction.process_wrapper import TMIProcessWrapper
-
-from trackmania_env.wrappers.observations_filter import ObservationFilter
-from simstate_space_dict import simstate_space_dict
 from game_interaction.tminterface_commands import TMInterfaceCommands
+
+
+from simstate_space_dict import simstate_space_dict
 from utils.scriptargs import get_argparser, get_paths, config_logging
 
 
@@ -55,12 +59,11 @@ if __name__ == "__main__":
     tm_env = TMNF_Single_Agent_Env(
         img_width=IMG_WIDTH,
         img_height=IMG_HEIHGT,
-        gim=GIM,
         command_queue=control_queue,
         response_queue=response_queue)
     
     # TODO wrap here the env with observation filter wrapper
-    observations_list= [
+    observations_list = [
             "image",
             "position",
             "velocity",
@@ -74,7 +77,7 @@ if __name__ == "__main__":
             ]
     # stress test to make sure all fields work
     observations_list = list(simstate_space_dict.keys())
-    tm_env = ObservationFilter(tm_env,observations_list)
+    tm_env = ObservationFilter(tm_env, observations_list)
     
     obs: gym.spaces.Dict = tm_env._get_obs()
     with open('out.txt', 'w') as f:
@@ -83,10 +86,21 @@ if __name__ == "__main__":
                 print(k)
                 print(v)
                 print("-"*20)
-    for i in range(100):
-        tm_env.step(np.random.randint(0, 12))
 
+    if args.replay:
+        logger.info(f"Replaying actions from {args.replay}")
+        with open(args.replay, "r") as file:
+            actions = [eval(line.strip()) for line in file][0]
 
+        RAM = get_reverse_action_map()
+        for action in actions:
+            tm_env.step(RAM[action])
+
+    else:
+        for i in range(100):
+            tm_env.step(np.random.randint(0, 12))
+        original_env : TMNF_Single_Agent_Env = tm_env.env
+        original_env.store_actions("logs/action_log.txt")
     
     control_queue.put(TMIProcessWrapper.IPCCommands.get_cmd_command(999, TMInterfaceCommands.recover_inputs("inputs.txt")))
 

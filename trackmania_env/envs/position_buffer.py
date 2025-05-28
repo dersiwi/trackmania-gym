@@ -43,10 +43,14 @@ class PositionBuffer:
         if self.count < 2:
             return True
 
+        total_distance = self.distance_moved()
+        return total_distance > movement_threshold
+    
+    def distance_moved(self) -> float:
         ordered = self.get_ordered()
         diffs = np.diff(ordered, axis=0)
         total_distance = np.sum(np.linalg.norm(diffs, axis=1))
-        return total_distance > movement_threshold
+        return total_distance
 
 if __name__ == "__main__":
     def test_case(name, buffer_size, positions, threshold, expected):

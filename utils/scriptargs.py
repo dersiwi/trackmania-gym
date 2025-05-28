@@ -3,13 +3,15 @@ import logging
 from pathlib import Path
 import os
 
-def get_argparser() -> None:
+
+
+def get_argparser() -> any:
     parser = argparse.ArgumentParser()
     parser.add_argument("--tmi_port", "-p", type=int, default=8775)
     parser.add_argument("--launch", "-l", action="store_true",  default=False)
     parser.add_argument("--linux", "-u", action="store_true",  default=False)
     parser.add_argument("--reqimgs", "-imgs", action="store_true",  help="If set, requests images each simulation step and stores them in the current directory in a /frame folder. [WARNING : This is a ton of frames, even for short amounts of running it.]", default=False)
-
+    parser.add_argument("--replay", "-r", type=str, help="Specifies the path to an action_log-file and replays it.", default=None)
     args = parser.parse_args()
     return args
 
