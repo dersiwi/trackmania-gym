@@ -49,15 +49,17 @@ class TMN_Extractor(BaseFeaturesExtractor):
                 Should our final feature vector be not that long ? -> could leed to not good training  
                 see https://bmild.github.io/fourfeat/index.html
                 """
-                # pytroch ModuleDict cant handel dots in key 
+                # pytroch ModuleDict cant handle dots in key 
                 new_key = key.replace('.',"")
                 self.key_mappings[new_key] = key
                 if len(subspace.shape) == 1 and subspace.shape[0] > 50 :
                     extractors[new_key] = nn.Linear(subspace.shape[0], subspace.shape[0] //4)
                     total_concat_size += subspace.shape[0] //4
+
                 elif len(subspace.shape) <= 1:
                     extractors[new_key] = nn.Identity()
                     total_concat_size += gym.spaces.utils.flatdim(subspace)
+
                 else:
                     extractors[new_key] = nn.Flatten()
                     total_concat_size += gym.spaces.utils.flatdim(subspace)
@@ -71,10 +73,6 @@ class TMN_Extractor(BaseFeaturesExtractor):
         encoded_tensor_list = []
         for key, extractor in self.extractors.items():
             tensor = extractor(observations[self.key_mappings[key]])
-            if key == "image" :
-                tensor = tensor[0]
-            tensor = torch.tensor(tensor, dtype= torch.float)
-            if len(tensor.shape) < 1 :
-                tensor = tensor.unsqueeze(0)
+            if key == "image" : tensor = tensor[0]
             encoded_tensor_list.append(tensor)
         return torch.cat(encoded_tensor_list, dim=-1)
