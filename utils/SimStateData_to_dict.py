@@ -3,7 +3,12 @@ import numpy as np
 from bytefield import FloatField, IntegerField, BooleanField, ArrayField, ByteArrayField, StructField
 from typing import List
 from tminterface.structs import SimStateData
+from six import string_types
 banned = ["last_field"]
+
+def is_list_of_strings(obj):
+    return isinstance(obj, list) and all(isinstance(item, str) for item in obj)
+
 def flatten_struct(cls, prefix=""):
     """Flatten a ByteStruct class into a dict of {flat_name: gym.spaces.Box}."""
     instance = cls()  # instantiate to access resolved fields
@@ -14,7 +19,6 @@ def flatten_struct(cls, prefix=""):
                 and not attr.startswith("__")]
     # and not (attr.endswith("_field") and attr[:-6] in dir(instance))
     for (name,field) in members:
-
         full_name = f"{prefix}.{name}" if prefix else name
         if (not isinstance(field, (
             IntegerField,
@@ -27,7 +31,7 @@ def flatten_struct(cls, prefix=""):
             int,
             float,
             bool)) 
-            or (full_name in banned)): continue
+            or (full_name in banned)) or is_list_of_strings(field): continue
         
         if isinstance(field, StructField):
             sub_cls = field.struct_type 

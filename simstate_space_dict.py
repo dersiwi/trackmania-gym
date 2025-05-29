@@ -257,7 +257,6 @@ simstate_space_dict = {
     "scene_mobil.input_gas_field": Box(-inf, inf, (), float32)  ,
     "scene_mobil.input_steer": Box(-inf, inf, (), float32)  ,
     "scene_mobil.input_steer_field": Box(-inf, inf, (), float32)  ,
-    "scene_mobil.instance_with_parent_field_names": Box(-inf, inf, (1,), float32)  ,
     "scene_mobil.is_freewheeling": Box(-inf, inf, (), float32)  ,
     "scene_mobil.is_freewheeling_field": Discrete(2)  ,
     "scene_mobil.is_light_trials_set": Box(-inf, inf, (), float32)  ,
