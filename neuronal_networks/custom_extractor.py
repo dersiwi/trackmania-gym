@@ -61,7 +61,7 @@ class TMN_Extractor(BaseFeaturesExtractor):
                     total_concat_size += gym.spaces.utils.flatdim(subspace)
 
                 else:
-                    extractors[new_key] = nn.Flatten()
+                    extractors[new_key] = nn.Flatten(start_dim=0)
                     total_concat_size += gym.spaces.utils.flatdim(subspace)
 
         self.extractors = nn.ModuleDict(extractors)

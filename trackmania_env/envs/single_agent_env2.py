@@ -70,7 +70,7 @@ class TMNF_Single_Agent_Env(gym.Env):
         """
         
         self.action_space = gym.spaces.Discrete(len(ACTION_MAP))
-    
+        self.SimStateData = None
         
     def _get_info(self) -> Dict[str,Any]:
         """Helper function for computing additional information (e.g. for debugging or logging)"""
@@ -93,7 +93,7 @@ class TMNF_Single_Agent_Env(gym.Env):
         image : np.ndarray = imgs_and_simstate["img"]
         game_states : SimStateData = imgs_and_simstate["sim_state"]
         sim_step : int = imgs_and_simstate["sim_step"]
-
+        self.SimStateData = game_states
         # TODO Issue #3 and #4
         # TODO what is with sim_step ?
         # the wrapper classes will do the filtering

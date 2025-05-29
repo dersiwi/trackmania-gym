@@ -22,6 +22,7 @@ from trackmania_env.wrappers.transform_torch import PytorchWrapper
 from neuronal_networks.conv_NNs import PrebuiltResNet
 from neuronal_networks.custom_extractor import TMN_Extractor
 
+from simstate_space_dict import simstate_space_dict
 
 import gymnasium as gym
 import numpy as np
@@ -75,10 +76,13 @@ if __name__ == "__main__":
             "scene_mobil.input_steer",
             "scene_mobil.async_vehicle_state.is_turbo",
             "scene_mobil.engine.gear",
-            #"scene_mobil.async_vehicle_state.rest_field",
-            #"player_info.last_field",
+            "input_finish_event.input_data_field",
+            "input_brake_event.last_field",
+            "input_accelerate_event.time_field",
+            "scene_mobil.async_vehicle_state.rest_field",
+            "player_info.last_field",
             ]
-    
+    observations_list = list(simstate_space_dict.keys())
     tm_env = ObservationFilter(tm_env,observations_list)
     tm_env = BGRA_to_RGB(tm_env)
     tm_env = PytorchWrapper(tm_env)
@@ -88,10 +92,11 @@ if __name__ == "__main__":
     extractor = TMN_Extractor(tm_env.observation_space,vision_model=vision_model,vision_model_out_dim=out_dim)
     with open('example_extractor_out.txt', 'w') as f:
         with redirect_stdout(f):
-             for i in range(10):
+             for i in range(20):
                 obs,_,_,_,_ = tm_env.step(np.random.randint(0,12))
                 v = extractor(obs)
                 print(v)
+                print(v.shape)
                 print("-"*20)
    
     control_queue.put(TMIProcessWrapper.IPCCommands.get_end_syncloop_command(1000)) #1000 doesnt matter.
