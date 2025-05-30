@@ -1,4 +1,5 @@
 from game_interaction.tminterface2 import MessageType, TMInterface
+from game_interaction.game_instance_manager2 import GameInstanceManager
 import numpy as np
 import time
 import logging, os
@@ -21,6 +22,8 @@ class TMIProcessWrapper:
         ACT = 0
         REQ_IMG = 1
         END_SYNCLOOP = 2
+        EXECUTE_COMMAND = 3
+        SIMULATION_STARTED = 4
 
         @staticmethod
         def get_act_command(command_id : int, action : tuple[bool, bool, bool, bool]) -> dict[str, any]:
@@ -36,11 +39,25 @@ class TMIProcessWrapper:
         def get_end_syncloop_command(command_id : int) -> dict[str, any]:
             """Returns command to end syncloop execution."""
             return {"cmd_id" : command_id, "cmd" : TMIProcessWrapper.IPCCommands.END_SYNCLOOP, "args" : None}
+        
+        @staticmethod
+        def get_cmd_command(command_id : int, command : str) -> dict[str, any]:
+            """Returns a command (for TMIProcessWrapper) that tells the underlying TMInterface to send a command to the game-instance."""
+            return {"cmd_id" : command_id, "cmd" : TMIProcessWrapper.IPCCommands.EXECUTE_COMMAND, "args" : command}
+        
+        @staticmethod
+        def get_startsignal(command_id : int) -> dict[str, any]:
+            """Returns a command which only sends a response, once the server is sending `SC_SYNC' commands; i.e. track has started."""
+            return {"cmd_id" : command_id, "cmd" : TMIProcessWrapper.IPCCommands.SIMULATION_STARTED}
 
 
-    def __init__(self, tminterface : TMInterface, command_queue : Queue, response_queue : Queue, img_width : int, img_height : int, img_store_capacity : int = 100):
-
-        self.iface : TMInterface = tminterface
+    def __init__(self, gim : GameInstanceManager, launch_game : bool, command_queue : Queue, response_queue : Queue, img_width : int, img_height : int, img_store_capacity : int = 100):
+        self.launch_game : bool = launch_game
+        self.gim = gim
+        if launch_game:
+            self.gim.launch_game()
+            self.gim.register_iface(10)
+        self.iface : TMInterface = gim.get_tminterface()
         self.command_queue : Queue = command_queue
         self.response_queue : Queue = response_queue
 
@@ -67,6 +84,7 @@ class TMIProcessWrapper:
         self.logger.info("TMIProcessWrapper initialized")
 
         self.__run_sync_loop = True
+        self.__start_cmd_id = -1
     
 
     def request_image(self, continuously : bool = False, cmd_id : int = -1):
@@ -155,6 +173,7 @@ class TMIProcessWrapper:
         
         # now handle command
         cmd_id : int = cmd["cmd_id"]
+        self.logger.debug(f"Got command with command-id {cmd_id} of type {cmd['cmd']}")
         assert not cmd_id == -1, "Command id cannot be -1 as this is used as an internal error-code."
         
         if cmd["cmd"] == TMIProcessWrapper.IPCCommands.ACT:
@@ -164,6 +183,11 @@ class TMIProcessWrapper:
         elif cmd["cmd"] == TMIProcessWrapper.IPCCommands.END_SYNCLOOP:
             self.stop_sync_loop()
             self.response_queue.put_nowait({"cmd_id" : cmd_id, "status" : 0})
+        elif cmd["cmd"] == TMIProcessWrapper.IPCCommands.EXECUTE_COMMAND:
+            self.iface.execute_command(cmd["args"])
+            self.response_queue.put_nowait({"cmd_id" : cmd_id, "status" : 0})
+        elif cmd["cmd"] == TMIProcessWrapper.IPCCommands.SIMULATION_STARTED:
+            self.__start_cmd_id = cmd["cmd_id"]
         else:
             self.response_queue.put_nowait({"cmd_id" : cmd_id, "status" : -1, "error" : "NoSuchCommand"})
 
@@ -187,6 +211,11 @@ class TMIProcessWrapper:
                 self.sim_step_count += 1
 
                 # ============================ BEGIN ON RUN STEP ============================
+
+                if not self.__start_cmd_id == -1:
+                    self.response_queue.put_nowait({"cmd_id" : self.__start_cmd_id, "status" : 0})
+                    self.__start_cmd_id = -1
+                    self.logger.info("Sending back command that abcdefg is ready.")
 
                 if self._req_img and not self._req_in_progress:
                     self.__request_frame()
@@ -227,6 +256,9 @@ class TMIProcessWrapper:
                 self.iface._respond_to_call(msgtype)
 
             self.check_command_queue()
+
+        if self.launch_game:
+            self.gim.close_game()
         
 
         
