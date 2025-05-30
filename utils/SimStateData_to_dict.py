@@ -3,7 +3,12 @@ import numpy as np
 from bytefield import FloatField, IntegerField, BooleanField, ArrayField, ByteArrayField, StructField
 from typing import List
 from tminterface.structs import SimStateData
+from six import string_types
 banned = ["last_field"]
+
+def is_list_of_strings(obj):
+    return isinstance(obj, list) and all(isinstance(item, str) for item in obj)
+
 def flatten_struct(cls, prefix=""):
     """Flatten a ByteStruct class into a dict of {flat_name: gym.spaces.Box}."""
     instance = cls()  # instantiate to access resolved fields
@@ -14,16 +19,7 @@ def flatten_struct(cls, prefix=""):
                 and not attr.startswith("__")]
     # and not (attr.endswith("_field") and attr[:-6] in dir(instance))
     for (name,field) in members:
-
-        # sadly need to harcode since i can not figue out the random substrings that get added to the fields 
-        #if "last" not in name:
-        #    name = name.replace("_field", "")
-        #if "names" in name:
-        #    name = name.replace("_names", "")
-
         full_name = f"{prefix}.{name}" if prefix else name
-        if full_name in ("player_info.last", "dyna.last"):
-            print(0)
         if (not isinstance(field, (
             IntegerField,
             FloatField,
@@ -35,7 +31,7 @@ def flatten_struct(cls, prefix=""):
             int,
             float,
             bool)) 
-            or (full_name in banned)): continue
+            or (full_name in banned)) or is_list_of_strings(field): continue
         
         if isinstance(field, StructField):
             sub_cls = field.struct_type 
@@ -73,7 +69,7 @@ def flatten_struct(cls, prefix=""):
             flat_dict[full_name] = gym.spaces.Box(low=low, high=high, shape=(np.shape(field)), dtype=dtype)
     # tminterface by default returns a BGRA image so 4 dimensional
     #TODO a global config would be helpfull in order to set the width and height of the image
-    flat_dict["image"] = gym.spaces.Box(low=0, high=255, shape=(4,100,100), dtype=np.uint8)       
+    flat_dict["image"] = gym.spaces.Box(low=0, high=255, shape=(100,100,4), dtype=np.uint8)       
     return flat_dict
 
 def get_numpy_dtype(field_type):
