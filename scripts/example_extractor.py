@@ -82,13 +82,15 @@ if __name__ == "__main__":
             "scene_mobil.async_vehicle_state.rest_field",
             "player_info.last_field",
             ]
-    observations_list = list(simstate_space_dict.keys())
+    #observations_list = list(simstate_space_dict.keys())
     tm_env = ObservationFilter(tm_env,observations_list)
     tm_env = BGRA_to_RGB(tm_env)
+    tm_env = TransformGrayscale(tm_env,keep_dim=True)
     tm_env = PytorchWrapper(tm_env)
 
     out_dim = 10
-    vision_model = PrebuiltResNet("resnet18",out_dims=out_dim,pretrained=True)
+    vision_model = PrebuiltResNet("resnet18",out_dims=out_dim,pretrained=True,
+                                  in_color_channels=tm_env.observation_space["image"].shape[-1])
     extractor = TMN_Extractor(tm_env.observation_space,vision_model=vision_model,vision_model_out_dim=out_dim)
     with open('example_extractor_out.txt', 'w') as f:
         with redirect_stdout(f):
