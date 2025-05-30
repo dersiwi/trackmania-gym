@@ -26,17 +26,17 @@ from simstate_space_dict import simstate_space_dict
 
 import gymnasium as gym
 import numpy as np
+import logging
+
+
+from utils.scriptargs import get_argparser, get_paths, config_logging
 
 if __name__ == "__main__":
     args = get_argparser()
+    TMLoader_path, path_to_plugin = get_paths(args.linux)
+    config_logging()
+    logger = logging.getLogger("examplescript")
 
-    if args.linux:
-        home_dir = os.environ['HOME']
-        TMLoader_path = Path(home_dir) / ".wine" / "drive_c" / "Program_Files_x86" / "TmNationsForever" / "TMLoader.exe"
-        path_to_plugin = Path(home_dir) / "Documents" / "TMInterface" /  "Plugins" / "Python_Link.as"
-    else:
-        TMLoader_path = Path(os.path.expanduser("~")) / "AppData" / "Local" / "TMLoader" / "TMLoader.exe"
-        path_to_plugin = Path(os.path.expanduser("~")) / "OneDrive" / "Dokumente" / "TMInterface" /"Plugins" / "Python_Link.as"
 
     IMG_WIDTH, IMG_HEIHGT = 180, 160
 
@@ -45,25 +45,25 @@ if __name__ == "__main__":
         path_to_plugin = path_to_plugin,
         linux = args.linux,
         headless= False)
-    
-    if args.launch:
-        GIM.launch_game()
-
-    GIM.register_iface()
-    iface = GIM.get_tminterface()
 
     # instanciate a SyncManager.
     control_queue = Queue() # queue for commands to send to TMIProcessWrapper
     response_queue = Queue() # answers (payload) from TMIProcess Wrapper
+   
 
-    p = Process(target=run_wrapper, args=(iface, control_queue, response_queue, IMG_WIDTH, IMG_HEIHGT))
+    p = Process(target=run_wrapper, args=(GIM, args.launch, control_queue, response_queue, IMG_WIDTH, IMG_HEIHGT))
     
     p.start()
+
+
+    # wait for trackmania to load map and start simulation.
+    control_queue.put_nowait(TMIProcessWrapper.IPCCommands.get_startsignal(512))
+    startsignal = response_queue.get(timeout = 60)
+    assert startsignal["cmd_id"] == 512 and startsignal["status"] == 0
 
     tm_env = TMNF_Single_Agent_Env(
         img_width=IMG_WIDTH,
         img_height=IMG_HEIHGT,
-        gim=GIM,
         command_queue=control_queue,
         response_queue=response_queue)
     
