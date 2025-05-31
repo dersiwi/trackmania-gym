@@ -197,4 +197,6 @@ logs/
 .vscode/ 
 *.txt/
 
-
+# hydra saves fro every run all the yaml files used in a output directory 
+# we might inlclude this later again but for now we will turn it off
+outputs/
