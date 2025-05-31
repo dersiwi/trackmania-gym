@@ -57,8 +57,6 @@ if __name__ == "__main__":
     assert startsignal["cmd_id"] == 512 and startsignal["status"] == 0
 
     tm_env = TMNF_Single_Agent_Env(
-        img_width=IMG_WIDTH,
-        img_height=IMG_HEIHGT,
         command_queue=control_queue,
         response_queue=response_queue)
     

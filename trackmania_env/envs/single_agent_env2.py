@@ -12,8 +12,6 @@ import time
 from queue import Queue
 from tminterface.structs import CheckpointData, SimStateData, CheckpointTime
 
-from game_interaction.tminterface2 import TMInterface, MessageType
-from game_interaction.game_instance_manager2 import GameInstanceManager
 from game_interaction.process_wrapper import TMIProcessWrapper
 
 from trackmania_env.envs.position_buffer import PositionBuffer
@@ -31,13 +29,10 @@ class TMNF_Single_Agent_Env(gym.Env):
 
     def __init__(
             self,
-            img_width: int,
-            img_height: int,
             command_queue : Queue,
             response_queue : Queue,
             position_buffer_size : int = 20,
             position_moved_threshold : float = 0.2,
-            color_channels : int = 3,
             observation_space = gym.spaces.Dict({
                 "image" : gym.spaces.Box(low=0, high=255, shape=(3,100,100), dtype=np.uint8),
                 "velocity": Box(-inf, inf, (3,), float32),
@@ -50,12 +45,7 @@ class TMNF_Single_Agent_Env(gym.Env):
         This constructor sets up the basic structure of the environment.
         As required by Gymnasium environments, it defines the action and observation spaces.
         We also define some other important varibales in order to communicate with TMInterface
-        """
-        self.img_width = img_width
-        self.img_height = img_height
-        self.color_channels= color_channels
-        self.img_shape = (self.color_channels,img_height,img_width)
-        
+        """  
         self.observation_space = observation_space
 
         self.command_queue = command_queue
