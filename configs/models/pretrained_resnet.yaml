@@ -1,0 +1,8 @@
+#available resnet architecturs from torchvision.models are :
+# resnet18, resnet34, resnet50, resnet101, resnet152
+_partial_: True
+_target_: neuronal_networks.conv_NNs.PrebuiltResNet
+model_name: "resnet18"
+out_dims: 10
+pretrained: true
+trainable_backbone: true

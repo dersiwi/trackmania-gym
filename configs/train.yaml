@@ -1,0 +1,17 @@
+defaults:
+  - platforms: linux.yaml  # or platforms/windows
+  - models: pretrained_resnet.yaml
+  - rl_env: single_agent_env.yaml
+  - sb3: ppo.yaml
+
+gmi:
+  launch: True
+  tm_loader_profile_name: "default"
+  headless: False
+  port: 8775
+
+image:
+  width: 100
+  height: 100
+
+total_timesteps: 100000
