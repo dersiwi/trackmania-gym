@@ -24,7 +24,7 @@ class PrebuiltResNet(nn.Module):
         if not hasattr(models, model_name):
             raise ValueError(f"Model '{model_name}' not found in torchvision.models")
 
-        
+        self.out_dims = out_dims
         # Load the model (with or without pretrained weights)
         """
         resnet has a preprocessor that rescales the images and also automatically normalizes
@@ -34,7 +34,7 @@ class PrebuiltResNet(nn.Module):
         self.model = model_fn(weights='DEFAULT' if pretrained else None)
 
         # Optionally freeze backbone parameters
-        if trainable_backbone:
+        if not trainable_backbone:
             for param in self.model.parameters():
                 param.requires_grad = False
 
@@ -72,7 +72,7 @@ class PrebuiltResNet(nn.Module):
     def forward(self, x):
         # we defined images to be of shape (w,h,c)
         # everything down there is ugly need to fix that 
-        x = x.permute(2,0,1)
+        #x = x.permute(0,3,1,2)
         x = self.color_adjust(x)
         if x.ndim == 3: x = x.unsqueeze(0)
         return self.model(x)

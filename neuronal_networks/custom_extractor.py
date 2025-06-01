@@ -74,5 +74,6 @@ class TMN_Extractor(BaseFeaturesExtractor):
         for key, extractor in self.extractors.items():
             tensor = extractor(observations[self.key_mappings[key]])
             if key == "image" : tensor = tensor[0]
+            if len(tensor.shape) == 2 : tensor = torch.squeeze(tensor)
             encoded_tensor_list.append(tensor)
         return torch.cat(encoded_tensor_list, dim=-1)
