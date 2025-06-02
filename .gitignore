@@ -201,3 +201,4 @@ logs/
 # we might inlclude this later again but for now we will turn it off
 outputs/
 wandb/
+runs/

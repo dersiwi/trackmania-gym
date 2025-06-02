@@ -1,5 +1,9 @@
 wrappers:
 
+  monitor: 
+  _partial_: True
+  _target_: stable_baselines3.common.monitor.Monitor 
+
   observations_filter:
     _partial_: True
     _target_: trackmania_env.wrappers.observations_filter.ObservationFilter

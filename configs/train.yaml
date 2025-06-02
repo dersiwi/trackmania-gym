@@ -15,3 +15,7 @@ image:
   height: 100
 
 total_timesteps: 100000
+
+wandb: 
+  entity : tmnf-practical-ss25
+  project : tmnf_ppo
