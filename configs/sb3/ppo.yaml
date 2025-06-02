@@ -2,6 +2,6 @@ _partial_: true
 _target_: stable_baselines3.PPO
 policy: "MultiInputPolicy"
 verbose: 1
-
+n_steps : 10
 
         

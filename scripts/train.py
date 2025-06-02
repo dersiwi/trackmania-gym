@@ -1,5 +1,7 @@
 # utils
 import sys, os
+
+import omegaconf
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))) # TODO : <- i don't want this here and it shouldnt have to be here!!!
 
 from utils.scriptargs import get_argparser
@@ -41,6 +43,9 @@ from configs.config import TrainConfig
 from utils.printutils import print_model_params
 
 
+
+import wandb
+from wandb.integration.sb3 import WandbCallback
 
 _HYDRA_PARAMS = {
     "version_base": "1.3",
@@ -93,6 +98,7 @@ def main(cfg:TrainConfig):
 
     tmi_process, control_queue, response_queue = start_process_and_wait_for_startsignal(GIM, cfg.gmi.launch, cfg.image.width, cfg.image.height)
 
+    #gym.make_vec("TMNF_Single_Agent_ENV_v0",num_envs=2,)
     tm_env = TMNF_Single_Agent_Env(
         command_queue=control_queue,
         response_queue=response_queue)
