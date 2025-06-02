@@ -154,11 +154,9 @@ class TMIProcessWrapper:
         logging.basicConfig(
             level=logging.DEBUG,
             format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-            handlers=[
-                logging.FileHandler(log_file),
-                logging.StreamHandler()
-            ]
+            handlers=[logging.FileHandler(log_file, mode='w')]
         )
+
         self.logger = logging.getLogger(__name__)
         self.logger.debug("Logger configured in subprocess.")
 
