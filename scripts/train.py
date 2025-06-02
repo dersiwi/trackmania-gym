@@ -107,7 +107,7 @@ def main(cfg:DictConfig):
     vision_model = vision_model,
     vision_model_out_dim = vision_model.out_dims))
 
-    model = hydra.utils.instantiate(cfg.sb3)(env= tm_env, policy_kwargs=policy_kwargs,tensorboard_log= f"runs/{run.id}",n_steps=10)
+    model = hydra.utils.instantiate(cfg.sb3)(env= tm_env, policy_kwargs=policy_kwargs,tensorboard_log= f"runs/{run.id}")
     print("Number of learnable params: ",len(list(model.policy.named_parameters())))
     #model = PPO("MultiInputPolicy", env= tm_env, policy_kwargs=policy_kwargs, verbose=1)
             
