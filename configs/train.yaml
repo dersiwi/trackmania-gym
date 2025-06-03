@@ -3,7 +3,7 @@ defaults:
   - models: pretrained_resnet.yaml
   - rl_env: single_agent_env.yaml
   - sb3: ppo.yaml
-
+  - wandb_callbacks : sb3_callback.yaml
 gmi:
   launch: True
   tm_loader_profile_name: "default"
@@ -16,6 +16,7 @@ image:
 
 total_timesteps: 100000
 
-wandb: 
+wandb:
+  use: True
   entity : tmnf-practical-ss25
   project : tmnf_ppo

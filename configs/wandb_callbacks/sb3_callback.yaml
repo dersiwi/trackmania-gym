@@ -1,0 +1,6 @@
+_partial_: True
+_target_: wandb.integration.sb3.WandbCallback
+model_save_freq: 1000
+gradient_save_freq: 100
+log: "all"
+verbose: 2
