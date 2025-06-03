@@ -1,41 +1,32 @@
-# utils
-import sys, os
 
+import os, sys
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))) # TODO : <- i don't want this here and it shouldnt have to be here!!!
 
-import logging
 import hydra
 from hydra.core.hydra_config import HydraConfig
+from omegaconf import DictConfig, OmegaConf
+from configs.config import TrainConfig
 import traceback
 
-# imports for communication between TMInterface and environment
+
 from trackmania_env.envs.single_agent_env2 import TMNF_Single_Agent_Env
 from game_interaction.game_instance_manager2 import GameInstanceManager
 from game_interaction.run_multiprocess_wrapper import start_process_and_wait_for_startsignal
 from game_interaction.process_wrapper import TMIProcessWrapper
-
-# gymnasium environment wrapper 
 from gymnasium import ObservationWrapper
-from trackmania_env.wrappers.observations_filter import ObservationFilter
-from trackmania_env.wrappers.bgra_to_rgb import BGRA_to_RGB
-from trackmania_env.wrappers.transform_grayscale import TransformGrayscale
-from trackmania_env.wrappers.transform_torch import PytorchWrapper
-from trackmania_env.wrappers.observations_filter import ObservationFilter
 
-from configs.config import TrainConfig
-
-_HYDRA_PARAMS = {
-    "version_base": "1.3",
-    "config_path": "../configs",
-    "config_name": "train.yaml",
-}
 
 from utils.hydra_utils import get_models
 
-@hydra.main(**_HYDRA_PARAMS)
+
+run_path = "outputs/2025-06-03/14-34-38"
+run_path_hydra = os.path.join(run_path, ".hydra")
+model_path = os.path.join(run_path, "model")
+
+cfg : TrainConfig= OmegaConf.load(os.path.join(run_path_hydra, "config.yaml"))
+
+
 def main(cfg : TrainConfig):
-    
-    # Instanciate GMI, TMNF-Environment and start TMi-Interaction process.
     platform = cfg.platforms
 
     GIM = GameInstanceManager.get_instance(
@@ -48,6 +39,7 @@ def main(cfg : TrainConfig):
     tmi_process, control_queue, response_queue = start_process_and_wait_for_startsignal(GIM, cfg.gmi.launch, cfg.image.width, cfg.image.height)
 
     try:
+        #gym.make_vec("TMNF_Single_Agent_ENV_v0",num_envs=2,)
         tm_env = TMNF_Single_Agent_Env(
             command_queue=control_queue,
             response_queue=response_queue)
@@ -60,8 +52,14 @@ def main(cfg : TrainConfig):
         
         # get algorithm and start learning process
         vision_model, model = get_models(cfg, tm_env, print_params = True)
-        model.learn(cfg.total_timesteps)
-        model.save(os.path.join(HydraConfig.get().run.dir, "model"))
+
+        model.load(model_path)
+        
+        terminated = False
+        observations, info = tm_env.reset()
+        while not terminated:
+            action, state = model.predict(observations)
+            observations, reward, terminated, truncated, info = tm_env.step(action)
 
     except Exception as e:
         traceback.print_exc()
@@ -71,10 +69,9 @@ def main(cfg : TrainConfig):
 
     finally:
         # Finalize training and close game all processes.
-        control_queue.put(TMIProcessWrapper.IPCCommands.get_end_syncloop_command(1000)) #1000 doesnt matter.
+        control_queue.put(TMIProcessWrapper.IPCCommands.get_end_syncloop_command(1000)) 
         tmi_process.join()
+        
 
-
-if __name__ == "__main__": 
-    main()
-    
+if __name__ == "__main__":
+    main(cfg)
