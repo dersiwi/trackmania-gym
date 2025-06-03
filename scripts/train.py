@@ -36,16 +36,8 @@ from utils.hydra_utils import get_models
 def main(cfg : TrainConfig):
     
     # Instanciate GMI, TMNF-Environment and start TMi-Interaction process.
-    platform = cfg.platforms
 
-    GIM = GameInstanceManager.get_instance(
-        TMLoader_path = platform.tmloader,
-        path_to_plugin = platform.plugin,
-        TMLoader_profile_name= cfg.gmi.tm_loader_profile_name,
-        linux = platform.os == "linux",
-        headless= cfg.gmi.headless)
-
-    tmi_process, control_queue, response_queue = start_process_and_wait_for_startsignal(GIM, cfg.gmi.launch, cfg.image.width, cfg.image.height)
+    tmi_process, control_queue, response_queue = start_process_and_wait_for_startsignal(cfg.platforms, cfg.gmi, cfg.image.width, cfg.image.height)
 
     try:
         tm_env = TMNF_Single_Agent_Env(

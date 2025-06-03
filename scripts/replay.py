@@ -27,16 +27,8 @@ cfg : TrainConfig= OmegaConf.load(os.path.join(run_path_hydra, "config.yaml"))
 
 
 def main(cfg : TrainConfig):
-    platform = cfg.platforms
 
-    GIM = GameInstanceManager.get_instance(
-        TMLoader_path = platform.tmloader,
-        path_to_plugin = platform.plugin,
-        TMLoader_profile_name= cfg.gmi.tm_loader_profile_name,
-        linux = platform.os == "linux",
-        headless= cfg.gmi.headless)
-
-    tmi_process, control_queue, response_queue = start_process_and_wait_for_startsignal(GIM, cfg.gmi.launch, cfg.image.width, cfg.image.height)
+    tmi_process, control_queue, response_queue = start_process_and_wait_for_startsignal(cfg.platforms, cfg.gmi, cfg.image.width, cfg.image.height)
 
     try:
         #gym.make_vec("TMNF_Single_Agent_ENV_v0",num_envs=2,)
