@@ -13,6 +13,7 @@ from queue import Queue
 from tminterface.structs import CheckpointData, SimStateData, CheckpointTime
 
 from game_interaction.process_wrapper import TMIProcessWrapper
+from game_interaction.tminterface_commands import TMInterfaceCommands
 
 from trackmania_env.envs.position_buffer import PositionBuffer
 from trackmania_env.envs.actionmap import ACTION_MAP
@@ -33,6 +34,7 @@ class TMNF_Single_Agent_Env(gym.Env):
             response_queue : Queue,
             position_buffer_size : int = 20,
             position_moved_threshold : float = 0.2,
+            reset_mode : str = "respawn",
             observation_space = gym.spaces.Dict({
                 "image" : gym.spaces.Box(low=0, high=255, shape=(3,100,100), dtype=np.uint8),
                 "velocity": Box(-inf, inf, (3,), float32),
@@ -53,21 +55,24 @@ class TMNF_Single_Agent_Env(gym.Env):
         self.__ipc_cmd_id = 0
         self.__ipc_timeout : int = 10
 
-        self.position_buffer = PositionBuffer(position_buffer_size)
-        self.position_buffer_threshold = position_moved_threshold
+
 
         self.logger = logging.getLogger(self.__class__.__name__)
-        
-        """
-        these are the inputs we will later give to the game engine ,
-        copied from linesightrl /config_files/inputs_list.py
-        """
         
         self.action_space = gym.spaces.Discrete(len(ACTION_MAP))
         self.SimStateData = None
         
         self.actions = []
         """list of actions that may be stored later."""
+
+
+        # variables used for resetting car(posiiton)
+        self.start_position : list[float] = [0,0,0]
+        self.__start_position_set : bool = False
+        self.reset_mode = reset_mode
+        
+        self.position_buffer = PositionBuffer(position_buffer_size)
+        self.position_buffer_threshold = position_moved_threshold
         
     def _get_info(self) -> Dict[str,Any]:
         """Helper function for computing additional information (e.g. for debugging or logging)"""
@@ -91,9 +96,9 @@ class TMNF_Single_Agent_Env(gym.Env):
         game_states : SimStateData = imgs_and_simstate["sim_state"]
         sim_step : int = imgs_and_simstate["sim_step"]
         self.SimStateData = game_states
-        # TODO Issue #3 and #4
-        # TODO what is with sim_step ?
+        # TODO Issue #3
         # the wrapper classes will do the filtering
+
         observations = {
         "image": image,
         "SimStateData": game_states,
@@ -174,8 +179,42 @@ class TMNF_Single_Agent_Env(gym.Env):
         
         observation = self._get_obs()
         info = self._get_info()
+        self.actions = []
+        
+        self.reset_car(observation["SimStateData"].position)
+        self.position_buffer.reset()
 
         return observation, info
+    
+    def reset_car(self, position : np.ndarray | list[float]):
+        """Resets car depending on specified mode.
+        Position : The position of the car in the current observation."""
+        if self.reset_mode == "respawn":
+            self.__respawn_car()
+        elif self.reset_mode == "position":
+            if not self.__start_position_set:
+                self.start_position = position
+                self.__start_position_set = True
+            self.__reset_car_position()
+        else:
+            raise ValueError(f"Mode '{self.reset_mode}' for car-resetting unknown.")
+    
+    def __respawn_car(self):
+        """Respawns car by 'clicking' enter - uses internal game mechanic; also respawns in correct orientation"""
+        self.command_queue.put_nowait(TMIProcessWrapper.IPCCommands.get_cmd_command(self.__ipc_cmd_id, 
+                                                                                    TMInterfaceCommands.key_action("press", "enter")))
+        response = self.response_queue.get(10)
+        assert response["cmd_id"] == self.__ipc_cmd_id, f"Got unexepected command id from response. Expected {self.__ipc_cmd_id}, got : {response['cmd_id']}"
+        self.__ipc_cmd_id += 1
+
+    
+    def __reset_car_position(self):
+        """Executes teleportation command to stored car-position; ignores rotation and keeps current rotation of car."""
+        self.command_queue.put_nowait(TMIProcessWrapper.IPCCommands.get_cmd_command(self.__ipc_cmd_id, 
+                                                                                    TMInterfaceCommands.teleport(self.start_position)))
+        response = self.response_queue.get(10)
+        assert response["cmd_id"] == self.__ipc_cmd_id, f"Got unexepected command id from response. Expected {self.__ipc_cmd_id}, got : {response['cmd_id']}"
+        self.__ipc_cmd_id += 1
     
     def render(self, mode = "human") -> Optional[np.array]:
         """

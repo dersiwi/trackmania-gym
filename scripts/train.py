@@ -84,7 +84,7 @@ def get_models(cfg : TrainConfig, tm_env : TMNF_Single_Agent_Env, print_params :
     return vision_model, model
 
 @hydra.main(**_HYDRA_PARAMS)
-def main(cfg:TrainConfig):
+def main(cfg : TrainConfig):
     
     # Instanciate GMI, TMNF-Environment and start TMi-Interaction process.
     platform = cfg.platforms

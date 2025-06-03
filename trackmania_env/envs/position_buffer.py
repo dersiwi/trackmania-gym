@@ -14,6 +14,12 @@ class PositionBuffer:
         self.size = size
         """Sizes of the buffer"""
 
+    def reset(self) -> None:
+        """Resets buffer to state right after initiaization."""
+        self.buffer = np.zeros((self.size, 3), dtype=float)
+        self.index = 0
+        self.count = 0
+
     def add(self, position : np.ndarray) -> None:
         """Adds a position to the buffer. Overwrites N-oldest position if buffer is full."""
         self.buffer[self.index] = position
@@ -40,7 +46,7 @@ class PositionBuffer:
         - Special case : if buffer is filled with only one position, this method returns True.
 
         """
-        if self.count < 2:
+        if self.count < self.size:
             return True
 
         total_distance = self.distance_moved()
