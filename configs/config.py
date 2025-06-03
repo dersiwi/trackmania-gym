@@ -64,11 +64,39 @@ class RLEnvConfig:
     wrappers: WrappersConfig
 
 @dataclass
-class SB3PPOConfig:
+class SB3PPOConstructorConfig:
     _partial_: bool
     _target_: str
     policy: str
     verbose: int
+    n_steps : int
+
+@dataclass
+class SB3PPOLearnArgsConfig:
+  total_timesteps: int
+  log_interval: int
+  tb_log_name: str
+  reset_num_timesteps: bool
+  progress_bar: bool
+@dataclass
+class SB3PPOConfig:
+    constructor: SB3PPOConstructorConfig
+    learn_args: SB3PPOLearnArgsConfig
+
+@dataclass
+class SB3CallbackConfig:
+    _partial_: bool
+    _target_: str
+    model_save_freq: int
+    gradient_save_freq: int
+    log: str
+    verbose: int
+
+@dataclass
+class WandbConfig:
+    use: bool
+    entity: str
+    project: str
 
 @dataclass
 class TrainConfig:
@@ -79,3 +107,5 @@ class TrainConfig:
     models: Optional[PretrainedResNetConfig] = None
     rl_env: Optional[RLEnvConfig] = None
     sb3: Optional[SB3PPOConfig] = None
+    wandb_callbacks: Optional[SB3CallbackConfig]= None
+    wandb: Optional[WandbConfig] = None

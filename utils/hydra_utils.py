@@ -11,11 +11,12 @@ from utils.printutils import print_model_params
 
 
 
-def get_models(cfg : TrainConfig, tm_env : TMNF_Single_Agent_Env, print_params : bool = False) -> tuple[nn.Module, BaseAlgorithm | PPO]:
+def get_models(cfg : TrainConfig, tm_env : TMNF_Single_Agent_Env, print_params : bool = False,run_id:str = "test") -> tuple[nn.Module, BaseAlgorithm | PPO]:
 
     """instanciates vision-model as well as sb3 algorithm according to parameters
     
     - cfg : config containing global configuration 
+    - run_id: identifier for the run which gets used for tensorboard login
     - tm_env : gym-environment for algorithm
     - print_params : If True, prints shapes of weights of neural network
 
@@ -33,8 +34,8 @@ def get_models(cfg : TrainConfig, tm_env : TMNF_Single_Agent_Env, print_params :
     vision_model = vision_model,
     vision_model_out_dim = vision_model.out_dims))
 
-    model_constructor = hydra.utils.instantiate(cfg.sb3)
-    model : BaseAlgorithm | PPO = model_constructor(env= tm_env, policy_kwargs=policy_kwargs)
+    model_constructor = hydra.utils.instantiate(cfg.sb3.constructor)
+    model : BaseAlgorithm | PPO = model_constructor(env= tm_env, policy_kwargs=policy_kwargs,tensorboard_log= f"runs/{run_id}")
 
     if print_params:
         print_model_params(model)       
