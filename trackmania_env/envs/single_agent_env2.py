@@ -17,7 +17,7 @@ from game_interaction.tminterface_commands import TMInterfaceCommands
 
 from trackmania_env.envs.position_buffer import PositionBuffer
 from trackmania_env.envs.actionmap import ACTION_MAP
-
+from trackmania_env.envs.reward_calculation import RewradCalculator
 
 import logging
 
@@ -73,6 +73,8 @@ class TMNF_Single_Agent_Env(gym.Env):
         
         self.position_buffer = PositionBuffer(position_buffer_size)
         self.position_buffer_threshold = position_moved_threshold
+
+        self.rew_calculator = RewradCalculator(self.position_buffer)
         
     def _get_info(self) -> Dict[str,Any]:
         """Helper function for computing additional information (e.g. for debugging or logging)"""
@@ -146,8 +148,8 @@ class TMNF_Single_Agent_Env(gym.Env):
         terminated = not self.position_buffer.moved_more_than_threshold(self.position_buffer_threshold)
         truncated = False
         
-        # TODO calculate reward
-        reward = self.position_buffer.distance_moved()
+
+        reward = self.rew_calculator.calculate_reward(observations)
         
         # TODO also store some info for logging or debugging
         info = self._get_info() 
@@ -183,6 +185,7 @@ class TMNF_Single_Agent_Env(gym.Env):
         
         self.reset_car(observation["SimStateData"].position)
         self.position_buffer.reset()
+        self.rew_calculator.reset()
 
         return observation, info
     

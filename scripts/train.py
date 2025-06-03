@@ -106,6 +106,7 @@ def main(cfg : TrainConfig):
     # apply (Observation)-wrappers to the environment
     for _, wrapper_conf in cfg.rl_env.wrappers.items():
         wrapper : ObservationWrapper = hydra.utils.instantiate(wrapper_conf)
+        print(f"Wrapping environment in {wrapper.__class__.__name__}")
         tm_env = wrapper(env=tm_env)
     
     # get algorithm and start learning process
