@@ -14,8 +14,6 @@ image:
   width: 100
   height: 100
 
-total_timesteps: 100000
-
 wandb:
   use: True
   entity : tmnf-practical-ss25

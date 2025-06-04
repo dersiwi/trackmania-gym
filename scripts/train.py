@@ -59,13 +59,15 @@ def main(cfg : TrainConfig):
     run_id = ""
     if cfg.wandb.use :
         wandb.login()
-        wandb.config = omegaconf.OmegaConf.to_container(cfg, resolve=True,throw_on_missing=True)
+        wandb_conf = omegaconf.OmegaConf.to_container(cfg, resolve=True,throw_on_missing=True)
+        wandb.config = wandb_conf
         run = wandb.init(
             entity=cfg.wandb.entity, 
             project=cfg.wandb.project,
             sync_tensorboard=True, 
             monitor_gym=True,  
-            save_code=True)
+            save_code=True,
+            config=wandb_conf)
         run_id = run.id
 
     # Instanciate GMI, TMNF-Environment and start TMi-Interaction process.
