@@ -145,11 +145,12 @@ class TMNF_Single_Agent_Env(gym.Env):
 
 
         # TODO check if episode terminated and or tuncated, terminated if reached the goal, truncated means that a timelimit has been reached but MDP is not in a terminal state
+        stuck = not self.position_buffer.moved_more_than_threshold(self.position_buffer_threshold)
         terminated = not self.position_buffer.moved_more_than_threshold(self.position_buffer_threshold) or race_finished
         truncated = False
         
 
-        reward = self.rew_calculator.calculate_reward(observations)
+        reward = self.rew_calculator.calculate_reward(observations, race_finished, stuck)
         
         # TODO also store some info for logging or debugging
         info = self._get_info() 
