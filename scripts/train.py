@@ -89,6 +89,7 @@ def main(cfg : TrainConfig):
         # TODO check if callbacks have the same class they inherit from 
         callback = hydra.utils.instantiate(cfg.wandb_callbacks)(model_save_path=f"models/{run_id}")  if cfg.wandb.use else None  
         model.learn(**cfg.sb3.learn_args,callback=callback)
+        if cfg.wandb.use : run.finish()
         model.save(os.path.join(HydraConfig.get().run.dir, "model"))
 
     except Exception as e:
