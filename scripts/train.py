@@ -75,9 +75,13 @@ def main(cfg : TrainConfig):
     tmi_process, control_queue, response_queue = start_process_and_wait_for_startsignal(cfg.platforms, cfg.gmi, cfg.image.width, cfg.image.height)
 
     try:
-        tm_env = TMNF_Single_Agent_Env(
+        tm_env = hydra.utils.instantiate(cfg.rl_env.env)(
             command_queue=control_queue,
             response_queue=response_queue)
+        
+        #tm_env = TMNF_Single_Agent_Env(
+        #    command_queue=control_queue,
+        #    response_queue=response_queue)
         
         # apply (Observation)-wrappers to the environment
         for _, wrapper_conf in cfg.rl_env.wrappers.items():

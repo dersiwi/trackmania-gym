@@ -1,5 +1,11 @@
-wrappers:
+env: 
+  _partial_: True
+  _target_: trackmania_env.envs.single_agent_env2.TMNF_Single_Agent_Env
+  position_buffer_size : 20
+  position_moved_threshold : 0.8
+  reset_mode : "respawn"
 
+wrappers:
   monitor: 
     _partial_: True
     _target_: stable_baselines3.common.monitor.Monitor 

@@ -202,3 +202,4 @@ logs/
 outputs/
 wandb/
 runs/
+models/
