@@ -51,7 +51,7 @@ class TMIProcessWrapper:
             return {"cmd_id" : command_id, "cmd" : TMIProcessWrapper.IPCCommands.SIMULATION_STARTED}
 
 
-    def __init__(self, gim : GameInstanceManager, launch_game : bool, command_queue : Queue, response_queue : Queue, img_width : int, img_height : int, img_store_capacity : int = 100):
+    def __init__(self, gim : GameInstanceManager, launch_game : bool, command_queue : Queue, response_queue : Queue, track : str, img_width : int, img_height : int, img_store_capacity : int = 100):
         self.launch_game : bool = launch_game
         self.gim = gim
         if launch_game:
@@ -85,6 +85,8 @@ class TMIProcessWrapper:
 
         self.__run_sync_loop = True
         self.__start_cmd_id = -1
+
+        self.map = track
     
 
     def request_image(self, continuously : bool = False, cmd_id : int = -1):
@@ -248,7 +250,7 @@ class TMIProcessWrapper:
 
             elif msgtype == int(MessageType.SC_ON_CONNECT_SYNC):
                 self.logger.info("On connect event. Reuesting map.")
-                self.iface.on_connect_event()
+                self.iface.on_connect_event(map_to_load=self.map)
                 self.iface._respond_to_call(msgtype)
             else:
                 self.iface._respond_to_call(msgtype)

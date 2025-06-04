@@ -8,6 +8,8 @@ class GMIConfig:
     tm_loader_profile_name: str
     headless: bool
     port: int
+    track : str
+
 
 @dataclass
 class ImageConfig:

@@ -6,11 +6,11 @@ from game_interaction.game_instance_manager2 import GameInstanceManager
 from multiprocessing import Process, Queue
 from configs.config import TrainConfig, GMIConfig, PlatformConfig
 
-def run_wrapper(gmi, launch_game : bool, cmd_q : Queue, res_q : Queue, img_w : int, img_h : int): # apparently its better to run process like this to avoid pickel issues or smth?
+def run_wrapper(gmi, launch_game : bool, cmd_q : Queue, res_q : Queue, track : str, img_w : int, img_h : int): # apparently its better to run process like this to avoid pickel issues or smth?
     """
     Method to run in the process
     """
-    wrapper = TMIProcessWrapper(gmi, launch_game=launch_game, command_queue=cmd_q, response_queue=res_q, img_width=img_w, img_height=img_h)
+    wrapper = TMIProcessWrapper(gmi, launch_game=launch_game, command_queue=cmd_q, response_queue=res_q, track=track, img_width=img_w, img_height=img_h)
     wrapper.syncloop()
 
 
@@ -40,7 +40,7 @@ def start_process_and_wait_for_startsignal(platform : PlatformConfig, gmi_cfg : 
     control_queue = Queue() # queue for commands to send to TMIProcessWrapper
     response_queue = Queue() # answers (payload) from TMIProcess Wrapper
    
-    p = Process(target=run_wrapper, args=(GIM, gmi_cfg.launch, control_queue, response_queue, image_width, image_height))
+    p = Process(target=run_wrapper, args=(GIM, gmi_cfg.launch, control_queue, response_queue, gmi_cfg.track, image_width, image_height))
     
     p.start()
 

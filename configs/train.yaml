@@ -1,5 +1,5 @@
 defaults:
-  - platforms: linux.yaml  # or platforms/windows
+  - platforms: windows.yaml  # or platforms/windows
   - models: pretrained_resnet.yaml
   - rl_env: single_agent_env.yaml
   - sb3: ppo.yaml
@@ -9,6 +9,7 @@ gmi:
   tm_loader_profile_name: "default"
   headless: False
   port: 8775
+  track : simple1_validated.Challenge.Gbx
 
 image:
   width: 100
@@ -18,3 +19,4 @@ wandb:
   use: True
   entity : tmnf-practical-ss25
   project : tmnf_ppo
+
