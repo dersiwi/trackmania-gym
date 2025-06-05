@@ -4,6 +4,7 @@ env:
   position_buffer_size : 20
   position_moved_threshold : 0.8
   reset_mode : "respawn"
+  reward_calculator : "basic"
 
 wrappers:
   monitor: 

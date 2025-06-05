@@ -35,6 +35,7 @@ class TMNF_Single_Agent_Env(gym.Env):
             position_buffer_size : int = 20,
             position_moved_threshold : float = 0.2,
             reset_mode : str = "respawn",
+            reward_calculator : str = "basic",
             observation_space = gym.spaces.Dict({
                 "image" : gym.spaces.Box(low=0, high=255, shape=(3,100,100), dtype=np.uint8),
                 "velocity": Box(-inf, inf, (3,), float32),
@@ -74,7 +75,7 @@ class TMNF_Single_Agent_Env(gym.Env):
         self.position_buffer = PositionBuffer(position_buffer_size)
         self.position_buffer_threshold = position_moved_threshold
 
-        self.rew_calculator = RewradCalculator(self.position_buffer)
+        self.rew_calculator = RewradCalculator.get_instance(reward_calculator, self.position_buffer)
         
     def _get_info(self) -> Dict[str,Any]:
         """Helper function for computing additional information (e.g. for debugging or logging)"""
