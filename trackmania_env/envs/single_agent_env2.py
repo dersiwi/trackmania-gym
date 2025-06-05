@@ -19,15 +19,19 @@ from trackmania_env.envs.position_buffer import PositionBuffer
 from trackmania_env.envs.actionmap import ACTION_MAP
 from trackmania_env.envs.reward_calculation import RewradCalculator
 
-import logging
+from simstate_space_dict import simstate_space_dict
 
+import logging
+import functools
+
+from bytefield import ByteArrayField,IntegerField,FloatField,BooleanField
+import torch
 class TMNF_Single_Agent_Env(gym.Env):
     """The reinforcement learning environment for Trackmania Nations Forever"""
 
     metadata = {"render.modes": ["human", "rgb_array"], "video.frames_per_second": 30}
     
     # init, step and reset have to be implemented for the class to be gym compatible
-
     def __init__(
             self,
             command_queue : Queue,
@@ -35,38 +39,27 @@ class TMNF_Single_Agent_Env(gym.Env):
             position_buffer_size : int = 20,
             position_moved_threshold : float = 0.2,
             reset_mode : str = "respawn",
-            reward_calculator : str = "basic",
-            observation_space = gym.spaces.Dict({
-                "image" : gym.spaces.Box(low=0, high=255, shape=(3,100,100), dtype=np.uint8),
-                "velocity": Box(-inf, inf, (3,), float32),
-                "yaw_pitch_roll": Box(-inf, inf, (3,), float32) ,
-                "position": Box(-inf, inf, (3,), float32),
-                "scene_mobil_field.engine_field.gear": Box(-inf, inf, (), float32),
-            }),):
+            reward_calculator : str = "basic"):
         """
         Initializes the custom Gymnasium environment.
         This constructor sets up the basic structure of the environment.
         As required by Gymnasium environments, it defines the action and observation spaces.
         We also define some other important varibales in order to communicate with TMInterface
         """  
-        self.observation_space = observation_space
+        self.observation_space = gym.spaces.Dict(simstate_space_dict)
+        self.observations = {}
+        self.action_space = gym.spaces.Discrete(len(ACTION_MAP))
+        self.SimStateData = None
+        self.actions = []
+        """list of actions that may be stored later."""
 
         self.command_queue = command_queue
         self.response_queue = response_queue
         self.__ipc_cmd_id = 0
         self.__ipc_timeout : int = 10
 
-
-
         self.logger = logging.getLogger(self.__class__.__name__)
         
-        self.action_space = gym.spaces.Discrete(len(ACTION_MAP))
-        self.SimStateData = None
-        
-        self.actions = []
-        """list of actions that may be stored later."""
-
-
         # variables used for resetting car(posiiton)
         self.start_position : list[float] = [0,0,0]
         self.__start_position_set : bool = False
@@ -94,19 +87,36 @@ class TMNF_Single_Agent_Env(gym.Env):
         except TimeoutError as t:
             self.logger.error(f"Timeout error while waiting for images: {t}")
 
-
         image : np.ndarray = imgs_and_simstate["img"]
         game_states : SimStateData = imgs_and_simstate["sim_state"]
+
+        for key in self.observation_space.spaces:
+            if key == "image" :
+                self.observations[key] = image
+            else :
+                # from https://discuss.python.org/t/enhancing-getattr-to-support-nested-attribute-access-with-dotted-strings/74305/9
+                field = functools.reduce(getattr, key.split('.'), game_states)
+
+                if isinstance(field, ByteArrayField): 
+                    value = field._getvalue(game_states)
+                    self.observations[key]= list(value.to_bytearray())
+
+                elif isinstance(field,(IntegerField,BooleanField,FloatField)):
+                    # this would also be valid unpack_bytes(game_states,v)
+                    self.observations[key] = field._getvalue(game_states)
+
+                elif isinstance(field,np.ndarray) and field.dtype == np.object_:
+                    arr = np.vstack(field).astype(np.float32)
+                    self.observations[key]= torch.from_numpy(arr)
+
+                else:
+                    self.observations[key] = field
+    
         sim_step : int = imgs_and_simstate["sim_step"]
         self.SimStateData = game_states
         # TODO Issue #3
         # the wrapper classes will do the filtering
-
-        observations = {
-        "image": image,
-        "SimStateData": game_states,
-        }
-        return observations
+        return self.observations
 
     def step(self, action) -> Tuple[gym.spaces.Dict,float,bool,bool,Dict[str,Any]]:
         """
@@ -139,10 +149,12 @@ class TMNF_Single_Agent_Env(gym.Env):
 
 
         observations = self._get_obs()
-        ssD : SimStateData = observations["SimStateData"]
+        #ssD : SimStateData = observations["SimStateData"]
 
-        self.position_buffer.add(ssD.position)
-        race_finished = ssD.player_info.race_finished
+        #self.position_buffer.add(ssD.position)
+        #race_finished = ssD.player_info.race_finished
+        self.position_buffer.add(self.observations["position"])
+        race_finished =  self.observations["player_info.race_finished"]
 
 
         # TODO check if episode terminated and or tuncated, terminated if reached the goal, truncated means that a timelimit has been reached but MDP is not in a terminal state
@@ -185,7 +197,8 @@ class TMNF_Single_Agent_Env(gym.Env):
         info = self._get_info()
         self.actions = []
         
-        self.reset_car(observation["SimStateData"].position)
+        #self.reset_car(observation["SimStateData"].position)
+        self.reset_car(self.observations["position"])
         self.position_buffer.reset()
         self.rew_calculator.reset()
 

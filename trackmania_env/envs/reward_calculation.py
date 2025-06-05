@@ -33,8 +33,9 @@ class BasicRewardCalculation(RewradCalculator):
         super().__init__(position_buffer)
 
     def calculate_reward(self, observations, race_finished, other_terminations):
-        ssD : SimStateData = observations["SimStateData"]
-        reward = np.linalg.norm(ssD.velocity[0:1]) + self.pos_buffer.distance_moved()
+        #ssD : SimStateData = observations["SimStateData"]
+        velocity = observations["velocity"]
+        reward = np.linalg.norm(velocity[0:1]) + self.pos_buffer.distance_moved()
 
         if race_finished:
             reward += 10000

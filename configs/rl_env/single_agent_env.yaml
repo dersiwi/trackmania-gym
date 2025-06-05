@@ -13,8 +13,8 @@ wrappers:
   
   observations_filter:
     _partial_: True
-    _target_: trackmania_env.wrappers.observations_filter.ObservationFilter
-    observations_list: 
+    _target_: gymnasium.wrappers.FilterObservation
+    filter_keys: 
       - image
       - position
       - velocity
@@ -28,6 +28,7 @@ wrappers:
       - input_accelerate_event.time_field
       - scene_mobil.async_vehicle_state.rest_field
       - player_info.last_field
+      - rotation_matrix
 
   bgra_to_rgb:
     _partial_: True

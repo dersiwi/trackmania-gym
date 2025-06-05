@@ -42,7 +42,13 @@ class TMN_Extractor(BaseFeaturesExtractor):
         the dots but later we must know what the orginal key was 
         """  
         self.key_mappings: dict[str,str] = {}
-
+        """
+        Later the inputs will come in batches (b : batch size) and will be turned into flat vectors:
+        image: (b,c,w,h) -> (b, vision_model_out_dim)
+        scalars: (b) -> (b,1)
+        lists: (b,length of list) -> (b,length of list) [depends on length of list]
+        rotation_matrix: (b,3,3)  -> (b,9)
+        """
         for key, subspace in observation_space.spaces.items():
 
             if key == "image":
@@ -82,6 +88,8 @@ class TMN_Extractor(BaseFeaturesExtractor):
         for key, extractor in self.extractors.items():
             tensor = extractor(observations[self.key_mappings[key]])
             encoded_tensor_list.append(tensor)
+            #print(key,observations[self.key_mappings[key]].shape)
+            #print(key,tensor.shape)
          # Return a (B, self._features_dim) PyTorch tensor, where B is batch dimension.
         return torch.cat(encoded_tensor_list, dim=1)
 
@@ -93,5 +101,5 @@ class Add_Batch(nn.Module):
 
     def forward(self,x):
         if len(x.shape) == 0: return x.unsqueeze(0).unsqueeze(0)
-        if len(x.shape) ==1 : return x.unsqueeze(0)
+        if len(x.shape) ==1 : return x.unsqueeze(1)
         return x
