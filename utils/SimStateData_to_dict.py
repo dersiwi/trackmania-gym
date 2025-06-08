@@ -12,7 +12,7 @@ from bytefield import (
     ByteStruct)
 from typing import List
 from tminterface.structs import SimStateData,SimulationWheel,WheelState
-banned = ["last_field","input_steer_event.time_field","internal_input_state"]
+banned = ["last_field","input_steer_event.time_field","internal_input_state","last"]
 
 def is_list_of_strings(obj):
     return isinstance(obj, list) and all(isinstance(item, str) for item in obj)
@@ -44,7 +44,7 @@ def flatten_struct(cls, prefix=""):
             int,
             float,
             bool)) 
-            or (full_name in banned)) or is_list_of_strings(field): 
+            or (full_name in banned)) or (name in banned) or is_list_of_strings(field): 
             continue
      
         if isinstance(field,ByteStruct):
@@ -141,11 +141,7 @@ def write_space_dict_to_file(filename: str):
         f.write("from numpy import uint8,int32,int64,float32,inf\n")
         f.write("simstate_space_dict = {\n")
         for key, space in space_dict.items():
-            #if isinstance(space,gym.spaces.Dict):
-            #    f.write(key+": {\n")
-            #    f.write(f'{repr(space)},\n')
-            #    f.write("}\n")
-            #    continue
+            if space is None or space.shape == [] : continue
             f.write(f'"{key}": {repr(space)},\n')
         f.write("}\n")
 

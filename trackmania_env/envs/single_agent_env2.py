@@ -21,6 +21,7 @@ from trackmania_env.envs.reward_calculation import RewradCalculator
 
 from simstate_space_dict import simstate_space_dict
 
+import re
 import logging
 import functools
 
@@ -94,8 +95,15 @@ class TMNF_Single_Agent_Env(gym.Env):
             if key == "image" :
                 self.observations[key] = image
             else :
+                field = None
                 # from https://discuss.python.org/t/enhancing-getattr-to-support-nested-attribute-access-with-dotted-strings/74305/9
-                field = functools.reduce(getattr, key.split('.'), game_states)
+                # TODO this is pretty ugly , think of another way to do this
+                match = re.search(r'\[(\d+)\]', key)
+                if match is not None:
+                    left,right = (re.sub(r'\[\d+\]', '', key)).split('.', 1)
+                    field = getattr(game_states,left)[int(match.group(1))]
+                    field = functools.reduce(getattr, right.split('.'), field)
+                else : field = functools.reduce(getattr, key.split('.'), game_states)
 
                 if isinstance(field, ByteArrayField): 
                     value = field._getvalue(game_states)
