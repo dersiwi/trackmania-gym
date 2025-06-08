@@ -1,10 +1,18 @@
 import gymnasium as gym
 import numpy as np
-from bytefield import FloatField, IntegerField, BooleanField, ArrayField, ByteArrayField, StructField
+from bytefield import (
+    FloatField, 
+    IntegerField, 
+    BooleanField, 
+    ArrayField, 
+    ByteArrayField, 
+    StructField,
+    ArrayFieldProxy, 
+    ByteArrayFieldProxy, 
+    ByteStruct)
 from typing import List
-from tminterface.structs import SimStateData
-from six import string_types
-banned = ["last_field"]
+from tminterface.structs import SimStateData,SimulationWheel,WheelState
+banned = ["last_field","input_steer_event.time_field","internal_input_state"]
 
 def is_list_of_strings(obj):
     return isinstance(obj, list) and all(isinstance(item, str) for item in obj)
@@ -17,27 +25,66 @@ def flatten_struct(cls, prefix=""):
                 for attr in dir(instance) 
                 if not callable(getattr(instance, attr)) 
                 and not attr.startswith("__")]
-    # and not (attr.endswith("_field") and attr[:-6] in dir(instance))
+    
     for (name,field) in members:
         full_name = f"{prefix}.{name}" if prefix else name
+
         if (not isinstance(field, (
             IntegerField,
             FloatField,
             BooleanField,
             ArrayField,
             StructField,
+            ByteStruct,
             ByteArrayField,
+            ArrayFieldProxy,
+            ByteArrayFieldProxy,
             List,
+            bytearray,
             int,
             float,
             bool)) 
-            or (full_name in banned)) or is_list_of_strings(field): continue
-        
-        if isinstance(field, StructField):
+            or (full_name in banned)) or is_list_of_strings(field): 
+            continue
+     
+        if isinstance(field,ByteStruct):
+            flat_dict.update(flatten_struct(type(field), prefix=full_name))
+    
+        elif isinstance(field, StructField):
             sub_cls = field.struct_type 
             full_name = full_name.replace("_field","")
             flat_dict.update(flatten_struct(sub_cls, prefix=full_name))
+        
+        elif isinstance(field,bytearray):
+            # assume that every bytearray is float type since there are no informations in a bytearray about the type
+            l = list(field)
+            flat_dict[full_name] = gym.spaces.Box(low=-np.inf, high=np.inf, shape=(len(l),), dtype=np.float32)
             
+        elif isinstance(field,ArrayFieldProxy):
+            #TODO need to do correct type handling
+            if full_name == "simulation_wheels":
+                pass
+
+            if not isinstance(field.field._elem_field,(FloatField,IntegerField,BooleanField)):
+                d = {}
+                for i in range(len(field.to_numpy())):
+                    d.update(flatten_struct(type(field[i]),full_name+f"[{i}]"))
+                flat_dict[full_name] = flat_dict.update(d)    
+                continue
+            dtype = get_numpy_dtype(type(field.field._elem_field))
+            low = 0 if dtype == np.bool_ else -np.inf
+            high = 1 if dtype == np.bool_ else np.inf
+            flat_dict[full_name] = gym.spaces.Box(low=low, high=high, shape=field.shape, dtype=dtype)
+
+        elif isinstance(field,ByteArrayFieldProxy):
+            l = list(field.to_bytearray())
+            # assume that we are dealing with homogenous lists
+            dtype = type(l[0])
+            if dtype == bool:
+                flat_dict[full_name] = gym.spaces.MultiBinary(n=len(l))
+            else:
+                flat_dict[full_name] = gym.spaces.Box(low=-np.inf, high=np.inf, shape=(len(l),), dtype=dtype)
+
         elif isinstance(field, ArrayField):
             shape = field.shape if field.shape is not None else (1,)  # default fallback
             try:
@@ -67,9 +114,11 @@ def flatten_struct(cls, prefix=""):
             low = 0 if dtype == np.bool_ else -np.inf
             high = 1 if dtype == np.bool_ else np.inf
             flat_dict[full_name] = gym.spaces.Box(low=low, high=high, shape=(np.shape(field)), dtype=dtype)
+
     # tminterface by default returns a BGRA image so 4 dimensional
     #TODO a global config would be helpfull in order to set the width and height of the image
-    flat_dict["image"] = gym.spaces.Box(low=0, high=255, shape=(100,100,4), dtype=np.uint8)       
+    if isinstance(field,SimStateData):
+        flat_dict["image"] = gym.spaces.Box(low=0, high=255, shape=(100,100,4), dtype=np.uint8)       
     return flat_dict
 
 def get_numpy_dtype(field_type):
@@ -88,11 +137,16 @@ def write_space_dict_to_file(filename: str):
     space_dict = flatten_struct(SimStateData)
 
     with open(filename, 'w') as f:
-        f.write("from gymnasium.spaces import Box,Discrete \n")
-        f.write("from numpy import uint8,int32,float32,inf\n")
+        f.write("from gymnasium.spaces import Box,Discrete,Dict \n")
+        f.write("from numpy import uint8,int32,int64,float32,inf\n")
         f.write("simstate_space_dict = {\n")
         for key, space in space_dict.items():
-            f.write(f'    "{key}": {repr(space)}  ,\n')
+            #if isinstance(space,gym.spaces.Dict):
+            #    f.write(key+": {\n")
+            #    f.write(f'{repr(space)},\n')
+            #    f.write("}\n")
+            #    continue
+            f.write(f'"{key}": {repr(space)},\n')
         f.write("}\n")
 
 
