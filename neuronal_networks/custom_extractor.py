@@ -53,6 +53,9 @@ class TMN_Extractor(BaseFeaturesExtractor):
 
             if key == "image":
                 extractors[key] = vision_model
+                dummy_input = torch.zeros(1, *subspace.shape) 
+                dummy_output = vision_model(dummy_input)
+                vision_model_out_dim = dummy_output.shape[1]
                 total_concat_size += vision_model_out_dim
                 self.key_mappings[key] = key
             else:

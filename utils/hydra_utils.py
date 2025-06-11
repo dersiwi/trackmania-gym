@@ -31,8 +31,8 @@ def get_models(cfg : TrainConfig, tm_env : TMNF_Single_Agent_Env, print_params :
     policy_kwargs = dict(
     features_extractor_class=TMN_Extractor,
     features_extractor_kwargs= dict( 
-    vision_model = vision_model,
-    vision_model_out_dim = vision_model.out_dims))
+    vision_model = vision_model))#,
+    #vision_model_out_dim = vision_model.out_dims))
 
     model_constructor = hydra.utils.instantiate(cfg.sb3.constructor)
     model : BaseAlgorithm | PPO = model_constructor(env= tm_env, policy_kwargs=policy_kwargs,tensorboard_log= f"runs/{run_id}")

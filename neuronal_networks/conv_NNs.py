@@ -1,5 +1,7 @@
+import torch
 import torch.nn as nn
 import torchvision.models as models
+
 class PrebuiltResNet(nn.Module):
     """
     A  wrapper for loading pretrained ResNet models from torchvision.
@@ -69,10 +71,32 @@ class PrebuiltResNet(nn.Module):
         in_features = self.model.fc.in_features
         # Replace the classification head
         self.model.fc = nn.Linear(in_features,out_dims)
+
     def forward(self, x):
         # we defined images to be of shape (w,h,c)
         # everything down there is ugly need to fix that 
         #x = x.permute(0,3,1,2)
         x = self.color_adjust(x)
         if x.ndim == 3: x = x.unsqueeze(0)
+        return self.model(x)
+    
+class Linesight_Vision_Model(nn.Module):
+    """
+    This is the same vision model which was used in linesight_rl 
+    """
+    def __init__(self,in_color_channels=1,img_head_channels = [1, 16, 32, 64, 32]):
+        super(Linesight_Vision_Model,self).__init__()
+        img_head_channels[0] = in_color_channels
+        self.model = torch.nn.Sequential(
+            torch.nn.Conv2d(in_channels=img_head_channels[0], out_channels=img_head_channels[1], kernel_size=(4, 4), stride=2),
+            torch.nn.LeakyReLU(inplace=True),
+            torch.nn.Conv2d(in_channels=img_head_channels[1], out_channels=img_head_channels[2], kernel_size=(4, 4), stride=2),
+            torch.nn.LeakyReLU(inplace=True),
+            torch.nn.Conv2d(in_channels=img_head_channels[2], out_channels=img_head_channels[3], kernel_size=(3, 3), stride=2),
+            torch.nn.LeakyReLU(inplace=True),
+            torch.nn.Conv2d(in_channels=img_head_channels[3], out_channels=img_head_channels[4], kernel_size=(3, 3), stride=1),
+            torch.nn.LeakyReLU(inplace=True),
+            torch.nn.Flatten(),
+        )
+    def forward(self,x):
         return self.model(x)

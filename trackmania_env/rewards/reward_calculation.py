@@ -18,7 +18,3 @@ class RewradCalculator:
     def reset(self) -> None:
         """resets rewrad calculator"""
         pass
-
-
-
-
