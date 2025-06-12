@@ -62,8 +62,16 @@ class WrappersConfig:
     pytroch_wrapper: PytorchWrapperConfig
 
 @dataclass
+class ObservationManager:
+    observation_list : list[str]
+    colorspace : str
+    convert_torch : bool
+
+@dataclass
 class RLEnvConfig:
     wrappers: WrappersConfig
+    env : dict[str, any]
+    obsmanager : ObservationManager
 
 @dataclass
 class SB3PPOConstructorConfig:

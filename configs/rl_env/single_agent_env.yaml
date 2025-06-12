@@ -6,39 +6,26 @@ env:
   reset_mode : "respawn"
   reward_calculator : "basic"
 
+
+obsmanager:
+  observation_list: 
+        - image
+        - position
+        - velocity
+        - yaw_pitch_roll
+        - scene_mobil.sync_vehicle_state.speed_forward
+        - scene_mobil.input_steer
+        - scene_mobil.async_vehicle_state.is_turbo
+        - scene_mobil.engine.gear
+        - input_finish_event.input_data_field
+        - input_accelerate_event.time_field
+        - scene_mobil.async_vehicle_state.rest_field
+        - rotation_matrix
+
+  colorspace : "rgb"
+  convert_torch : true
+
 wrappers:
   monitor: 
     _partial_: True
     _target_: stable_baselines3.common.monitor.Monitor 
-  
-  observations_filter:
-    _partial_: True
-    _target_: gymnasium.wrappers.FilterObservation
-    filter_keys: 
-      - image
-      - position
-      - velocity
-      - yaw_pitch_roll
-      - scene_mobil.sync_vehicle_state.speed_forward
-      - scene_mobil.input_steer
-      - scene_mobil.async_vehicle_state.is_turbo
-      - scene_mobil.engine.gear
-      - input_finish_event.input_data_field
-      - input_brake_event.last_field
-      - input_accelerate_event.time_field
-      - scene_mobil.async_vehicle_state.rest_field
-      - player_info.last_field
-      - rotation_matrix
-
-  bgra_to_rgb:
-    _partial_: True
-    _target_: trackmania_env.wrappers.bgra_to_rgb.BGRA_to_RGB
-
-  transform_grayscale:
-    _partial_: True
-    _target_: trackmania_env.wrappers.transform_grayscale.TransformGrayscale
-    keep_dim: True
-
-  pytroch_wrapper:
-    _partial_: True
-    _target_: trackmania_env.wrappers.transform_torch.PytorchWrapper

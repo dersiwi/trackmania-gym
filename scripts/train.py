@@ -29,6 +29,8 @@ from neuronal_networks.custom_extractor import TMN_Extractor
 import torch.nn as nn
 from stable_baselines3.common.base_class import BaseAlgorithm
 from trackmania_env.envs.single_agent_env2 import TMNF_Single_Agent_Env
+from trackmania_env.envs.observation_manager import ObservationManager
+
 from configs.config import TrainConfig
 from utils.printutils import print_model_params
 
@@ -43,6 +45,7 @@ from omegaconf import DictConfig, OmegaConf
 import gymnasium as gym
 from stable_baselines3.common.policies import ActorCriticPolicy
 import numpy as np
+from trackmania_env.envs.observation_manager import ObservationManager
 
 _HYDRA_PARAMS = {
     "version_base": "1.3",
@@ -75,9 +78,15 @@ def main(cfg : TrainConfig):
     tmi_process, control_queue, response_queue = start_process_and_wait_for_startsignal(cfg.platforms, cfg.gmi, cfg.image.width, cfg.image.height)
 
     try:
-        tm_env = hydra.utils.instantiate(cfg.rl_env.env)(
-            command_queue=control_queue,
-            response_queue=response_queue)
+        obs_manager_cfg = cfg.rl_env.obsmanager
+        obs_manager = ObservationManager(observation_list=obs_manager_cfg.observation_list, 
+                                         colorspace=obs_manager_cfg.colorspace,
+                                         convert_torch=obs_manager_cfg.convert_torch,
+                                         img_width=cfg.image.width, 
+                                         img_height=cfg.image.height)
+        tm_env = TMNF_Single_Agent_Env(command_queue=control_queue,
+                                        response_queue=response_queue, 
+                                        obs_manager=obs_manager)
              
         # apply (Observation)-wrappers to the environment
         for _, wrapper_conf in cfg.rl_env.wrappers.items():

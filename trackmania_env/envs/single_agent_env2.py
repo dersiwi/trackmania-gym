@@ -5,28 +5,28 @@ https://gymnasium.farama.org/tutorials/gymnasium_basics/environment_creation/
 from typing import Any,Dict,Tuple,Optional,List
 
 import gymnasium as gym
-from gymnasium.spaces import Box,Discrete 
-from numpy import uint8,int32,float32,inf
 import numpy as np
-import time 
+import logging
+import torch
+
+from gymnasium import spaces
 from queue import Queue
 from tminterface.structs import CheckpointData, SimStateData, CheckpointTime
 
 from game_interaction.process_wrapper import TMIProcessWrapper
 from game_interaction.tminterface_commands import TMInterfaceCommands
+from game_interaction.ipc_fields import IPCFields
 
 from trackmania_env.envs.position_buffer import PositionBuffer
 from trackmania_env.envs.actionmap import ACTION_MAP
 from trackmania_env.envs.reward_calculation import RewradCalculator
+from trackmania_env.envs.observation_manager import ObservationManager
+
 
 from simstate_space_dict import simstate_space_dict
 
-import re
-import logging
-import functools
 
-from bytefield import ByteArrayField,IntegerField,FloatField,BooleanField
-import torch
+
 class TMNF_Single_Agent_Env(gym.Env):
     """The reinforcement learning environment for Trackmania Nations Forever"""
 
@@ -37,6 +37,7 @@ class TMNF_Single_Agent_Env(gym.Env):
             self,
             command_queue : Queue,
             response_queue : Queue,
+            obs_manager : ObservationManager,
             position_buffer_size : int = 20,
             position_moved_threshold : float = 0.2,
             reset_mode : str = "respawn",
@@ -46,11 +47,9 @@ class TMNF_Single_Agent_Env(gym.Env):
         This constructor sets up the basic structure of the environment.
         As required by Gymnasium environments, it defines the action and observation spaces.
         We also define some other important varibales in order to communicate with TMInterface
-        """  
-        self.observation_space = gym.spaces.Dict(simstate_space_dict)
-        self.observations = {}
+        """
+        self.observation_space = obs_manager.get_observation_dict()
         self.action_space = gym.spaces.Discrete(len(ACTION_MAP))
-        self.SimStateData = None
         self.actions = []
         """list of actions that may be stored later."""
 
@@ -70,61 +69,32 @@ class TMNF_Single_Agent_Env(gym.Env):
         self.position_buffer_threshold = position_moved_threshold
 
         self.rew_calculator = RewradCalculator.get_instance(reward_calculator, self.position_buffer)
+        self.obs_manager = obs_manager
         
     def _get_info(self) -> Dict[str,Any]:
         """Helper function for computing additional information (e.g. for debugging or logging)"""
         info = {} 
         return info
     
-    def _get_obs(self) -> Dict:
+    def _get_raw_obs(self) -> Dict:
         """Helper function to translate the the environment's state into an observation"""
 
         try:
             # request images, wait for response from process and check that cmd-id of response matches request-id.
             self.command_queue.put(TMIProcessWrapper.IPCCommands.get_req_img_command(self.__ipc_cmd_id))
             imgs_and_simstate = self.response_queue.get(timeout=self.__ipc_timeout)
-            assert imgs_and_simstate["cmd_id"] == self.__ipc_cmd_id
+            assert imgs_and_simstate[IPCFields.CMD_ID] == self.__ipc_cmd_id
             self.__ipc_cmd_id += 1
         except TimeoutError as t:
             self.logger.error(f"Timeout error while waiting for images: {t}")
 
-        image : np.ndarray = imgs_and_simstate["img"]
-        game_states : SimStateData = imgs_and_simstate["sim_state"]
-
-        for key in self.observation_space.spaces:
-            if key == "image" :
-                self.observations[key] = image
-            else :
-                field = None
-                # from https://discuss.python.org/t/enhancing-getattr-to-support-nested-attribute-access-with-dotted-strings/74305/9
-                # TODO this is pretty ugly , think of another way to do this
-                match = re.search(r'\[(\d+)\]', key)
-                if match is not None:
-                    left,right = (re.sub(r'\[\d+\]', '', key)).split('.', 1)
-                    field = getattr(game_states,left)[int(match.group(1))]
-                    field = functools.reduce(getattr, right.split('.'), field)
-                else : field = functools.reduce(getattr, key.split('.'), game_states)
-
-                if isinstance(field, ByteArrayField): 
-                    value = field._getvalue(game_states)
-                    self.observations[key]= list(value.to_bytearray())
-
-                elif isinstance(field,(IntegerField,BooleanField,FloatField)):
-                    # this would also be valid unpack_bytes(game_states,v)
-                    self.observations[key] = field._getvalue(game_states)
-
-                elif isinstance(field,np.ndarray) and field.dtype == np.object_:
-                    arr = np.vstack(field).astype(np.float32)
-                    self.observations[key]= torch.from_numpy(arr)
-
-                else:
-                    self.observations[key] = field
+        return imgs_and_simstate
     
-        sim_step : int = imgs_and_simstate["sim_step"]
-        self.SimStateData = game_states
-        # TODO Issue #3
-        # the wrapper classes will do the filtering
-        return self.observations
+    def _send_action(self, action : tuple[bool, bool, bool, bool]):
+        self.command_queue.put(TMIProcessWrapper.IPCCommands.get_act_command(self.__ipc_cmd_id, action))
+        res = self.response_queue.get(timeout=self.__ipc_timeout)
+        assert res[IPCFields.CMD_ID] == self.__ipc_cmd_id
+        self.__ipc_cmd_id += 1
 
     def step(self, action) -> Tuple[gym.spaces.Dict,float,bool,bool,Dict[str,Any]]:
         """
@@ -145,24 +115,16 @@ class TMNF_Single_Agent_Env(gym.Env):
         info (dict): A dictionary with additional information (e.g. for debugging or logging).
         """
         
-        (left,right,accelerate,brake) = ACTION_MAP[action]
-
-        self.actions.append((left,right,accelerate,brake))
-
-        # send the action via tminterface here
-        self.command_queue.put(TMIProcessWrapper.IPCCommands.get_act_command(self.__ipc_cmd_id, (left,right,accelerate,brake)))
-        res = self.response_queue.get(timeout=self.__ipc_timeout)
-        assert res["cmd_id"] == self.__ipc_cmd_id
-        self.__ipc_cmd_id += 1
+        #store action internally and send via TMInterface
+        action = ACTION_MAP[action]
+        self.actions.append(action)
+        self._send_action(action)
 
 
-        observations = self._get_obs()
-        #ssD : SimStateData = observations["SimStateData"]
-
-        #self.position_buffer.add(ssD.position)
-        #race_finished = ssD.player_info.race_finished
-        self.position_buffer.add(self.observations["position"])
-        race_finished =  self.observations["player_info.race_finished"]
+        raw_obs = self._get_raw_obs()
+        ssD : SimStateData = raw_obs[IPCFields.SIMSTATE]
+        self.position_buffer.add(ssD.position)
+        race_finished = ssD.player_info.race_finished
 
 
         # TODO check if episode terminated and or tuncated, terminated if reached the goal, truncated means that a timelimit has been reached but MDP is not in a terminal state
@@ -171,12 +133,14 @@ class TMNF_Single_Agent_Env(gym.Env):
         truncated = False
         
 
-        reward = self.rew_calculator.calculate_reward(observations, race_finished, stuck)
+        reward = self.rew_calculator.calculate_reward(raw_obs, race_finished, stuck)
         
         # TODO also store some info for logging or debugging
         info = self._get_info() 
+
+        processed_obs = self.obs_manager.get_observation(raw_obs)
         
-        return observations, reward, terminated, truncated, info
+        return processed_obs, reward, terminated, truncated, info
     
     def reset(self, seed = None, options = None)-> Tuple[gym.spaces.Dict,Dict[str,Any]]:
         """
@@ -201,12 +165,12 @@ class TMNF_Single_Agent_Env(gym.Env):
         (one of the TM Youtube channels said that random spawning helps)
         """
         
-        observation = self._get_obs()
+        raw_obs = self._get_raw_obs()
+        observation = self.obs_manager.get_observation(raw_obs)
         info = self._get_info()
         self.actions = []
         
-        #self.reset_car(observation["SimStateData"].position)
-        self.reset_car(self.observations["position"])
+        self.reset_car(raw_obs[IPCFields.SIMSTATE].position)
         self.position_buffer.reset()
         self.rew_calculator.reset()
 
@@ -230,7 +194,7 @@ class TMNF_Single_Agent_Env(gym.Env):
         self.command_queue.put_nowait(TMIProcessWrapper.IPCCommands.get_cmd_command(self.__ipc_cmd_id, 
                                                                                     TMInterfaceCommands.key_action("press", "enter")))
         response = self.response_queue.get(10)
-        assert response["cmd_id"] == self.__ipc_cmd_id, f"Got unexepected command id from response. Expected {self.__ipc_cmd_id}, got : {response['cmd_id']}"
+        assert response[IPCFields.CMD_ID] == self.__ipc_cmd_id, f"Got unexepected command id from response. Expected {self.__ipc_cmd_id}, got : {response['cmd_id']}"
         self.__ipc_cmd_id += 1
 
     
@@ -239,7 +203,7 @@ class TMNF_Single_Agent_Env(gym.Env):
         self.command_queue.put_nowait(TMIProcessWrapper.IPCCommands.get_cmd_command(self.__ipc_cmd_id, 
                                                                                     TMInterfaceCommands.teleport(self.start_position)))
         response = self.response_queue.get(10)
-        assert response["cmd_id"] == self.__ipc_cmd_id, f"Got unexepected command id from response. Expected {self.__ipc_cmd_id}, got : {response['cmd_id']}"
+        assert response[IPCFields.CMD_ID] == self.__ipc_cmd_id, f"Got unexepected command id from response. Expected {self.__ipc_cmd_id}, got : {response['cmd_id']}"
         self.__ipc_cmd_id += 1
     
     def render(self, mode = "human") -> Optional[np.array]:

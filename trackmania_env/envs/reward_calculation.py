@@ -1,6 +1,7 @@
 from __future__ import annotations
 from trackmania_env.envs.position_buffer import PositionBuffer
 from tminterface.structs import CheckpointData, SimStateData, CheckpointTime
+from game_interaction.ipc_fields import IPCFields
 import numpy as np
 
 class RewradCalculator:
@@ -33,8 +34,8 @@ class BasicRewardCalculation(RewradCalculator):
         super().__init__(position_buffer)
 
     def calculate_reward(self, observations, race_finished, other_terminations):
-        #ssD : SimStateData = observations["SimStateData"]
-        velocity = observations["velocity"]
+        ssD : SimStateData = observations[IPCFields.SIMSTATE]
+        velocity = ssD.velocity
         reward = np.linalg.norm(velocity[0:1]) + self.pos_buffer.distance_moved()
 
         if race_finished:
