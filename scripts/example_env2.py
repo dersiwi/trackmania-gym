@@ -12,8 +12,7 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))) 
 
 
 from trackmania_env.envs.single_agent_env2 import TMNF_Single_Agent_Env
-from trackmania_env.envs.actionmap import get_reverse_action_map
-from trackmania_env.wrappers.observations_filter import ObservationFilter
+from trackmania_env.utils.actionmap import get_reverse_action_map
 
 
 from game_interaction.game_instance_manager2 import GameInstanceManager
@@ -75,7 +74,6 @@ if __name__ == "__main__":
             ]
     # stress test to make sure all fields work
     observations_list = list(simstate_space_dict.keys())
-    tm_env = ObservationFilter(tm_env, observations_list)
     
     obs: gym.spaces.Dict = tm_env._get_obs()
     with open('out.txt', 'w') as f:

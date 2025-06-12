@@ -1,5 +1,5 @@
 from __future__ import annotations
-from trackmania_env.envs.position_buffer import PositionBuffer
+from trackmania_env.utils.position_buffer import PositionBuffer
 from tminterface.structs import CheckpointData, SimStateData, CheckpointTime
 from game_interaction.ipc_fields import IPCFields
 import numpy as np

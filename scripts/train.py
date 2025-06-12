@@ -11,11 +11,8 @@ import traceback
 
 # Weights and Biases related imports
 import wandb
-from wandb.integration.sb3 import WandbCallback
-from stable_baselines3.common.callbacks import BaseCallback
 
 # imports for communication between TMInterface and environment
-from game_interaction.game_instance_manager2 import GameInstanceManager
 from game_interaction.run_multiprocess_wrapper import start_process_and_wait_for_startsignal
 from game_interaction.process_wrapper import TMIProcessWrapper
 
@@ -24,28 +21,13 @@ from gymnasium import ObservationWrapper
 from stable_baselines3.common.monitor import Monitor
 
 # extractor imports
-from neuronal_networks.conv_NNs import PrebuiltResNet
-from neuronal_networks.custom_extractor import TMN_Extractor
-import torch.nn as nn
 from stable_baselines3.common.base_class import BaseAlgorithm
 from trackmania_env.envs.single_agent_env2 import TMNF_Single_Agent_Env
-from trackmania_env.envs.observation_manager import ObservationManager
+from trackmania_env.utils.observation_manager import ObservationManager
 
 from configs.config import TrainConfig
 from utils.printutils import print_model_params
 
-# unused imports
-from simstate_space_dict import simstate_space_dict
-from utils.scriptargs import get_argparser
-from pathlib import Path
-from contextlib import redirect_stdout
-from multiprocessing import Queue, Process
-import logging
-from omegaconf import DictConfig, OmegaConf
-import gymnasium as gym
-from stable_baselines3.common.policies import ActorCriticPolicy
-import numpy as np
-from trackmania_env.envs.observation_manager import ObservationManager
 
 _HYDRA_PARAMS = {
     "version_base": "1.3",

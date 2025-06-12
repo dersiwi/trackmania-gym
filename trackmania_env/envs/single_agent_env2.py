@@ -17,10 +17,10 @@ from game_interaction.process_wrapper import TMIProcessWrapper
 from game_interaction.tminterface_commands import TMInterfaceCommands
 from game_interaction.ipc_fields import IPCFields
 
-from trackmania_env.envs.position_buffer import PositionBuffer
-from trackmania_env.envs.actionmap import ACTION_MAP
-from trackmania_env.envs.reward_calculation import RewradCalculator
-from trackmania_env.envs.observation_manager import ObservationManager
+from trackmania_env.utils.position_buffer import PositionBuffer
+from trackmania_env.utils.actionmap import ACTION_MAP
+from trackmania_env.utils.reward_calculation import RewradCalculator
+from trackmania_env.utils.observation_manager import ObservationManager
 
 
 from simstate_space_dict import simstate_space_dict
