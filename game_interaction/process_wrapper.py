@@ -1,5 +1,6 @@
 from game_interaction.tminterface2 import MessageType, TMInterface
 from game_interaction.game_instance_manager2 import GameInstanceManager
+from game_interaction.ipc_fields import IPCFields
 import numpy as np
 import time
 import logging, os
@@ -28,27 +29,27 @@ class TMIProcessWrapper:
         @staticmethod
         def get_act_command(command_id : int, action : tuple[bool, bool, bool, bool]) -> dict[str, any]:
             """Creates command for IPC communication for request_image()"""
-            return {"cmd_id" : command_id, "cmd" : TMIProcessWrapper.IPCCommands.ACT, "args" : action}
+            return {IPCFields.CMD_ID : command_id, IPCFields.CMD : TMIProcessWrapper.IPCCommands.ACT, "args" : action}
             
         @staticmethod
         def get_req_img_command(command_id : int, continuous : bool = False) -> dict[str, any]:
             """Creates command for IPC communication for request_image()"""
-            return {"cmd_id" : command_id, "cmd" : TMIProcessWrapper.IPCCommands.REQ_IMG, "args" : continuous}
+            return {IPCFields.CMD_ID : command_id, IPCFields.CMD : TMIProcessWrapper.IPCCommands.REQ_IMG, "args" : continuous}
         
         @staticmethod
         def get_end_syncloop_command(command_id : int) -> dict[str, any]:
             """Returns command to end syncloop execution."""
-            return {"cmd_id" : command_id, "cmd" : TMIProcessWrapper.IPCCommands.END_SYNCLOOP, "args" : None}
+            return {IPCFields.CMD_ID : command_id, IPCFields.CMD : TMIProcessWrapper.IPCCommands.END_SYNCLOOP, "args" : None}
         
         @staticmethod
         def get_cmd_command(command_id : int, command : str) -> dict[str, any]:
             """Returns a command (for TMIProcessWrapper) that tells the underlying TMInterface to send a command to the game-instance."""
-            return {"cmd_id" : command_id, "cmd" : TMIProcessWrapper.IPCCommands.EXECUTE_COMMAND, "args" : command}
+            return {IPCFields.CMD_ID : command_id, IPCFields.CMD : TMIProcessWrapper.IPCCommands.EXECUTE_COMMAND, "args" : command}
         
         @staticmethod
         def get_startsignal(command_id : int) -> dict[str, any]:
             """Returns a command which only sends a response, once the server is sending `SC_SYNC' commands; i.e. track has started."""
-            return {"cmd_id" : command_id, "cmd" : TMIProcessWrapper.IPCCommands.SIMULATION_STARTED}
+            return {IPCFields.CMD_ID : command_id, IPCFields.CMD : TMIProcessWrapper.IPCCommands.SIMULATION_STARTED}
 
 
     def __init__(self, gim : GameInstanceManager, launch_game : bool, command_queue : Queue, response_queue : Queue, track : str, img_width : int, img_height : int, img_store_capacity : int = 100):
@@ -114,10 +115,10 @@ class TMIProcessWrapper:
         ssD = self.iface.get_simulation_state()
 
         if not self._req_img_cmd_id == -1:
-            self.response_queue.put_nowait({"cmd_id" : self._req_img_cmd_id, "status" : 0, 
-                                            "img" : frame,
-                                            "sim_state" : ssD,
-                                            "sim_step": self.sim_step_count})
+            self.response_queue.put_nowait({IPCFields.CMD_ID : self._req_img_cmd_id, IPCFields.STATUS : 0, 
+                                            IPCFields.IMG : frame,
+                                            IPCFields.SIMSTATE : ssD,
+                                            IPCFields.SIMSTEP : self.sim_step_count})
 
     def __request_frame(self):
         self.logger.debug("Requesting frame from game instance.")
@@ -144,7 +145,7 @@ class TMIProcessWrapper:
         self._send_action = False
 
         if not self._act_cmd_id == -1:
-            self.response_queue.put_nowait({"cmd_id" : self._act_cmd_id, "status" : 0})
+            self.response_queue.put_nowait({IPCFields.CMD_ID : self._act_cmd_id, IPCFields.STATUS : 0})
 
     def stop_sync_loop(self) -> None:
         """Stops running syncloop(). May result in timeout-error."""
@@ -172,24 +173,24 @@ class TMIProcessWrapper:
             return
         
         # now handle command
-        cmd_id : int = cmd["cmd_id"]
+        cmd_id : int = cmd[IPCFields.CMD_ID]
         self.logger.debug(f"Got command with command-id {cmd_id} of type {cmd['cmd']}")
         assert not cmd_id == -1, "Command id cannot be -1 as this is used as an internal error-code."
         
-        if cmd["cmd"] == TMIProcessWrapper.IPCCommands.ACT:
+        if cmd[IPCFields.CMD] == TMIProcessWrapper.IPCCommands.ACT:
             self.act(cmd["args"], cmd_id)
-        elif cmd["cmd"] == TMIProcessWrapper.IPCCommands.REQ_IMG:
+        elif cmd[IPCFields.CMD] == TMIProcessWrapper.IPCCommands.REQ_IMG:
             self.request_image(cmd["args"], cmd_id)
-        elif cmd["cmd"] == TMIProcessWrapper.IPCCommands.END_SYNCLOOP:
+        elif cmd[IPCFields.CMD] == TMIProcessWrapper.IPCCommands.END_SYNCLOOP:
             self.stop_sync_loop()
-            self.response_queue.put_nowait({"cmd_id" : cmd_id, "status" : 0})
-        elif cmd["cmd"] == TMIProcessWrapper.IPCCommands.EXECUTE_COMMAND:
+            self.response_queue.put_nowait({IPCFields.CMD_ID : cmd_id, IPCFields.STATUS : 0})
+        elif cmd[IPCFields.CMD] == TMIProcessWrapper.IPCCommands.EXECUTE_COMMAND:
             self.iface.execute_command(cmd["args"])
-            self.response_queue.put_nowait({"cmd_id" : cmd_id, "status" : 0})
-        elif cmd["cmd"] == TMIProcessWrapper.IPCCommands.SIMULATION_STARTED:
-            self.__start_cmd_id = cmd["cmd_id"]
+            self.response_queue.put_nowait({IPCFields.CMD_ID : cmd_id, IPCFields.STATUS : 0})
+        elif cmd[IPCFields.CMD] == TMIProcessWrapper.IPCCommands.SIMULATION_STARTED:
+            self.__start_cmd_id = cmd[IPCFields.CMD_ID]
         else:
-            self.response_queue.put_nowait({"cmd_id" : cmd_id, "status" : -1, "error" : "NoSuchCommand"})
+            self.response_queue.put_nowait({IPCFields.CMD_ID : cmd_id, IPCFields.STATUS : -1, "error" : "NoSuchCommand"})
 
 
     def syncloop(self, logfilepath = "logs/tmi_process.log"):
@@ -213,7 +214,7 @@ class TMIProcessWrapper:
                 # ============================ BEGIN ON RUN STEP ============================
 
                 if not self.__start_cmd_id == -1:
-                    self.response_queue.put_nowait({"cmd_id" : self.__start_cmd_id, "status" : 0})
+                    self.response_queue.put_nowait({IPCFields.CMD_ID : self.__start_cmd_id, IPCFields.STATUS : 0})
                     self.__start_cmd_id = -1
                     self.logger.info("Sending back command that abcdefg is ready.")
 
