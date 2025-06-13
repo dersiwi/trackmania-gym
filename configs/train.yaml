@@ -1,6 +1,5 @@
 defaults:
   - platforms: windows.yaml  # or platforms/windows
-  - models: pretrained_resnet.yaml
   - rl_env: single_agent_env.yaml
   - sb3: ppo.yaml
   - wandb_callbacks : sb3_callback.yaml
