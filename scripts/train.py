@@ -76,9 +76,9 @@ def main(cfg : TrainConfig):
         elif cfg.rl_env.env.obs_manager =="linesight":
             linesightcfg = cfg.rl_env.linesightobsmanager
             zone_centers = load_map_with_extrapolated_centers(
-                n_before= linesightcfg.n_zone_centers_extrapolate_before_start_of_map,
-                n_after=  linesightcfg.n_zone_centers_extrapolate_after_end_of_map,
-                path_to_file= linesightcfg.reference_line,)
+                n_before = linesightcfg.n_zone_centers_extrapolate_before_start_of_map,
+                n_after  = linesightcfg.n_zone_centers_extrapolate_after_end_of_map,
+                path_to_file = linesightcfg.reference_line,)
             
             (
                 zone_transitions,
@@ -114,7 +114,8 @@ def main(cfg : TrainConfig):
             
         tm_env = TMNF_Single_Agent_Env(command_queue=control_queue,
                                         response_queue=response_queue, 
-                                        obs_manager=obs_manager)
+                                        obs_manager=obs_manager,
+                                        max_steps_before_reset=cfg.rl_env.env.max_steps_until_reset)
              
         # apply (Observation)-wrappers to the environment
         for _, wrapper_conf in cfg.rl_env.wrappers.items():

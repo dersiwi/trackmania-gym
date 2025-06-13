@@ -25,6 +25,7 @@ class TMIProcessWrapper:
         END_SYNCLOOP = 2
         EXECUTE_COMMAND = 3
         SIMULATION_STARTED = 4
+        REVENT_SIM_FINISH = 5
 
         @staticmethod
         def get_act_command(command_id : int, action : tuple[bool, bool, bool, bool]) -> dict[str, any]:
@@ -50,6 +51,11 @@ class TMIProcessWrapper:
         def get_startsignal(command_id : int) -> dict[str, any]:
             """Returns a command which only sends a response, once the server is sending `SC_SYNC' commands; i.e. track has started."""
             return {IPCFields.CMD_ID : command_id, IPCFields.CMD : TMIProcessWrapper.IPCCommands.SIMULATION_STARTED}
+        
+        @staticmethod
+        def prevent_simulation_finish() -> dict[str, any]:
+            """Sends command to call ifcae.prevent_simulation_finish - does not answer! """
+            return {IPCFields.CMD_ID : 9999, IPCFields.CMD : TMIProcessWrapper.IPCCommands.REVENT_SIM_FINISH}
 
 
     def __init__(self, gim : GameInstanceManager, launch_game : bool, command_queue : Queue, response_queue : Queue, track : str, img_width : int, img_height : int, img_store_capacity : int = 100):
@@ -88,7 +94,6 @@ class TMIProcessWrapper:
         self.__start_cmd_id = -1
 
         self.map = track
-    
 
     def request_image(self, continuously : bool = False, cmd_id : int = -1):
         """Request an image with the specified image and width (specified in class initialization)
@@ -176,19 +181,21 @@ class TMIProcessWrapper:
         cmd_id : int = cmd[IPCFields.CMD_ID]
         self.logger.debug(f"Got command with command-id {cmd_id} of type {cmd['cmd']}")
         assert not cmd_id == -1, "Command id cannot be -1 as this is used as an internal error-code."
-        
-        if cmd[IPCFields.CMD] == TMIProcessWrapper.IPCCommands.ACT:
+        command = cmd[IPCFields.CMD]
+        if command == TMIProcessWrapper.IPCCommands.ACT:
             self.act(cmd["args"], cmd_id)
-        elif cmd[IPCFields.CMD] == TMIProcessWrapper.IPCCommands.REQ_IMG:
+        elif command == TMIProcessWrapper.IPCCommands.REQ_IMG:
             self.request_image(cmd["args"], cmd_id)
-        elif cmd[IPCFields.CMD] == TMIProcessWrapper.IPCCommands.END_SYNCLOOP:
+        elif command == TMIProcessWrapper.IPCCommands.END_SYNCLOOP:
             self.stop_sync_loop()
             self.response_queue.put_nowait({IPCFields.CMD_ID : cmd_id, IPCFields.STATUS : 0})
-        elif cmd[IPCFields.CMD] == TMIProcessWrapper.IPCCommands.EXECUTE_COMMAND:
+        elif command == TMIProcessWrapper.IPCCommands.EXECUTE_COMMAND:
             self.iface.execute_command(cmd["args"])
             self.response_queue.put_nowait({IPCFields.CMD_ID : cmd_id, IPCFields.STATUS : 0})
-        elif cmd[IPCFields.CMD] == TMIProcessWrapper.IPCCommands.SIMULATION_STARTED:
+        elif command == TMIProcessWrapper.IPCCommands.SIMULATION_STARTED:
             self.__start_cmd_id = cmd[IPCFields.CMD_ID]
+        elif command == TMIProcessWrapper.IPCCommands.REVENT_SIM_FINISH:
+            self.iface.prevent_simulation_finish()
         else:
             self.response_queue.put_nowait({IPCFields.CMD_ID : cmd_id, IPCFields.STATUS : -1, "error" : "NoSuchCommand"})
 

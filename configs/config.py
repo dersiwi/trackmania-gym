@@ -120,9 +120,18 @@ class WandbConfig:
     project: str
 
 @dataclass
+class EnvConfig:
+    position_buffer_size : int
+    position_moved_threshold : float
+    reset_mode : str
+    reward_calculator : str
+    obs_manager : str ##use basic for other
+    max_steps_until_reset : int
+
+@dataclass
 class RLEnvConfig:
     wrappers: WrappersConfig
-    env : dict[str, any]
+    env : EnvConfig
     obsmanager : ObservationManager
     linesightobsmanager : LinesightObsCfg
 

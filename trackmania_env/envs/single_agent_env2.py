@@ -43,7 +43,8 @@ class TMNF_Single_Agent_Env(gym.Env):
             position_moved_threshold : float = 0.2,
             reset_mode : str = "respawn",
             reward_calculator : str = "basic",
-            n_previous_actions : int = 10):
+            n_previous_actions : int = 10,
+            max_steps_before_reset : int = 10000):
         """
         Initializes the custom Gymnasium environment.
         This constructor sets up the basic structure of the environment.
@@ -73,6 +74,9 @@ class TMNF_Single_Agent_Env(gym.Env):
         self.rew_calculator = get_reward_calculator(reward_calculator, self.position_buffer)
         self.obs_manager = obs_manager
         self.obs_manager.set_env(self)
+
+        self.max_steps_before_reset : int = max_steps_before_reset
+        self.n_steps : int = 0
 
         # define observation and action space for gym
         self.observation_space = obs_manager.get_observation_dict()
@@ -136,9 +140,13 @@ class TMNF_Single_Agent_Env(gym.Env):
 
         # TODO check if episode terminated and or tuncated, terminated if reached the goal, truncated means that a timelimit has been reached but MDP is not in a terminal state
         stuck = not self.position_buffer.moved_more_than_threshold(self.position_buffer_threshold)
-        terminated = not self.position_buffer.moved_more_than_threshold(self.position_buffer_threshold) or race_finished
-        truncated = False
+        timeout = self.n_steps >= self.max_steps_before_reset
+        terminated = not self.position_buffer.moved_more_than_threshold(self.position_buffer_threshold) or race_finished or timeout
         
+        truncated = False
+
+        if race_finished:
+            self.command_queue.put_nowait(TMIProcessWrapper.IPCCommands.prevent_simulation_finish())       
 
         
         
@@ -154,7 +162,7 @@ class TMNF_Single_Agent_Env(gym.Env):
             pass
 
         reward = self.rew_calculator.calculate_reward(raw_obs, race_finished, stuck)
-        
+        self.n_steps += 1
         return processed_obs, reward, terminated, truncated, info
     
     def reset(self, seed = None, options = None)-> Tuple[gym.spaces.Dict,Dict[str,Any]]:
@@ -188,6 +196,7 @@ class TMNF_Single_Agent_Env(gym.Env):
         self.reset_car(raw_obs[IPCFields.SIMSTATE].position)
         self.position_buffer.reset()
         self.rew_calculator.reset()
+        self.n_steps = 0
 
         return observation, info
     
