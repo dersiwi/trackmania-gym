@@ -23,9 +23,6 @@ from game_interaction.process_wrapper import TMIProcessWrapper
 from gymnasium import ObservationWrapper
 from stable_baselines3.common.monitor import Monitor
 
-from trackmania_env.wrappers.bgra_to_rgb import Vec_BGRA_to_RGB
-from trackmania_env.wrappers.transform_grayscale import Vec_TransformGrayscale
-from trackmania_env.wrappers.transform_torch import Vec_PytorchWrapper
 
 
 from trackmania_env.envs.single_agent_env2 import TMNF_Single_Agent_Env

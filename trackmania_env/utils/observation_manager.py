@@ -28,8 +28,13 @@ class ObservationManager:
         self.img_width = img_width
         self.img_height = img_height
 
+        self.env = None
+
         if self.obs_have_img:
             self.observation_list.remove("image")
+
+    def set_env(self, environment):
+        self.env = environment
 
 
     def get_values_from_state_dict(self, obs : SimStateData) -> np.ndarray:

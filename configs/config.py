@@ -67,11 +67,7 @@ class ObservationManager:
     colorspace : str
     convert_torch : bool
 
-@dataclass
-class RLEnvConfig:
-    wrappers: WrappersConfig
-    env : dict[str, any]
-    obsmanager : ObservationManager
+
 
 @dataclass
 class SB3PPOConstructorConfig:
@@ -82,12 +78,25 @@ class SB3PPOConstructorConfig:
     n_steps : int
 
 @dataclass
+class LinesightObsCfg:
+    n_zone_centers_in_inputs : int
+    one_every_n_zone_centers_in_inputs : int
+    n_zone_centers_extrapolate_after_end_of_map : int
+    n_zone_centers_extrapolate_before_start_of_map : int
+    n_prev_actions_in_inputs : int
+    margin_to_announce_finish_meters : int
+    distance_between_checkpoints: float
+    road_width: int  ## a little bit of margin, could be closer to 24 probably ? Don't take risks there are curvy roads
+    sync_virtual_and_real_checkpoints : bool
+
+@dataclass
 class SB3PPOLearnArgsConfig:
   total_timesteps: int
   log_interval: int
   tb_log_name: str
   reset_num_timesteps: bool
   progress_bar: bool
+  
 @dataclass
 class SB3PPOConfig:
     constructor: SB3PPOConstructorConfig
@@ -107,6 +116,13 @@ class WandbConfig:
     use: bool
     entity: str
     project: str
+
+@dataclass
+class RLEnvConfig:
+    wrappers: WrappersConfig
+    env : dict[str, any]
+    obsmanager : ObservationManager
+    linesightobsmanager : LinesightObsCfg
 
 @dataclass
 class TrainConfig:

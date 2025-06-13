@@ -21,6 +21,7 @@ from trackmania_env.utils.position_buffer import PositionBuffer
 from trackmania_env.utils.actionmap import ACTION_MAP
 from trackmania_env.utils.reward_calculation import RewradCalculator
 from trackmania_env.utils.observation_manager import ObservationManager
+from collections import deque
 
 
 from simstate_space_dict import simstate_space_dict
@@ -41,18 +42,19 @@ class TMNF_Single_Agent_Env(gym.Env):
             position_buffer_size : int = 20,
             position_moved_threshold : float = 0.2,
             reset_mode : str = "respawn",
-            reward_calculator : str = "basic"):
+            reward_calculator : str = "basic",
+            n_previous_actions : int = 10):
         """
         Initializes the custom Gymnasium environment.
         This constructor sets up the basic structure of the environment.
         As required by Gymnasium environments, it defines the action and observation spaces.
         We also define some other important varibales in order to communicate with TMInterface
         """
-        self.observation_space = obs_manager.get_observation_dict()
-        self.action_space = gym.spaces.Discrete(len(ACTION_MAP))
-        self.actions = []
+        self.n_prev_actions = n_previous_actions
+        self.actions : deque = deque([(False,False,False,False)] * self.n_prev_actions, maxlen=self.n_prev_actions)
         """list of actions that may be stored later."""
 
+        # variables for IPC communication
         self.command_queue = command_queue
         self.response_queue = response_queue
         self.__ipc_cmd_id = 0
@@ -70,6 +72,11 @@ class TMNF_Single_Agent_Env(gym.Env):
 
         self.rew_calculator = RewradCalculator.get_instance(reward_calculator, self.position_buffer)
         self.obs_manager = obs_manager
+        self.obs_manager.set_env(self)
+
+        # define observation and action space for gym
+        self.observation_space = obs_manager.get_observation_dict()
+        self.action_space = gym.spaces.Discrete(len(ACTION_MAP))
         
     def _get_info(self) -> Dict[str,Any]:
         """Helper function for computing additional information (e.g. for debugging or logging)"""
@@ -168,7 +175,7 @@ class TMNF_Single_Agent_Env(gym.Env):
         raw_obs = self._get_raw_obs()
         observation = self.obs_manager.get_observation(raw_obs)
         info = self._get_info()
-        self.actions = []
+        self.actions.clear()
         
         self.reset_car(raw_obs[IPCFields.SIMSTATE].position)
         self.position_buffer.reset()
