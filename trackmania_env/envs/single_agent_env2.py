@@ -140,12 +140,20 @@ class TMNF_Single_Agent_Env(gym.Env):
         truncated = False
         
 
-        reward = self.rew_calculator.calculate_reward(raw_obs, race_finished, stuck)
+        
         
         # TODO also store some info for logging or debugging
         info = self._get_info() 
 
         processed_obs = self.obs_manager.get_observation(raw_obs)
+        try:
+            raw_obs["meters_advanced_along_centerline"] = self.obs_manager.distance_since_track_begin
+            raw_obs["state_zone_center_coordinates_in_car_reference_system"] = self.obs_manager.state_zone_center_coordinates_in_car_reference_system
+        except:
+            # this only works if obs manager is lineisght 
+            pass
+
+        reward = self.rew_calculator.calculate_reward(raw_obs, race_finished, stuck)
         
         return processed_obs, reward, terminated, truncated, info
     
@@ -175,7 +183,7 @@ class TMNF_Single_Agent_Env(gym.Env):
         raw_obs = self._get_raw_obs()
         observation = self.obs_manager.get_observation(raw_obs)
         info = self._get_info()
-        self.actions.clear()
+        self.actions = deque([(False,False,False,False)] * self.n_prev_actions, maxlen=self.n_prev_actions)
         
         self.reset_car(raw_obs[IPCFields.SIMSTATE].position)
         self.position_buffer.reset()

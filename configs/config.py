@@ -22,6 +22,7 @@ class PlatformConfig:
     home: str
     tmloader: str
     plugin: str
+    map_dir : str
 
 @dataclass
 class PretrainedResNetConfig:
@@ -88,6 +89,7 @@ class LinesightObsCfg:
     distance_between_checkpoints: float
     road_width: int  ## a little bit of margin, could be closer to 24 probably ? Don't take risks there are curvy roads
     sync_virtual_and_real_checkpoints : bool
+    reference_line : str
 
 @dataclass
 class SB3PPOLearnArgsConfig:

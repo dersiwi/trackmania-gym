@@ -5,7 +5,7 @@ env:
   position_moved_threshold : 0.8
   reset_mode : "respawn"
   reward_calculator : "basic"
-  obs_manager : "linesight" ##use basic for other
+  obs_manager : "basic" ##use basic for other
 
 
 obsmanager:
@@ -36,6 +36,8 @@ linesightobsmanager:
   distance_between_checkpoints: 0.5
   road_width: 90  ## a little bit of margin, could be closer to 24 probably ? Don't take risks there are curvy roads
   sync_virtual_and_real_checkpoints : True
+  reference_line: tracks/reference_line/Level1.npy
+
 
 
 wrappers:

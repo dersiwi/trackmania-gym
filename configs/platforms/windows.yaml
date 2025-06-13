@@ -2,3 +2,4 @@ os: windows
 home: ${oc.env:USERPROFILE,""}  # This is the equivalent of expanduser("~") on Windows , "" fallback value if no such environment variable
 tmloader: ${.home}/AppData/Local/TMLoader/TMLoader.exe
 plugin: ${.home}/OneDrive/Dokumente/TMInterface/Plugins/Python_Link.as
+map_dir: ${.home}/OneDrive/Dokumente/TmForever/Tracks/Challenges

@@ -1,0 +1,96 @@
+from __future__ import annotations
+from trackmania_env.utils.position_buffer import PositionBuffer
+from tminterface.structs import CheckpointData, SimStateData, CheckpointTime
+from game_interaction.ipc_fields import IPCFields
+import numpy as np
+from numba import jit
+
+from trackmania_env.rewards.reward_calculation import RewradCalculator
+
+
+@jit(nopython=True)
+def speedslide_quality_tarmac(speed_x: float, speed_z: float) -> float:
+    """
+    Extract from Tomashu's documentation:
+    - speedslide_quality < 1: you don't utilize entire speedslide potential, steer more.
+    - speedslide_quality == 1: you utilize entire speedslide potential.perfect speedslide.
+    - speedslide_quality > 1: you utilize entire speedslide potential, but you start losing some speed from drifting, steer less.
+    """
+    material_max_side_friction_multiplier = 1.0  # will need to be changed in the future for dirt & grass
+    max_side_friction = (
+        np.interp(speed_z * 3.6, [0, 100, 200, 300, 400, 500], [80, 80, 75, 67, 60, 55]) * material_max_side_friction_multiplier
+    )
+    side_friction = 20 * abs(speed_x)
+    speedslide_quality = (side_friction - max_side_friction) / max_side_friction if side_friction > max_side_friction else 0.0
+    return speedslide_quality
+
+
+class LinesightRewardCalculator(RewradCalculator):
+    def __init__(self, position_buffer):
+        super().__init__(position_buffer)
+        self.last_obs : SimStateData = None
+
+
+    def calculate_reward(self, observations, race_finished, other_terminations):
+        ssD : SimStateData = observations[IPCFields.SIMSTATE]
+        ssD.simulation_wheels[0]
+        constant_reward_per_ms = 1
+        ms_per_action = 1
+
+        # Die hier kommen von Linesight config_copy (kompletter fiebertraum)
+        reward_per_m_advanced_along_centerline = 5 / 500
+        final_speed_reward_as_if_duration_s = 0
+        final_speed_reward_per_m_per_s = reward_per_m_advanced_along_centerline * final_speed_reward_as_if_duration_s
+        wheel_state = [ssD.simulation_wheels[i].real_time_state for i in range(4)]
+        reward_per_m_advanced_along_centerline = 1
+
+        engineered_speedslide_reward = 1
+        engineered_neoslide_reward = 1
+        engineered_kamikaze_reward = 1
+        engineered_close_to_vcp_reward = 1
+        engineered_reward_min_dist_to_cur_vcp = 5
+        engineered_reward_max_dist_to_cur_vcp = 25
+
+        reward = 0
+        
+        reward += constant_reward_per_ms 
+        """* (
+            ms_per_action
+            if (i < n_frames - 1 or ("race_time" not in rollout_results))
+            else rollout_results["race_time"] - (n_frames - 2) * config_copy.ms_per_action
+        )"""
+        reward += (
+            observations["meters_advanced_along_centerline"] - self.last_obs["meters_advanced_along_centerline"]
+        ) * reward_per_m_advanced_along_centerline
+        
+        
+        v_x, v_z = ssD.velocity[0], ssD.velocity[2]
+        if not self.last_obs == None:
+            
+            if final_speed_reward_per_m_per_s != 0 and v_z > 0:
+                # car has velocity *forward*
+                reward += final_speed_reward_per_m_per_s * (np.linalg.norm(ssD.velocity) - np.linalg.norm(self.last_obs.velocity))
+
+
+
+
+        if engineered_speedslide_reward != 0 and all(*(ws.has_ground_contact for ws in wheel_state)):
+            # all wheels touch the ground
+            reward += engineered_speedslide_reward * max(0.0, 1 - abs(speedslide_quality_tarmac(v_x, v_z) - 1))
+
+        # lateral speed is higher than 2 meters per second
+        reward += engineered_neoslide_reward if abs(v_x) >= 2.0 else 0
+
+
+        # kamikaze reward
+        if ( any(*(ws.has_ground_contact for ws in wheel_state))): #TODO : # engineered_kamikaze_reward != 0 and rollout_results["actions"][i] <= 2 or
+            reward += engineered_kamikaze_reward
+
+
+        if engineered_close_to_vcp_reward != 0:
+            reward += engineered_close_to_vcp_reward * max(
+                engineered_reward_min_dist_to_cur_vcp,
+                min(engineered_reward_max_dist_to_cur_vcp, np.linalg.norm(observations["state_zone_center_coordinates_in_car_reference_system"])),
+            )
+
+

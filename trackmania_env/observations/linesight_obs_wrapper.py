@@ -34,6 +34,7 @@ class LinesightObservationWrapper(ObservationManager):
         self.zone_centers: np.ndarray = zone_centers
         self.current_zone_idx:int = cfg.n_zone_centers_extrapolate_after_end_of_map
         self.distance_since_track_begin:int = 0
+        self.state_zone_center_coordinates_in_car_reference_system : np.ndarray = np.zeros(3,)
         self.max_allowable_distance_to_virtual_checkpoint = np.sqrt((cfg.distance_between_checkpoints / 2) ** 2 + (cfg.road_width / 2) ** 2)
 
         self.zone_transitions = zone_transitions
@@ -71,11 +72,12 @@ class LinesightObservationWrapper(ObservationManager):
         # Dynamic Car State
         # =========================
         (
-        state_zone_center_coordinates_in_car_reference_system,
+        self.state_zone_center_coordinates_in_car_reference_system,
         y_map_vector_in_car_reference_system,
         velocity_in_car_reference_system,
         angular_velocity_in_car_reference_system
         ) = self.get_dynamics_states(game_states=game_states)
+
 
         # =======================================
         # Wheel States,Engine and Gearbox State
@@ -95,7 +97,7 @@ class LinesightObservationWrapper(ObservationManager):
                             angular_velocity_in_car_reference_system.ravel(),
                             velocity_in_car_reference_system.ravel(),
                             y_map_vector_in_car_reference_system.ravel(),
-                            state_zone_center_coordinates_in_car_reference_system.ravel(),
+                            self.state_zone_center_coordinates_in_car_reference_system.ravel(),
                             min(
                                 self.cfg.margin_to_announce_finish_meters,
                                 self.distance_from_start_track_to_prev_zone_transition[

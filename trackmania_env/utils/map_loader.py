@@ -8,8 +8,8 @@ import numpy as np
 def load_map_with_extrapolated_centers(
     n_before: int,                # Number of points to extrapolate before start
     n_after: int,                 # Number of points to extrapolate after end
-    filename: str,                # Name of the .npy file to load
-    map_dir: Path                 # Base directory containing "maps" subfolder
+    path_to_file: str,                # Name of the .npy file to load
+
 ) -> np.ndarray:
     """
     Loads a centerline from file and extrapolates zone centers before the start and after the end.
@@ -24,7 +24,7 @@ def load_map_with_extrapolated_centers(
         np.ndarray: Extended and smoothed zone center points, shape (N + n_before + n_after, 3)
     """
     # Load original zone centers from file
-    centers = np.load(str(map_dir / "maps" / filename))
+    centers = np.load(path_to_file)
 
     # Extrapolate before the start
     direction_start = centers[0] - centers[1]
