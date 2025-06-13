@@ -3,18 +3,10 @@ from trackmania_env.utils.position_buffer import PositionBuffer
 from tminterface.structs import CheckpointData, SimStateData, CheckpointTime
 from game_interaction.ipc_fields import IPCFields
 import numpy as np
+from numba import jit
 
 class RewradCalculator:
     """Responsible for reward calculations for environment"""
-
-    @staticmethod
-    def get_instance(reward_calculator : str, position_buffer : PositionBuffer) -> RewradCalculator:
-
-        if reward_calculator == "basic":
-            return BasicRewardCalculation(position_buffer)
-
-        else:
-            raise NameError(f"Rewardcalculator '{reward_calculator}' not known.")
 
     def __init__(self, position_buffer : PositionBuffer):
         self.pos_buffer = position_buffer # do not reset or add anything to this position buffer, read-only! (no reset, no add...)
@@ -28,18 +20,5 @@ class RewradCalculator:
         pass
 
 
-class BasicRewardCalculation(RewradCalculator):
 
-    def __init__(self, position_buffer):
-        super().__init__(position_buffer)
 
-    def calculate_reward(self, observations, race_finished, other_terminations):
-        ssD : SimStateData = observations[IPCFields.SIMSTATE]
-        velocity = ssD.velocity
-        reward = np.linalg.norm(velocity[0:1]) + self.pos_buffer.distance_moved()
-
-        if race_finished:
-            reward += 10000
-        if other_terminations:
-            reward -= 1000
-        return reward

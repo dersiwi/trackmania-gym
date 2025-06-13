@@ -23,7 +23,9 @@ from stable_baselines3.common.monitor import Monitor
 # extractor imports
 from stable_baselines3.common.base_class import BaseAlgorithm
 from trackmania_env.envs.single_agent_env2 import TMNF_Single_Agent_Env
-from trackmania_env.utils.observation_manager import ObservationManager
+from trackmania_env.envs.observations.observation_manager import ObservationManager
+from trackmania_env.envs.observations.linesight_obs_wrapper import LinesightObservationWrapper
+
 
 from configs.config import TrainConfig
 from utils.printutils import print_model_params
@@ -61,11 +63,20 @@ def main(cfg : TrainConfig):
 
     try:
         obs_manager_cfg = cfg.rl_env.obsmanager
-        obs_manager = ObservationManager(observation_list=obs_manager_cfg.observation_list, 
-                                         colorspace=obs_manager_cfg.colorspace,
-                                         convert_torch=obs_manager_cfg.convert_torch,
-                                         img_width=cfg.image.width, 
-                                         img_height=cfg.image.height)
+        if cfg.rl_env.env.obsmanager =="basic":
+            obs_manager = ObservationManager(observation_list=obs_manager_cfg.observation_list, 
+                                            colorspace=obs_manager_cfg.colorspace,
+                                            convert_torch=obs_manager_cfg.convert_torch,
+                                            img_width=cfg.image.width, 
+                                            img_height=cfg.image.height)
+        elif cfg.rl_env.env.obsmanager =="linesight":
+            raise NotImplementedError("A bunch of data is missing for instanciation of LinesightObservationWrapper!!")
+            obs_manager = LinesightObservationWrapper(observation_list=obs_manager_cfg.observation_list, 
+                                            colorspace=obs_manager_cfg.colorspace,
+                                            convert_torch=obs_manager_cfg.convert_torch,
+                                            img_width=cfg.image.width, 
+                                            img_height=cfg.image.height,
+                                            cfg = cfg.rl_env.linesightobsmanager)
         tm_env = TMNF_Single_Agent_Env(command_queue=control_queue,
                                         response_queue=response_queue, 
                                         obs_manager=obs_manager)

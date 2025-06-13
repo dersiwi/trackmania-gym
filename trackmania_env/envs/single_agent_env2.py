@@ -19,8 +19,8 @@ from game_interaction.ipc_fields import IPCFields
 
 from trackmania_env.utils.position_buffer import PositionBuffer
 from trackmania_env.utils.actionmap import ACTION_MAP
-from trackmania_env.utils.reward_calculation import RewradCalculator
-from trackmania_env.utils.observation_manager import ObservationManager
+from trackmania_env.rewards.getrewards import get_reward_calculator
+from trackmania_env.observations.observation_manager import ObservationManager
 from collections import deque
 
 
@@ -70,7 +70,7 @@ class TMNF_Single_Agent_Env(gym.Env):
         self.position_buffer = PositionBuffer(position_buffer_size)
         self.position_buffer_threshold = position_moved_threshold
 
-        self.rew_calculator = RewradCalculator.get_instance(reward_calculator, self.position_buffer)
+        self.rew_calculator = get_reward_calculator(reward_calculator, self.position_buffer)
         self.obs_manager = obs_manager
         self.obs_manager.set_env(self)
 

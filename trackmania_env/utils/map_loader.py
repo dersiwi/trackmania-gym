@@ -2,6 +2,8 @@ import numpy as np
 from pathlib import Path
 from typing import Tuple
 from pygbx import Gbx, GbxType
+import numpy as np
+
 
 def load_map_with_extrapolated_centers(
     n_before: int,                # Number of points to extrapolate before start
@@ -89,3 +91,51 @@ def gbx_to_raw_pos_list(gbx_path: Path):
         raw_positions_list.append(np.array([r.position.x, r.position.y, r.position.z]))
 
     return raw_positions_list
+
+def get_checkpoint_positions_from_gbx(map_path: str):
+    """
+    Given a challenge.gbx file, return an unordered list of the checkpoint positions on that track.
+    <!> Warning: this function assumes that the block size for that map is 32x8x32. This is true for campaign maps, but not for all custom maps.
+    """
+    g = Gbx(map_path)
+
+    challenges = g.get_classes_by_ids([GbxType.CHALLENGE, GbxType.CHALLENGE_OLD])
+    if not challenges:
+        quit()
+
+    checkpoint_positions = []
+    challenge = challenges[0]
+    for block in challenge.blocks:
+        if "Checkpoint" in block.name or "Line" in block.name:
+            checkpoint_positions.append(np.array(block.position.as_array(), dtype="float"))
+            if "High" in block.name:  # Added for E03
+                checkpoint_positions[-1] += np.array([0, 7 / 8, 0])
+            elif block.name in ["StadiumRoadMainCheckpointRight", "StadiumRoadMainCheckpointLeft"]:  # Added for "exceed my tech"
+                checkpoint_positions[-1] += np.array([0, 5 / 8, 0])
+    checkpoint_positions = np.array(checkpoint_positions) * np.array([32, 8, 32]) + np.array((16, 0, 16))
+    return checkpoint_positions
+
+
+def sync_virtual_and_real_checkpoints(zone_centers: np.ndarray, map_path: str, sync_virtual_and_real_checkpoints = True):
+    """
+    Given a challenge.gbx file and a list of VCP, return:
+        - next_real_checkpoint_positions: a list of points with the same length as the list of VCP
+        - max_allowable_distance_to_real_checkpoint: a list of distances with the same length as the list of VCP
+
+    In this function we match each checkpoint with its corresponding closest VCP.
+    In game_instance_manager.py, we will enforce that the car can only advance towards the next VCP if it was within 12 meters of the center of the real checkpoint.
+    """
+    next_real_checkpoint_positions = np.zeros((len(zone_centers), 3))
+    max_allowable_distance_to_real_checkpoint = 9999999 * np.ones(len(zone_centers))
+    if sync_virtual_and_real_checkpoints:
+        checkpoint_positions = get_checkpoint_positions_from_gbx(map_path)
+        for checkpoint_position in checkpoint_positions:
+            dist_vcp_cp = np.linalg.norm(zone_centers - checkpoint_position, axis=1)
+            while np.min(dist_vcp_cp) < 12:
+                # This while is necessary for multi-lap maps, to identify the multiple VCP that are linked to the same CP
+                idx = dist_vcp_cp.argmin()
+                next_real_checkpoint_positions[idx, :] = checkpoint_position
+                max_allowable_distance_to_real_checkpoint[idx] = 12
+                dist_vcp_cp[max(0, idx - 200) : idx + 200] = 99999
+
+    return next_real_checkpoint_positions, max_allowable_distance_to_real_checkpoint
