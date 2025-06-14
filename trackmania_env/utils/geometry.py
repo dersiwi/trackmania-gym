@@ -31,7 +31,7 @@ def fraction_time_spent_in_current_zone(
     return max(0, min(1, si))
 
 
-def extract_cp_distance_interval(raw_position_list: List, target_distance_between_cp_m: float, base_dir: Path):
+def extract_cp_distance_interval(raw_position_list: List, target_distance_between_cp_m: float, base_dir: Path,map_name:str):
     """
     :param raw_position_list:               a list of 3D coordinates.
 
@@ -67,5 +67,5 @@ def extract_cp_distance_interval(raw_position_list: List, target_distance_betwee
         )
     )
     # TODO allow theuser to specify the file name 
-    np.save(base_dir/ "tminteraction" / "tracks" / "reference_line" /"map", np.array(zone_centers).round(4))
+    np.save(base_dir/ "tracks" / "reference_line" /map_name, np.array(zone_centers).round(4))
     return zone_centers
