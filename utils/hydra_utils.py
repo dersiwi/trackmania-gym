@@ -2,13 +2,13 @@
 import torch.nn as nn
 from configs.config import TrainConfig
 from trackmania_env.envs.single_agent_env2 import TMNF_Single_Agent_Env
-from stable_baselines3 import PPO
+from stable_baselines3 import PPO, SAC
 from stable_baselines3.common.base_class import BaseAlgorithm
 import hydra
 from neuronal_networks.conv_NNs import PrebuiltResNet
 from neuronal_networks.custom_extractor import TMN_Extractor
 from utils.printutils import print_model_params
-
+from omegaconf import DictConfig, OmegaConf
 
 
 def get_models(cfg : TrainConfig, tm_env : TMNF_Single_Agent_Env, print_params : bool = False,run_id:str = "test") -> tuple[nn.Module, BaseAlgorithm | PPO]:
@@ -34,8 +34,12 @@ def get_models(cfg : TrainConfig, tm_env : TMNF_Single_Agent_Env, print_params :
     vision_model = vision_model))#,
     #vision_model_out_dim = vision_model.out_dims))
 
+    algorithm_params = OmegaConf.to_container(cfg.sb3.algorithm_params, resolve=True)
+
+
+
     model_constructor = hydra.utils.instantiate(cfg.sb3.constructor)
-    model : BaseAlgorithm | PPO = model_constructor(env= tm_env, policy_kwargs=policy_kwargs,tensorboard_log= f"runs/{run_id}")
+    model : BaseAlgorithm | PPO | SAC = model_constructor(env= tm_env, policy_kwargs=policy_kwargs,tensorboard_log= f"runs/{run_id}", **algorithm_params)
 
     if print_params:
         print_model_params(model)       

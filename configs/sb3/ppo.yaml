@@ -7,8 +7,30 @@ constructor:
 
 learn_args:
   total_timesteps: 10000
-  log_interval: 1
+  log_interval: 13
   tb_log_name: "PPO"
   reset_num_timesteps: True
   progress_bar: False
-        
+
+algorithm_params:
+  learning_rate: 0.0003          # Learning rate or scheduler function
+  n_steps: 2048                  # Number of steps to run per environment per update
+  batch_size: 64                 # Minibatch size for each gradient update
+  n_epochs: 10                   # Number of epochs per update (how many times each minibatch is reused)
+  gamma: 0.99                    # Discount factor for reward
+  gae_lambda: 0.95               # Lambda for GAE (Generalized Advantage Estimation)
+  clip_range: 0.2                # Clipping range for policy loss (PPO-specific)
+  clip_range_vf: null            # Clipping range for value function (useful to stabilize critic updates); null means no clipping
+  normalize_advantage: true      # Whether to normalize advantages before updating
+  ent_coef: 0.0                  # Entropy coefficient (exploration bonus)
+  vf_coef: 0.5                   # Value function loss coefficient
+  max_grad_norm: 0.5             # Maximum gradient norm (gradient clipping)
+  use_sde: false                 # Whether to use State-Dependent Exploration (for continuous actions)
+  sde_sample_freq: -1           # Frequency of sampling new noise matrix for SDE (-1: only at start of episode)
+  rollout_buffer_class: null     # Custom rollout buffer class (leave null to use default)
+  rollout_buffer_kwargs: null    # Arguments to pass to the rollout buffer (leave null for default)
+  target_kl: null                # Early stopping when approximate KL divergence reaches this value (useful for avoiding overfitting)
+  stats_window_size: 100         # Window size for computing stats like average reward
+  seed: null                     # Random seed (for reproducibility)
+  device: "auto"                 # Device to use: "cpu", "cuda", or "auto"
+  _init_setup_model: true        # Whether to build the model immediately (usually true)

@@ -103,6 +103,7 @@ class SB3PPOLearnArgsConfig:
 class SB3PPOConfig:
     constructor: SB3PPOConstructorConfig
     learn_args: SB3PPOLearnArgsConfig
+    algorithm_params : dict[str, any]
 
 @dataclass
 class SB3CallbackConfig:
