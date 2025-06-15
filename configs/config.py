@@ -129,6 +129,7 @@ class EnvConfig:
     reward_calculator : str
     obs_manager : str ##use basic for other
     max_steps_until_reset : int
+    game_speed : float
 
 @dataclass
 class RLEnvConfig:

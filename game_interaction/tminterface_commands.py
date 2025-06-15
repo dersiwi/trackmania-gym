@@ -4,6 +4,12 @@ class TMInterfaceCommands:
     """This class implements commands from https://donadigo.com/tminterface/commands as methods with given parameters.
     All Methods return strings that can be sent via tminterface.execute_command(...)."""
 
+
+    class Variables:
+        """Implements variables """
+        SPEED = "speed"
+        """Defines games-speed, value is float!"""
+
     @staticmethod
     def recover_inputs(filename : str) -> str:
         """Calls 'recover inputs'-command, which saves them to the give filename (also add .txt-fileextension to the filename)
@@ -33,6 +39,7 @@ class TMInterfaceCommands:
         assert action in ["press", "rel"], f"Got unexpected action for key : {action}"
         return f"{action} {key}" 
     
-        
-
-    
+    @staticmethod
+    def set_variable(variable : str, value : any) -> str:
+        """Sets a variable. Available variables and value-ranges defined here : https://donadigo.com/tminterface/variables"""
+        return f"set {variable} {value}"

@@ -30,22 +30,22 @@ class TMIProcessWrapper:
         @staticmethod
         def get_act_command(command_id : int, action : tuple[bool, bool, bool, bool]) -> dict[str, any]:
             """Creates command for IPC communication for request_image()"""
-            return {IPCFields.CMD_ID : command_id, IPCFields.CMD : TMIProcessWrapper.IPCCommands.ACT, "args" : action}
+            return {IPCFields.CMD_ID : command_id, IPCFields.CMD : TMIProcessWrapper.IPCCommands.ACT, IPCFields.ARGS : action}
             
         @staticmethod
         def get_req_img_command(command_id : int, continuous : bool = False) -> dict[str, any]:
             """Creates command for IPC communication for request_image()"""
-            return {IPCFields.CMD_ID : command_id, IPCFields.CMD : TMIProcessWrapper.IPCCommands.REQ_IMG, "args" : continuous}
+            return {IPCFields.CMD_ID : command_id, IPCFields.CMD : TMIProcessWrapper.IPCCommands.REQ_IMG, IPCFields.ARGS : continuous}
         
         @staticmethod
         def get_end_syncloop_command(command_id : int) -> dict[str, any]:
             """Returns command to end syncloop execution."""
-            return {IPCFields.CMD_ID : command_id, IPCFields.CMD : TMIProcessWrapper.IPCCommands.END_SYNCLOOP, "args" : None}
+            return {IPCFields.CMD_ID : command_id, IPCFields.CMD : TMIProcessWrapper.IPCCommands.END_SYNCLOOP, IPCFields.ARGS : None}
         
         @staticmethod
         def get_cmd_command(command_id : int, command : str) -> dict[str, any]:
             """Returns a command (for TMIProcessWrapper) that tells the underlying TMInterface to send a command to the game-instance."""
-            return {IPCFields.CMD_ID : command_id, IPCFields.CMD : TMIProcessWrapper.IPCCommands.EXECUTE_COMMAND, "args" : command}
+            return {IPCFields.CMD_ID : command_id, IPCFields.CMD : TMIProcessWrapper.IPCCommands.EXECUTE_COMMAND, IPCFields.ARGS : command}
         
         @staticmethod
         def get_startsignal(command_id : int) -> dict[str, any]:
@@ -53,9 +53,9 @@ class TMIProcessWrapper:
             return {IPCFields.CMD_ID : command_id, IPCFields.CMD : TMIProcessWrapper.IPCCommands.SIMULATION_STARTED}
         
         @staticmethod
-        def prevent_simulation_finish() -> dict[str, any]:
-            """Sends command to call ifcae.prevent_simulation_finish - does not answer! """
-            return {IPCFields.CMD_ID : 9999, IPCFields.CMD : TMIProcessWrapper.IPCCommands.REVENT_SIM_FINISH}
+        def prevent_simulation_finish(command_id : int) -> dict[str, any]:
+            """Sends command to call ifcae.prevent_simulation_finish """
+            return {IPCFields.CMD_ID : command_id, IPCFields.CMD : TMIProcessWrapper.IPCCommands.REVENT_SIM_FINISH}
 
 
     def __init__(self, gim : GameInstanceManager, launch_game : bool, 
@@ -135,7 +135,7 @@ class TMIProcessWrapper:
         ssD = self.iface.get_simulation_state()
 
         if not self._req_img_cmd_id == -1:
-            self.response_queue.put_nowait({IPCFields.CMD_ID : self._req_img_cmd_id, IPCFields.STATUS : 0, 
+            self.response_queue.put_nowait({IPCFields.CMD_ID : self._req_img_cmd_id, IPCFields.STATUS : IPCFields.STATUS_OK, 
                                             IPCFields.IMG : frame,
                                             IPCFields.SIMSTATE : ssD,
                                             IPCFields.SIMSTEP : self.sim_step_count})
@@ -165,7 +165,7 @@ class TMIProcessWrapper:
         self._send_action = False
 
         if not self._act_cmd_id == -1:
-            self.response_queue.put_nowait({IPCFields.CMD_ID : self._act_cmd_id, IPCFields.STATUS : 0})
+            self.response_queue.put_nowait({IPCFields.CMD_ID : self._act_cmd_id, IPCFields.STATUS : IPCFields.STATUS_OK})
 
     def stop_sync_loop(self) -> None:
         """Stops running syncloop(). May result in timeout-error."""
@@ -198,21 +198,22 @@ class TMIProcessWrapper:
         assert not cmd_id == -1, "Command id cannot be -1 as this is used as an internal error-code."
         command = cmd[IPCFields.CMD]
         if command == TMIProcessWrapper.IPCCommands.ACT:
-            self.act(cmd["args"], cmd_id)
+            self.act(cmd[IPCFields.ARGS], cmd_id)
         elif command == TMIProcessWrapper.IPCCommands.REQ_IMG:
-            self.request_image(cmd["args"], cmd_id)
-        elif command == TMIProcessWrapper.IPCCommands.END_SYNCLOOP:
+            self.request_image(cmd[IPCFields.ARGS], cmd_id)
+        elif command == TMIProcessWrapper.IPCCommands.END_SYNCLOOP: 
             self.stop_sync_loop()
-            self.response_queue.put_nowait({IPCFields.CMD_ID : cmd_id, IPCFields.STATUS : 0})
+            self.response_queue.put_nowait({IPCFields.CMD_ID : cmd_id, IPCFields.STATUS : IPCFields.STATUS_OK})
         elif command == TMIProcessWrapper.IPCCommands.EXECUTE_COMMAND:
-            self.iface.execute_command(cmd["args"])
-            self.response_queue.put_nowait({IPCFields.CMD_ID : cmd_id, IPCFields.STATUS : 0})
+            self.iface.execute_command(cmd[IPCFields.ARGS])
+            self.response_queue.put_nowait({IPCFields.CMD_ID : cmd_id, IPCFields.STATUS : IPCFields.STATUS_OK})
         elif command == TMIProcessWrapper.IPCCommands.SIMULATION_STARTED:
             self.__start_cmd_id = cmd[IPCFields.CMD_ID]
         elif command == TMIProcessWrapper.IPCCommands.REVENT_SIM_FINISH:
             self.iface.prevent_simulation_finish()
+            self.response_queue.put_nowait({IPCFields.CMD_ID : cmd_id, IPCFields.STATUS : IPCFields.STATUS_OK})
         else:
-            self.response_queue.put_nowait({IPCFields.CMD_ID : cmd_id, IPCFields.STATUS : -1, "error" : "NoSuchCommand"})
+            self.response_queue.put_nowait({IPCFields.CMD_ID : cmd_id, IPCFields.STATUS : IPCFields.STATUS_ERROR, IPCFields.ERROR : "NoSuchCommand"})
 
 
     def syncloop(self, logfilepath = "logs/tmi_process.log"):
@@ -236,7 +237,7 @@ class TMIProcessWrapper:
                 # ============================ BEGIN ON RUN STEP ============================
 
                 if not self.__start_cmd_id == -1:
-                    self.response_queue.put_nowait({IPCFields.CMD_ID : self.__start_cmd_id, IPCFields.STATUS : 0})
+                    self.response_queue.put_nowait({IPCFields.CMD_ID : self.__start_cmd_id, IPCFields.STATUS : IPCFields.STATUS_OK})
                     self.__start_cmd_id = -1
                     self.logger.info("Sending back command that abcdefg is ready.")
 

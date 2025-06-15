@@ -1,4 +1,4 @@
-env: 
+env:
   _partial_: True
   _target_: trackmania_env.envs.single_agent_env2.TMNF_Single_Agent_Env
   position_buffer_size : 20
@@ -7,6 +7,7 @@ env:
   reward_calculator : "linesight"
   obs_manager : "linesight" ##use basic for other
   max_steps_until_reset : 10000
+  game_speed : 1
 
 
 obsmanager:
@@ -23,7 +24,7 @@ obsmanager:
         - input_accelerate_event.time_field
         - scene_mobil.async_vehicle_state.rest_field
         - rotation_matrix
-
+        
   colorspace : "rgb"
   convert_torch : true
 

@@ -84,7 +84,8 @@ def main(cfg : TrainConfig):
         tm_env = TMNF_Single_Agent_Env(command_queue=control_queue,
                                         response_queue=response_queue, 
                                         obs_manager=obs_manager,
-                                        max_steps_before_reset=cfg.rl_env.env.max_steps_until_reset)
+                                        max_steps_before_reset=cfg.rl_env.env.max_steps_until_reset,
+                                        game_speed=cfg.rl_env.env.game_speed)
              
         # apply (Observation)-wrappers to the environment
         for _, wrapper_conf in cfg.rl_env.wrappers.items():

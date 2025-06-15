@@ -45,7 +45,9 @@ class TMNF_Single_Agent_Env(gym.Env):
             reward_calculator : str = "basic",
             n_previous_actions : int = 10,
             ignore_stuck_for_n_steps_after_reset : int = 80,
-            max_steps_before_reset : int = 10000):
+            max_steps_before_reset : int = 10000,
+            game_speed : float = 1):
+        
         """
         Initializes the custom Gymnasium environment.
         This constructor sets up the basic structure of the environment.
@@ -64,6 +66,7 @@ class TMNF_Single_Agent_Env(gym.Env):
         - n_previous_actions        : tracks actions for this many steps. 
         - ignore_stuck_for_n_steps_after_reset : Ignores the position-buffer-reset-trigger for this many steps after reset. (Set to 1 if you dont want to use this)
         - max_steps_before_reset    : specifies timeout (environment resets after this many steps)
+        - game_speed                : sets speed of game, as defined in https://donadigo.com/tminterface/variables
 
         """
         self.n_prev_actions = n_previous_actions
@@ -97,31 +100,40 @@ class TMNF_Single_Agent_Env(gym.Env):
         # define observation and action space for gym
         self.observation_space = obs_manager.get_observation_dict()
         self.action_space = gym.spaces.Discrete(len(ACTION_MAP))
-        
+
+        self.__send_command_to_process_wrapper(TMIProcessWrapper.IPCCommands.get_cmd_command(self.__ipc_cmd_id, 
+                                                                                             TMInterfaceCommands.set_variable(TMInterfaceCommands.Variables.SPEED, 
+                                                                                                                              value=game_speed)))
+
     def _get_info(self) -> Dict[str,Any]:
         """Helper function for computing additional information (e.g. for debugging or logging)"""
         info = {} 
         return info
+    
+
+    def __send_command_to_process_wrapper(self, command : dict[str, any], timeout = 10) -> dict[str, any]:
+        """Sends a command to the process wrapper, asserts answer matches command and returns answer from process wrapper"""
+        self.command_queue.put_nowait(command)
+        response = self.response_queue.get(timeout=timeout)
+        assert response[IPCFields.CMD_ID] == self.__ipc_cmd_id, f"Got unexepected command id from response. Expected {self.__ipc_cmd_id}, got : {response['cmd_id']}"
+        self.__ipc_cmd_id += 1
+        if not response[IPCFields.STATUS] == IPCFields.STATUS_OK:
+            self.logger.error(f"Got error when executing command {command[IPCFields.CMD]}, with message : {response[IPCFields.ERROR]}")
+        return response
     
     def _get_raw_obs(self) -> Dict:
         """Helper function to translate the the environment's state into an observation"""
 
         try:
             # request images, wait for response from process and check that cmd-id of response matches request-id.
-            self.command_queue.put(TMIProcessWrapper.IPCCommands.get_req_img_command(self.__ipc_cmd_id))
-            imgs_and_simstate = self.response_queue.get(timeout=self.__ipc_timeout)
-            assert imgs_and_simstate[IPCFields.CMD_ID] == self.__ipc_cmd_id
-            self.__ipc_cmd_id += 1
+            imgs_and_simstate = self.__send_command_to_process_wrapper(TMIProcessWrapper.IPCCommands.get_req_img_command(self.__ipc_cmd_id))
         except TimeoutError as t:
             self.logger.error(f"Timeout error while waiting for images: {t}")
 
         return imgs_and_simstate
     
     def _send_action(self, action : tuple[bool, bool, bool, bool]):
-        self.command_queue.put(TMIProcessWrapper.IPCCommands.get_act_command(self.__ipc_cmd_id, action))
-        res = self.response_queue.get(timeout=self.__ipc_timeout)
-        assert res[IPCFields.CMD_ID] == self.__ipc_cmd_id
-        self.__ipc_cmd_id += 1
+        self.__send_command_to_process_wrapper(TMIProcessWrapper.IPCCommands.get_act_command(self.__ipc_cmd_id, action))
 
     def __log_reset_reason(self, stuck, race_finished, timeout):
         if stuck:
@@ -173,7 +185,7 @@ class TMNF_Single_Agent_Env(gym.Env):
         truncated = False
 
         if race_finished:
-            self.command_queue.put_nowait(TMIProcessWrapper.IPCCommands.prevent_simulation_finish())       
+            self.__send_command_to_process_wrapper(TMIProcessWrapper.IPCCommands.prevent_simulation_finish(self.__ipc_cmd_id))
 
         
         
@@ -242,20 +254,13 @@ class TMNF_Single_Agent_Env(gym.Env):
     
     def __respawn_car(self):
         """Respawns car by 'clicking' enter - uses internal game mechanic; also respawns in correct orientation"""
-        self.command_queue.put_nowait(TMIProcessWrapper.IPCCommands.get_cmd_command(self.__ipc_cmd_id, 
+        self.__send_command_to_process_wrapper(TMIProcessWrapper.IPCCommands.get_cmd_command(self.__ipc_cmd_id, 
                                                                                     TMInterfaceCommands.key_action("press", "enter")))
-        response = self.response_queue.get(10)
-        assert response[IPCFields.CMD_ID] == self.__ipc_cmd_id, f"Got unexepected command id from response. Expected {self.__ipc_cmd_id}, got : {response['cmd_id']}"
-        self.__ipc_cmd_id += 1
-
     
     def __reset_car_position(self):
         """Executes teleportation command to stored car-position; ignores rotation and keeps current rotation of car."""
-        self.command_queue.put_nowait(TMIProcessWrapper.IPCCommands.get_cmd_command(self.__ipc_cmd_id, 
+        self.__send_command_to_process_wrapper(TMIProcessWrapper.IPCCommands.get_cmd_command(self.__ipc_cmd_id, 
                                                                                     TMInterfaceCommands.teleport(self.start_position)))
-        response = self.response_queue.get(10)
-        assert response[IPCFields.CMD_ID] == self.__ipc_cmd_id, f"Got unexepected command id from response. Expected {self.__ipc_cmd_id}, got : {response['cmd_id']}"
-        self.__ipc_cmd_id += 1
     
     def render(self, mode = "human") -> Optional[np.array]:
         """
