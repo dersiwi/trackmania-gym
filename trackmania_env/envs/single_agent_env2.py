@@ -107,6 +107,15 @@ class TMNF_Single_Agent_Env(gym.Env):
         assert res[IPCFields.CMD_ID] == self.__ipc_cmd_id
         self.__ipc_cmd_id += 1
 
+    def __log_reset_reason(self, stuck, race_finished, timeout):
+        if stuck:
+            self.logger.info(f"Resetting environment because car is STUCk")
+        elif race_finished:
+            self.logger.info(f"Resttting environment because RACE FINISHED")
+        elif timeout:
+            self.logger.info(f"Resttting environment because TIMEOUT")  
+
+
     def step(self, action) -> Tuple[gym.spaces.Dict,float,bool,bool,Dict[str,Any]]:
         """
         The `step` function is a core component of the Gymnasium environment API and contains 
@@ -141,8 +150,10 @@ class TMNF_Single_Agent_Env(gym.Env):
         # TODO check if episode terminated and or tuncated, terminated if reached the goal, truncated means that a timelimit has been reached but MDP is not in a terminal state
         stuck = not self.position_buffer.moved_more_than_threshold(self.position_buffer_threshold)
         timeout = self.n_steps >= self.max_steps_before_reset
-        terminated = not self.position_buffer.moved_more_than_threshold(self.position_buffer_threshold) or race_finished or timeout
+        terminated = stuck or race_finished or timeout
+        self.__log_reset_reason(stuck, race_finished, timeout)
         
+
         truncated = False
 
         if race_finished:
