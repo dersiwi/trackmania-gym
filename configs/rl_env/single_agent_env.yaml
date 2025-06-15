@@ -7,7 +7,8 @@ env:
   reward_calculator : "linesight"
   obs_manager : "linesight" ##use basic for other
   max_steps_until_reset : 10000
-  game_speed : 1
+  game_speed : 5
+  test : True
 
 
 obsmanager:

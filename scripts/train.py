@@ -80,12 +80,20 @@ def main(cfg : TrainConfig):
                                             img_height=cfg.image.height,
                                             log_directory="logs/observations", log_frequency=30)
             
-            
-        tm_env = TMNF_Single_Agent_Env(command_queue=control_queue,
-                                        response_queue=response_queue, 
-                                        obs_manager=obs_manager,
-                                        max_steps_before_reset=cfg.rl_env.env.max_steps_until_reset,
-                                        game_speed=cfg.rl_env.env.game_speed)
+        if cfg.rl_env.env.test:
+            from trackmania_env.envs.testenv_single_agent import TestEnvironment
+            tm_env = TestEnvironment(command_queue=control_queue,
+                                            response_queue=response_queue, 
+                                            obs_manager=obs_manager,
+                                            max_steps_before_reset=cfg.rl_env.env.max_steps_until_reset,
+                                            game_speed=cfg.rl_env.env.game_speed)
+
+        else:
+            tm_env = TMNF_Single_Agent_Env(command_queue=control_queue,
+                                            response_queue=response_queue, 
+                                            obs_manager=obs_manager,
+                                            max_steps_before_reset=cfg.rl_env.env.max_steps_until_reset,
+                                            game_speed=cfg.rl_env.env.game_speed)
              
         # apply (Observation)-wrappers to the environment
         for _, wrapper_conf in cfg.rl_env.wrappers.items():

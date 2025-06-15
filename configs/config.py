@@ -130,6 +130,7 @@ class EnvConfig:
     obs_manager : str ##use basic for other
     max_steps_until_reset : int
     game_speed : float
+    test : bool
 
 @dataclass
 class RLEnvConfig:
