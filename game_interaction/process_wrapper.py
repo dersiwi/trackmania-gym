@@ -58,7 +58,23 @@ class TMIProcessWrapper:
             return {IPCFields.CMD_ID : 9999, IPCFields.CMD : TMIProcessWrapper.IPCCommands.REVENT_SIM_FINISH}
 
 
-    def __init__(self, gim : GameInstanceManager, launch_game : bool, command_queue : Queue, response_queue : Queue, track : str, img_width : int, img_height : int, img_store_capacity : int = 100):
+    def __init__(self, gim : GameInstanceManager, launch_game : bool, 
+                 command_queue : Queue, response_queue : Queue, 
+                 track : str, 
+                 img_width : int, img_height : int,
+                 automatic_prevent_sim_finish : bool = True):
+        """
+        Parameters
+        ---------
+        - gim               : INtance of GameInstanceManager, from which TMInterface is aquired using gim.get_tminterface.
+        - launch_game       : If True, gim.launc_game() is called and gim.register_iface(), also closes the game after end-syncloop-command is sent.
+        - command_queue     : Queue from which commands are queried. Use IPCCommands for correct format.
+        - response_queue    : Queue used for sending responses to commands.
+        - track             : Specifies which track to load once instance is connected to game
+        - img_width         : Image width of images queried from game
+        - img_height        : Image height of images queried from game
+        - automatic_prevent_sim_finish : If True, iface.prevent_sim_finish() is called automatically, once the current and target checkpoint are the same.
+        """
         self.launch_game : bool = launch_game
         self.gim = gim
         if launch_game:
@@ -75,8 +91,6 @@ class TMIProcessWrapper:
         self.img_height = img_height
 
         
-        self.img_store_capacity : int = img_store_capacity
-
         self._req_img : bool = False
         self.__continuous_image_request : bool = False
         self._req_in_progress : bool = False
@@ -93,6 +107,7 @@ class TMIProcessWrapper:
         self.__run_sync_loop = True
         self.__start_cmd_id = -1
 
+        self.automatic_prevent_sim_finish = automatic_prevent_sim_finish
         self.map = track
 
     def request_image(self, continuously : bool = False, cmd_id : int = -1):
@@ -241,7 +256,9 @@ class TMIProcessWrapper:
                 target = self.iface._read_int32()
 
                 # ============================ BEGIN ON CP COUNT ============================
-
+                if current == target and self.automatic_prevent_sim_finish:  # Finished the race !!
+                    self.logger.info("Called automatic self.iface.prevent-simulation-finish.")
+                    self.iface.prevent_simulation_finish()
                 # ============================ END ON CP COUNT ============================
                 self.iface._respond_to_call(msgtype)
             elif msgtype == int(MessageType.SC_LAP_COUNT_CHANGED_SYNC):
@@ -262,6 +279,7 @@ class TMIProcessWrapper:
                 self.iface._respond_to_call(msgtype)
             else:
                 self.iface._respond_to_call(msgtype)
+
 
             self.check_command_queue()
 
