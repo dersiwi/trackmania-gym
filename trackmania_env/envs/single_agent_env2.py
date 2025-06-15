@@ -44,12 +44,27 @@ class TMNF_Single_Agent_Env(gym.Env):
             reset_mode : str = "respawn",
             reward_calculator : str = "basic",
             n_previous_actions : int = 10,
+            ignore_stuck_for_n_steps_after_reset : int = 80,
             max_steps_before_reset : int = 10000):
         """
         Initializes the custom Gymnasium environment.
         This constructor sets up the basic structure of the environment.
         As required by Gymnasium environments, it defines the action and observation spaces.
-        We also define some other important varibales in order to communicate with TMInterface
+
+        Parameters
+        ----------
+        - coommand_queue            : Command-Queue used for sending commands to TMInterface process
+        - response_queue            : Used for getting responsees from TMInterface process
+        - obs_manager               : Processes raw-Observations aquired from TMInterface process, returns Observations given to Policy/FeatureExtractor
+        - position_buffer_size      : Amount of positions that are tracked and from which the moved-distance is specified 
+        - position_moved_threshold  : If position_buffer_size = n, it takes n steps in which the change in position has 
+                to be less than position_moved_threshold for the environment to trigger a reset
+        - reset_mode                : Specifies the mode how reset is execued. "respawn" uses game-respawn mechanic, "position" uses teleportation mode; ignores rotation
+        - reward_calculator         : specifies used reward calculator. Uses `get_reward_calculator(reward_calculator)` to aquire class-instance
+        - n_previous_actions        : tracks actions for this many steps. 
+        - ignore_stuck_for_n_steps_after_reset : Ignores the position-buffer-reset-trigger for this many steps after reset. (Set to 1 if you dont want to use this)
+        - max_steps_before_reset    : specifies timeout (environment resets after this many steps)
+
         """
         self.n_prev_actions = n_previous_actions
         self.actions : deque = deque([(False,False,False,False)] * self.n_prev_actions, maxlen=self.n_prev_actions)
@@ -77,6 +92,7 @@ class TMNF_Single_Agent_Env(gym.Env):
 
         self.max_steps_before_reset : int = max_steps_before_reset
         self.n_steps : int = 0
+        self.ignore_stuck_for_n_steps_after_reset = ignore_stuck_for_n_steps_after_reset
 
         # define observation and action space for gym
         self.observation_space = obs_manager.get_observation_dict()
@@ -148,7 +164,7 @@ class TMNF_Single_Agent_Env(gym.Env):
 
 
         # TODO check if episode terminated and or tuncated, terminated if reached the goal, truncated means that a timelimit has been reached but MDP is not in a terminal state
-        stuck = not self.position_buffer.moved_more_than_threshold(self.position_buffer_threshold)
+        stuck = False if self.n_steps < self.ignore_stuck_for_n_steps_after_reset else not self.position_buffer.moved_more_than_threshold(self.position_buffer_threshold)
         timeout = self.n_steps >= self.max_steps_before_reset
         terminated = stuck or race_finished or timeout
         self.__log_reset_reason(stuck, race_finished, timeout)
