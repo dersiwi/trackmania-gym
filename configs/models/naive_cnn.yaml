@@ -1,0 +1,6 @@
+_partial_: True
+_target_: neuronal_networks.conv_NNs.NaiveCNN
+num_blocks: 3
+out_channels: 32
+image_shape: [100, 100]
+num_classes: 10
