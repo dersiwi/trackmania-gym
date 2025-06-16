@@ -34,6 +34,7 @@ from trackmania_env.observations.linesight_obs_wrapper import LinesightObservati
 from configs.config import TrainConfig
 from utils.printutils import print_model_params
 from trackmania_env.utils.init_linesight_obs import get_linesight_obs_instance
+from trackmania_env.rewards.getrewards import get_reward_calculator
 
 _HYDRA_PARAMS = {
     "version_base": "1.3",
@@ -66,6 +67,7 @@ def main(cfg : TrainConfig):
         tm_env = TM_ENV_CLASS(command_queue=control_queue,
                                         response_queue=response_queue, 
                                         obs_manager=obs_manager,
+                                        reward_calculator=get_reward_calculator(cfg),
                                         max_steps_before_reset=cfg.rl_env.env.max_steps_until_reset,
                                         game_speed=cfg.rl_env.env.game_speed)
              

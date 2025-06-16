@@ -12,11 +12,12 @@ from torchvision.transforms.functional import to_pil_image
 
 class ObservationTest(ObservationManager):
 
-    def __init__(self, observation_list, colorspace, convert_torch, img_width, img_height, log_directory : str, log_frequency : int = 10):
+    def __init__(self, observation_list, colorspace, convert_torch, img_width, img_height, log_directory : str, log_frequency : int = 10, log_images : bool = True):
         super().__init__(observation_list, colorspace, convert_torch, img_width, img_height)
         self.log_directory = log_directory
         self.log_frequency = log_frequency
         self.step = 0
+        self.log_images = False
 
 
     def get_observation(self, raw_observation : dict[str, np.ndarray | SimStateData]) -> np.ndarray | dict[str, np.ndarray] | torch.Tensor | dict[str, torch.Tensor]:
@@ -27,7 +28,7 @@ class ObservationTest(ObservationManager):
 
         processed_obs = super().get_observation(raw_observation)
 
-        if self.step % self.log_frequency == 0:
+        if self.step % self.log_frequency == 0 and self.log_images:
             img = Image.fromarray(raw_observation[IPCFields.IMG])
             img.save(os.path.join(self.log_directory, f"raw_image_{self.step}.png"))
 
@@ -37,7 +38,8 @@ class ObservationTest(ObservationManager):
             pimg = Image.fromarray(processed_img)
             pimg.save(os.path.join(self.log_directory, f"processed_image_{self.step}.png"))
 
-        return processed_obs
+        # print position of and veloctiy of car.
+        ssD : SimStateData = raw_observation[IPCFields.SIMSTATE]
+        print(ssD.position, ssD.velocity)
 
-        
-        
+        return processed_obs

@@ -8,8 +8,12 @@ from numba import jit
 class RewradCalculator:
     """Responsible for reward calculations for environment"""
 
-    def __init__(self, position_buffer : PositionBuffer):
-        self.pos_buffer = position_buffer # do not reset or add anything to this position buffer, read-only! (no reset, no add...)
+    def __init__(self):
+        self.pos_buffer = None # do not reset or add anything to this position buffer, read-only! (no reset, no add...)
+
+    def set_position_buffer(self, position_buffer : PositionBuffer):
+        """Set position buffer for this instance"""
+        self.pos_buffer = position_buffer
 
     def calculate_reward(self, observations : dict[str, any], race_finished : bool, other_terminations : bool) -> float:
         """Calculates the rewrad given observations for current environment-step"""
