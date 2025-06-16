@@ -4,18 +4,20 @@ from trackmania_env.utils.position_buffer import PositionBuffer
 from trackmania_env.rewards.reward_calculation import RewradCalculator
 from trackmania_env.rewards.basic_rewards import BasicRewardCalculation
 from trackmania_env.rewards.linesight_rewards import LinesightRewardCalculator
+from trackmania_env.rewards.nextpointrewards import NextPointRewards
+from configs.config import TrainConfig
 
 
-from game_interaction.ipc_fields import IPCFields
-import numpy as np
 
 
+def get_reward_calculator(cfg : TrainConfig) -> RewradCalculator:
 
-def get_reward_calculator(reward_calculator : str, position_buffer : PositionBuffer) -> RewradCalculator:
-
+    reward_calculator = cfg.rl_env.env.reward_calculator
     if reward_calculator == "basic":
-        return BasicRewardCalculation(position_buffer)
+        return BasicRewardCalculation()
     elif reward_calculator == "linesight":
-        return LinesightRewardCalculator(position_buffer)
+        return LinesightRewardCalculator()
+    elif reward_calculator == "nextpoint":
+        return NextPointRewards(cfg.rl_env.linesightobsmanager.reference_line)
     else:
         raise NameError(f"Rewardcalculator '{reward_calculator}' not known.")

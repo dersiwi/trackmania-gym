@@ -19,8 +19,8 @@ from game_interaction.ipc_fields import IPCFields
 
 from trackmania_env.utils.position_buffer import PositionBuffer
 from trackmania_env.utils.actionmap import ACTION_MAP
-from trackmania_env.rewards.getrewards import get_reward_calculator
 from trackmania_env.observations.observation_manager import ObservationManager
+from trackmania_env.rewards.reward_calculation import RewradCalculator
 from collections import deque
 
 
@@ -39,10 +39,10 @@ class TMNF_Single_Agent_Env(gym.Env):
             command_queue : Queue,
             response_queue : Queue,
             obs_manager : ObservationManager,
+            reward_calculator : RewradCalculator,
             position_buffer_size : int = 20,
             position_moved_threshold : float = 0.2,
             reset_mode : str = "respawn",
-            reward_calculator : str = "basic",
             n_previous_actions : int = 10,
             ignore_stuck_for_n_steps_after_reset : int = 80,
             max_steps_before_reset : int = 10000,
@@ -62,7 +62,7 @@ class TMNF_Single_Agent_Env(gym.Env):
         - position_moved_threshold  : If position_buffer_size = n, it takes n steps in which the change in position has 
                 to be less than position_moved_threshold for the environment to trigger a reset
         - reset_mode                : Specifies the mode how reset is execued. "respawn" uses game-respawn mechanic, "position" uses teleportation mode; ignores rotation
-        - reward_calculator         : specifies used reward calculator. Uses `get_reward_calculator(reward_calculator)` to aquire class-instance
+        - reward_calculator         : Instance of reward calcualtor used to calculate rewards in environment.
         - n_previous_actions        : tracks actions for this many steps. 
         - ignore_stuck_for_n_steps_after_reset : Ignores the position-buffer-reset-trigger for this many steps after reset. (Set to 1 if you dont want to use this)
         - max_steps_before_reset    : specifies timeout (environment resets after this many steps)
@@ -89,7 +89,8 @@ class TMNF_Single_Agent_Env(gym.Env):
         self.position_buffer = PositionBuffer(position_buffer_size)
         self.position_buffer_threshold = position_moved_threshold
 
-        self.rew_calculator = get_reward_calculator(reward_calculator, self.position_buffer)
+        self.rew_calculator = reward_calculator#get_reward_calculator(reward_calculator, self.position_buffer)
+        self.rew_calculator.set_position_buffer(self.position_buffer)
         self.obs_manager = obs_manager
         self.obs_manager.set_env(self)
 
