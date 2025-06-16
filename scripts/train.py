@@ -23,6 +23,9 @@ from stable_baselines3.common.monitor import Monitor
 # extractor imports
 from stable_baselines3.common.base_class import BaseAlgorithm
 from trackmania_env.envs.single_agent_env2 import TMNF_Single_Agent_Env
+from trackmania_env.envs.testenv_single_agent import TestEnvironment
+
+from trackmania_env.observations.observations import get_observation_manager
 from trackmania_env.observations.observation_manager import ObservationManager
 from trackmania_env.observations.observation_test import ObservationTest
  
@@ -53,37 +56,18 @@ def main(cfg : TrainConfig):
     tmi_process, control_queue, response_queue = start_process_and_wait_for_startsignal(cfg.platforms, cfg.gmi, cfg.image.width, cfg.image.height)
 
     try:
-        obs_manager_cfg = cfg.rl_env.obsmanager
-        if cfg.rl_env.env.obs_manager =="basic":
-            obs_manager = ObservationManager(observation_list=obs_manager_cfg.observation_list, 
-                                            colorspace=obs_manager_cfg.colorspace,
-                                            convert_torch=obs_manager_cfg.convert_torch,
-                                            img_width=cfg.image.width, 
-                                            img_height=cfg.image.height)
-        elif cfg.rl_env.env.obs_manager =="linesight":
-            obs_manager = get_linesight_obs_instance(cfg)
-        elif cfg.rl_env.env.obs_manager == "test":
-            obs_manager = ObservationTest(observation_list=obs_manager_cfg.observation_list, 
-                                            colorspace=obs_manager_cfg.colorspace,
-                                            convert_torch=obs_manager_cfg.convert_torch,
-                                            img_width=cfg.image.width, 
-                                            img_height=cfg.image.height,
-                                            log_directory="logs/observations", log_frequency=30)
+        obs_manager = get_observation_manager(cfg)
             
         if cfg.rl_env.env.test:
-            from trackmania_env.envs.testenv_single_agent import TestEnvironment
-            tm_env = TestEnvironment(command_queue=control_queue,
-                                            response_queue=response_queue, 
-                                            obs_manager=obs_manager,
-                                            max_steps_before_reset=cfg.rl_env.env.max_steps_until_reset,
-                                            game_speed=cfg.rl_env.env.game_speed)
-
+            TM_ENV_CLASS = TestEnvironment
         else:
-            tm_env = TMNF_Single_Agent_Env(command_queue=control_queue,
-                                            response_queue=response_queue, 
-                                            obs_manager=obs_manager,
-                                            max_steps_before_reset=cfg.rl_env.env.max_steps_until_reset,
-                                            game_speed=cfg.rl_env.env.game_speed)
+            TM_ENV_CLASS = TMNF_Single_Agent_Env
+
+        tm_env = TM_ENV_CLASS(command_queue=control_queue,
+                                        response_queue=response_queue, 
+                                        obs_manager=obs_manager,
+                                        max_steps_before_reset=cfg.rl_env.env.max_steps_until_reset,
+                                        game_speed=cfg.rl_env.env.game_speed)
              
         # apply (Observation)-wrappers to the environment
         for _, wrapper_conf in cfg.rl_env.wrappers.items():
