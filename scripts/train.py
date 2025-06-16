@@ -38,28 +38,15 @@ _HYDRA_PARAMS = {
     "config_name": "train.yaml",
 }
 
-from utils.hydra_utils import get_models
+from utils.hydra_wandb_utils import get_models, init_and_login_wandb
 
 @hydra.main(**_HYDRA_PARAMS)
 def main(cfg : TrainConfig):
     
     # Start Weights and Biases login
-    run_id = ""
-    if cfg.wandb.use :
-        wandb.login()
-        wandb_conf = omegaconf.OmegaConf.to_container(cfg, resolve=True,throw_on_missing=True)
-        wandb.config = wandb_conf
-        run = wandb.init(
-            entity=cfg.wandb.entity, 
-            project=cfg.wandb.project,
-            sync_tensorboard=True, 
-            monitor_gym=True,  
-            save_code=True,
-            config=wandb_conf)
-        run_id = run.id
+    run, run_id = init_and_login_wandb(cfg)
 
     # Instanciate GMI, TMNF-Environment and start TMi-Interaction process.
-
     tmi_process, control_queue, response_queue = start_process_and_wait_for_startsignal(cfg.platforms, cfg.gmi, cfg.image.width, cfg.image.height)
 
     try:
@@ -107,8 +94,10 @@ def main(cfg : TrainConfig):
         # TODO check if callbacks have the same class they inherit from 
         callback = hydra.utils.instantiate(cfg.wandb_callbacks)(model_save_path=f"models/{run_id}")  if cfg.wandb.use else None  
         model.learn(**cfg.learn_args, callback=callback)
+        
         if cfg.wandb.use:
             run.finish()
+
         model.save(os.path.join(HydraConfig.get().run.dir, "model"))
 
     except Exception as e:

@@ -9,7 +9,8 @@ from neuronal_networks.conv_NNs import PrebuiltResNet
 from neuronal_networks.custom_extractor import TMN_Extractor
 from utils.printutils import print_model_params
 from omegaconf import DictConfig, OmegaConf
-
+import wandb
+from wandb.wandb_run import Run
 
 def get_models(cfg : TrainConfig, tm_env : TMNF_Single_Agent_Env, print_params : bool = False,run_id:str = "test") -> tuple[nn.Module, BaseAlgorithm | PPO]:
 
@@ -45,3 +46,26 @@ def get_models(cfg : TrainConfig, tm_env : TMNF_Single_Agent_Env, print_params :
         print_model_params(model)       
 
     return vision_model, model
+
+
+def init_and_login_wandb(cfg : TrainConfig) -> tuple[Run | None, str]:
+    """Instanciates and logs into weights and biases (wandb), if specified in configuration (cfg.wandb.use).
+    After login, returns tuple of Run-instance and run-id 
+    
+    If cfg.wandb.use is False, the returned Run is None."""
+    run_id = ""
+    if cfg.wandb.use:
+        wandb.login()
+        wandb_conf = OmegaConf.to_container(cfg, resolve=True,throw_on_missing=True)
+        wandb.config = wandb_conf
+        run = wandb.init(
+            entity=cfg.wandb.entity, 
+            project=cfg.wandb.project,
+            sync_tensorboard=True, 
+            monitor_gym=True,  
+            save_code=True,
+            config=wandb_conf)
+        run_id = run.id
+        return run, run_id
+    else:
+        return None, run_id

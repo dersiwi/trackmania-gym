@@ -15,7 +15,7 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))) 
 
 from game_interaction.tminterface2 import MessageType, TMInterface
 from game_interaction.game_instance_manager2 import GameInstanceManager
-from utils.print_simstate import print_sim_state
+from utils.printutils import print_sim_state
 from utils.scriptargs import get_paths, get_argparser, config_logging
 
 

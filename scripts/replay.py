@@ -16,7 +16,7 @@ from game_interaction.process_wrapper import TMIProcessWrapper
 from gymnasium import ObservationWrapper
 
 
-from utils.hydra_utils import get_models
+from utils.hydra_wandb_utils import get_models
 
 
 run_path = "outputs/2025-06-03/14-34-38"

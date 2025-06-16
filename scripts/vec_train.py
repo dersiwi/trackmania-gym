@@ -40,7 +40,7 @@ _HYDRA_PARAMS = {
     "config_name": "train.yaml",
 }
 
-from utils.hydra_utils import get_models
+from utils.hydra_wandb_utils import get_models
 
 
 @hydra.main(**_HYDRA_PARAMS)
@@ -80,7 +80,7 @@ def main(cfg : TrainConfig):
         # for sb3 the type would be BaseCallBack. For other callbacks we would need to manually write the other types.
         # TODO check if callbacks have the same class they inherit from 
         callback = hydra.utils.instantiate(cfg.wandb_callbacks)(model_save_path=f"models/{run_id}")  if cfg.wandb.use else None  
-        model.learn(**cfg.sb3.learn_args,callback=callback)
+        model.learn(**cfg.learn_args, callback=callback)
         model.save(os.path.join(HydraConfig.get().run.dir, "model"))
 
     except Exception as e:
