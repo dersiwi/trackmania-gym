@@ -119,7 +119,9 @@ class WandbConfig:
     use: bool
     entity: str
     project: str
-
+    checkpoint_freq: int 
+    eval_freq:int
+    
 @dataclass
 class EnvConfig:
     position_buffer_size : int

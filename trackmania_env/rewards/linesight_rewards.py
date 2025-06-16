@@ -48,7 +48,7 @@ class LinesightRewardCalculator(RewradCalculator):
         ) * reward_per_m_advanced_along_centerline
         
         
-        v_x, v_z = ssD.velocity[0], ssD.velocity[2]
+        v_x, v_z = ssD.velocity[1], ssD.velocity[2] # v_x is actually index 1
         if not self.last_obs == None:
             
             if final_speed_reward_per_m_per_s != 0 and v_z > 0:
