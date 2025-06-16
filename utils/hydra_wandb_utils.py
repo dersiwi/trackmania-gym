@@ -40,7 +40,7 @@ def get_models(cfg : TrainConfig, tm_env : TMNF_Single_Agent_Env, print_params :
 
 
     model_constructor = hydra.utils.instantiate(cfg.sb3.constructor)
-    model : BaseAlgorithm | PPO | SAC = model_constructor(env= tm_env, policy_kwargs=policy_kwargs,tensorboard_log= f"runs/{run_id}", **algorithm_params)
+    model : BaseAlgorithm | PPO | SAC = model_constructor(env= tm_env, policy_kwargs=policy_kwargs,tensorboard_log= run_id, **algorithm_params)
 
     if print_params:
         print_model_params(model)       
@@ -48,7 +48,7 @@ def get_models(cfg : TrainConfig, tm_env : TMNF_Single_Agent_Env, print_params :
     return vision_model, model
 
 
-def init_and_login_wandb(cfg : TrainConfig) -> tuple[Run | None, str]:
+def init_and_login_wandb(cfg : TrainConfig, wandbdir : str = "wandb") -> tuple[Run | None, str]:
     """Instanciates and logs into weights and biases (wandb), if specified in configuration (cfg.wandb.use).
     After login, returns tuple of Run-instance and run-id 
     
@@ -64,6 +64,7 @@ def init_and_login_wandb(cfg : TrainConfig) -> tuple[Run | None, str]:
             sync_tensorboard=True, 
             monitor_gym=True,  
             save_code=True,
+            dir = wandbdir,
             config=wandb_conf)
         run_id = run.id
         return run, run_id

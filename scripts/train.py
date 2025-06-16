@@ -42,9 +42,12 @@ from utils.hydra_wandb_utils import get_models, init_and_login_wandb
 
 @hydra.main(**_HYDRA_PARAMS)
 def main(cfg : TrainConfig):
+
+    HYDRA_RUN_DIR = HydraConfig.get().run.dir
     
     # Start Weights and Biases login
-    run, run_id = init_and_login_wandb(cfg)
+    run, run_id = init_and_login_wandb(cfg, wandbdir=HYDRA_RUN_DIR)
+    RUN_ID_IN_HYDRA_LOG_DIR = os.path.join(HYDRA_RUN_DIR, run_id)
 
     # Instanciate GMI, TMNF-Environment and start TMi-Interaction process.
     tmi_process, control_queue, response_queue = start_process_and_wait_for_startsignal(cfg.platforms, cfg.gmi, cfg.image.width, cfg.image.height)
@@ -89,12 +92,12 @@ def main(cfg : TrainConfig):
             tm_env = wrapper(env=tm_env)
         
         # get algorithm and start learning process
-        vision_model, model = get_models(cfg, tm_env, print_params = True,run_id=run_id)
+        vision_model, model = get_models(cfg, tm_env, print_params = True,run_id=RUN_ID_IN_HYDRA_LOG_DIR)
         # for sb3 the type would be BaseCallBack. For other callbacks we would need to manually write the other types.
         # TODO check if callbacks have the same class they inherit from 
-        callback = hydra.utils.instantiate(cfg.wandb_callbacks)(model_save_path=f"models/{run_id}")  if cfg.wandb.use else None  
+        callback = hydra.utils.instantiate(cfg.wandb_callbacks)(model_save_path=RUN_ID_IN_HYDRA_LOG_DIR)  if cfg.wandb.use else None  
         model.learn(**cfg.learn_args, callback=callback)
-        
+
         if cfg.wandb.use:
             run.finish()
 
