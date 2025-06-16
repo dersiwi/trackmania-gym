@@ -93,7 +93,7 @@ class LinesightObsCfg:
     reference_line : str
 
 @dataclass
-class SB3PPOLearnArgsConfig:
+class SB3LearnArgsConfig:
   total_timesteps: int
   log_interval: int
   tb_log_name: str
@@ -103,7 +103,6 @@ class SB3PPOLearnArgsConfig:
 @dataclass
 class SB3PPOConfig:
     constructor: SB3PPOConstructorConfig
-    learn_args: SB3PPOLearnArgsConfig
     algorithm_params : dict[str, any]
 
 @dataclass
@@ -144,6 +143,7 @@ class TrainConfig:
     gmi: GMIConfig
     image: ImageConfig
     total_timesteps: int
+    learn_args: SB3LearnArgsConfig
     platforms: Optional[PlatformConfig] = None
     models: Optional[PretrainedResNetConfig] = None
     rl_env: Optional[RLEnvConfig] = None

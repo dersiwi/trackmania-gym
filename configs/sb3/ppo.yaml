@@ -4,12 +4,6 @@ constructor:
   policy: "MultiInputPolicy"
   verbose: 1
 
-learn_args:
-  total_timesteps: 10000
-  log_interval: 13
-  tb_log_name: "PPO"
-  reset_num_timesteps: True
-  progress_bar: False
 
 algorithm_params:
   learning_rate: 0.00025          # Learning rate or scheduler function
