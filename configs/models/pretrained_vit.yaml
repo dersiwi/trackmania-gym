@@ -1,0 +1,6 @@
+_partial_: True
+_target_: neuronal_networks.vit.PrebuiltViT
+model_name: 'vit_b_16'
+out_dims: 21
+pretrained: False
+trainable_backbone: True
