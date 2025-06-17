@@ -201,7 +201,8 @@ class TMNF_Single_Agent_Env(gym.Env):
             # this only works if obs manager is lineisght 
             pass
 
-        reward = self.rew_calculator.calculate_reward(raw_obs, race_finished, stuck)
+        reward, reward_info = self.rew_calculator.calculate_reward(raw_obs, race_finished, stuck)
+        info["reward_info"] = reward_info
         self.n_steps += 1
         return processed_obs, reward, terminated, truncated, info
     

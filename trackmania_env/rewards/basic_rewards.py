@@ -10,7 +10,7 @@ class BasicRewardCalculation(RewradCalculator):
     def __init__(self, position_buffer):
         super().__init__(position_buffer)
 
-    def calculate_reward(self, observations, race_finished, other_terminations):
+    def calculate_reward(self, observations, race_finished, other_terminations) -> tuple[float, dict[str, any]]:
         ssD : SimStateData = observations[IPCFields.SIMSTATE]
         velocity = ssD.velocity
         reward = np.linalg.norm(velocity[0:1]) + self.pos_buffer.distance_moved()
@@ -19,4 +19,4 @@ class BasicRewardCalculation(RewradCalculator):
             reward += 10000
         if other_terminations:
             reward -= 1000
-        return reward
+        return reward, {}

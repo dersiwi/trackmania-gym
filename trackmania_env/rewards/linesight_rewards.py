@@ -76,5 +76,6 @@ class LinesightRewardCalculator(RewradCalculator):
                 engineered_reward_min_dist_to_cur_vcp,
                 min(engineered_reward_max_dist_to_cur_vcp, np.linalg.norm(observations["state_zone_center_coordinates_in_car_reference_system"])),
             )
+        return reward, {}
 
 

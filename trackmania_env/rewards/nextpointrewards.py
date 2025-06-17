@@ -42,7 +42,13 @@ class NextPointRewards(RewradCalculator):
         if self.step % self.logging_freq == 0:
             self.logger.info(f"Calculated_Rewards;{reward}:accumulated_distance;{accum_dist_reward};{i};{d}:race_not_finished;{race_not_finished_reward}:race_finished;{race_finished}:other_terminations;{other_term_reward}:vel_reward;{velocity_reward}")
         self.step += 1
-        return reward
+        return reward, {"total" : reward, 
+                        "accumulated_distance" : accum_dist_reward,
+                        "nextpoint_reference_index" : i,
+                        "race_not_finished":race_not_finished_reward,
+                        "race_finished" : race_finished,
+                        "other_terminations":other_term_reward,
+                        "vel_reward":velocity_reward}
 
 
 

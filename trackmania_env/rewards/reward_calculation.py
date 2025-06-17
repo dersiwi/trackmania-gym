@@ -15,8 +15,9 @@ class RewradCalculator:
         """Set position buffer for this instance"""
         self.pos_buffer = position_buffer
 
-    def calculate_reward(self, observations : dict[str, any], race_finished : bool, other_terminations : bool) -> float:
-        """Calculates the rewrad given observations for current environment-step"""
+    def calculate_reward(self, observations : dict[str, any], race_finished : bool, other_terminations : bool) -> tuple[float, dict[str, any]]:
+        """Calculates the rewrad given observations for current environment-step
+        Returns reward, reward_info as dictionary"""
         raise NotImplementedError("Do Not use this class directly. Use RewardCalculator.get_instance()")
 
     def reset(self) -> None:
