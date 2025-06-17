@@ -1,0 +1,30 @@
+constructor:
+  _partial_: true
+  _target_: stable_baselines3.DQN
+  policy: "MultiInputPolicy"
+  verbose: 1
+
+
+algorithm_params:
+  learning_rate: 0.00005  # Etwas niedriger, stabiler mit CNN
+  buffer_size: 500000  # Kann reduziert werden wegen großem Speicherbedarf
+  learning_starts: 10000  # Mehr Schritte zum Vorfüllen
+  batch_size: 64  # Größerer Batch für visuelle Stabilität
+  tau: 1.0  # Soft-Update-Faktor (1.0 = Hard Update)
+  gamma: 0.99  # Discount-Faktor
+  train_freq: 1  # Trainingsfrequenz 
+  gradient_steps: 4  # Anzahl SGD-Schritte pro Trainingsintervall
+  replay_buffer_class: null  # Eigener Buffer-Typ (optional)
+  replay_buffer_kwargs: null  # Zusätzliche Buffer-Parameter
+  optimize_memory_usage: false  # Speicheroptimierung aktivieren
+  target_update_interval: 10000  # Schritte bis Zielnetzwerk-Update
+  exploration_fraction: 0.2  # Anteil für ε-Reduktion
+  exploration_initial_eps: 1.0  # Startwert für ε
+  exploration_final_eps: 0.05  # Minimalwert für ε
+  max_grad_norm: 10  # Max. Gradienten-Norm (Clipping)
+  stats_window_size: 100  # Fenstergröße für Logging
+  tensorboard_log: null  # Pfad für TensorBoard-Logs (optional)
+  policy_kwargs: null  # Netzwerkarchitektur (z.B. {"net_arch": [64, 64]})
+  verbose: 1  # Logging-Level (0 = still, 1 = Info, 2 = Debug)
+  seed: null  # Zufalls-Seed
+  _init_setup_model: true  # Modell sofort initialisieren
