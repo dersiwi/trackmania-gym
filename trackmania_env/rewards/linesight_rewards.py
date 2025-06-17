@@ -77,6 +77,7 @@ class LinesightRewardCalculator(RewradCalculator):
         reward += velocity_change_reward + kamikaze_reward + lateral_speed_reward + too_close_to_vcp
         reward += speedslide_reward
         
+        self.last_obs = observations
         return reward, {"const_rew_per_ms" : constant_reward_per_ms,
                         "meters_advanced_along_centerline_rew" : meters_advanced_along_centerline_rew,
                         "velocity_change_reward" : velocity_change_reward,
