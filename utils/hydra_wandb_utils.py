@@ -12,7 +12,7 @@ from omegaconf import DictConfig, OmegaConf
 import wandb
 from wandb.wandb_run import Run
 
-def get_models(cfg : TrainConfig, tm_env : TMNF_Single_Agent_Env, print_params : bool = False,run_id:str = "test") -> tuple[nn.Module, BaseAlgorithm | PPO]:
+def get_models(cfg : TrainConfig, tm_env : TMNF_Single_Agent_Env, print_params : bool = False,run_id:str = "test",device="cpu") -> tuple[nn.Module, BaseAlgorithm | PPO]:
 
     """instanciates vision-model as well as sb3 algorithm according to parameters
     
@@ -32,15 +32,13 @@ def get_models(cfg : TrainConfig, tm_env : TMNF_Single_Agent_Env, print_params :
     policy_kwargs = dict(
     features_extractor_class=TMN_Extractor,
     features_extractor_kwargs= dict( 
-    vision_model = vision_model))#,
-    #vision_model_out_dim = vision_model.out_dims))
+    vision_model = vision_model,
+    device= device))
 
     algorithm_params = OmegaConf.to_container(cfg.sb3.algorithm_params, resolve=True)
 
-
-
     model_constructor = hydra.utils.instantiate(cfg.sb3.constructor)
-    model : BaseAlgorithm | PPO | SAC = model_constructor(env= tm_env, policy_kwargs=policy_kwargs,tensorboard_log= run_id, **algorithm_params)
+    model : BaseAlgorithm | PPO | SAC = model_constructor(env= tm_env, policy_kwargs=policy_kwargs,tensorboard_log= run_id,device=device ,**algorithm_params)
 
     if print_params:
         print_model_params(model)       

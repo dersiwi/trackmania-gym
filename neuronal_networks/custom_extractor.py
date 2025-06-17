@@ -30,6 +30,7 @@ class TMN_Extractor(BaseFeaturesExtractor):
         observation_space: gym.spaces.Dict,
         vision_model,
         vision_model_out_dim : int = 128,
+        device= "cpu",
         normalized_image: bool = False,
     ) -> None:
         super().__init__(observation_space, features_dim=1)
@@ -52,8 +53,9 @@ class TMN_Extractor(BaseFeaturesExtractor):
         for key, subspace in observation_space.spaces.items():
 
             if key == "image":
+                vision_model.to(device)
                 extractors[key] = vision_model
-                dummy_input = torch.zeros(1, *subspace.shape) 
+                dummy_input = (torch.zeros(1, *subspace.shape)).to(device) 
                 dummy_output = vision_model(dummy_input)
                 vision_model_out_dim = dummy_output.shape[1]
                 total_concat_size += vision_model_out_dim
@@ -66,7 +68,7 @@ class TMN_Extractor(BaseFeaturesExtractor):
                 # if subspace is a vector whith length > thresh (here 50) then project into lower dimension
                 if len(subspace.shape) == 1:
                     if subspace.shape[0] > 50 :
-                        extractors[new_key] = nn.Linear(subspace.shape[0], subspace.shape[0] //4)
+                        extractors[new_key] = nn.Linear(subspace.shape[0], subspace.shape[0] //4,device=device)
                         total_concat_size += subspace.shape[0] //4
                     else: 
                         extractors[new_key] = nn.Identity() # ensure that batch dim gets added 

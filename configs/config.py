@@ -24,6 +24,7 @@ class PlatformConfig:
     tmloader: str
     plugin: str
     map_dir : str
+    device: str
 
 @dataclass
 class PretrainedResNetConfig:

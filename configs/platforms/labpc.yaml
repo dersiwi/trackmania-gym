@@ -3,3 +3,4 @@ home: ${oc.env:USERPROFILE,""}  # This is the equivalent of expanduser("~") on W
 tmloader: C:/Users/ALR-Students/Desktop/TmNationsForever/TMLoader-1.0.1-win32/TMLoader.exe
 plugin: C:/Users/ALR-Students/Documents/TMInterface/Plugins/Python_Link.as
 map_dir: C:/Users/ALR-Students/Documents/TmForever/Tracks/Challenges
+device: cuda

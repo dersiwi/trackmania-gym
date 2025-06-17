@@ -25,5 +25,5 @@ algorithm_params:
   target_kl: null                # Early stopping when approximate KL divergence reaches this value (useful for avoiding overfitting)
   stats_window_size: 100         # Window size for computing stats like average reward
   seed: null                     # Random seed (for reproducibility)
-  device: "auto"                 # Device to use: "cpu", "cuda", or "auto"
+ # device: "auto"                 # Device to use: "cpu", "cuda", or "auto"
   _init_setup_model: true        # Whether to build the model immediately (usually true)

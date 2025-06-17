@@ -29,5 +29,5 @@ algorithm_params:
   policy_kwargs: null                # Custom arguments for policy network (architecture, activation, etc.)
   verbose: 0                         # Verbosity level (0 = silent, 1 = info, 2 = debug)
   seed: null                         # Random seed for reproducibility
-  device: "auto"                     # Device to use: "cpu", "cuda", or "auto"
+  #device: "auto"                     # Device to use: "cpu", "cuda", or "auto"
   _init_setup_model: true            # Whether to initialize the model immediately (usually true)
