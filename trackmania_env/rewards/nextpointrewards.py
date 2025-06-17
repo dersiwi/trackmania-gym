@@ -43,7 +43,7 @@ class NextPointRewards(RewradCalculator):
         race_not_finished_reward = (-1) * self.race_not_finished_weight
         race_finished = race_finished * self.race_finished_reward
         other_term_reward = (-1) * other_terminations * self.other_termination_punishment
-        backward_punishment = (-1) * np.clip(d, min=0, max=100) / 100 * self.backward_weight
+        backward_punishment = (-1) * np.clip(d, a_min=0, a_max=100) / 100 * self.backward_weight
         
         reward = accum_dist_reward + race_not_finished_reward + race_finished + other_term_reward + velocity_reward + backward_punishment
 

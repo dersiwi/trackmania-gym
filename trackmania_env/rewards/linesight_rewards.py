@@ -10,8 +10,8 @@ from trackmania_env.utils.speedslide_quality import speedslide_quality_tarmac
 
 
 class LinesightRewardCalculator(RewradCalculator):
-    def __init__(self, position_buffer):
-        super().__init__(position_buffer)
+    def __init__(self):
+        super().__init__()
         self.last_obs : SimStateData = None
 
 
@@ -41,13 +41,12 @@ class LinesightRewardCalculator(RewradCalculator):
             if (i < n_frames - 1 or ("race_time" not in rollout_results))
             else rollout_results["race_time"] - (n_frames - 2) * config_copy.ms_per_action
         )"""
-        meters_advanced_along_centerline_rew = (observations["meters_advanced_along_centerline"] - self.last_obs["meters_advanced_along_centerline"]) * reward_per_m_advanced_along_centerline
         
-        
+        meters_advanced_along_centerline_rew = 0
         v_x, v_z = ssD.velocity[1], ssD.velocity[2] # v_x is actually index 1
         velocity_change_reward = 0
         if not self.last_obs == None:
-            
+            meters_advanced_along_centerline_rew = (observations["meters_advanced_along_centerline"] - self.last_obs["meters_advanced_along_centerline"]) * reward_per_m_advanced_along_centerline
             if final_speed_reward_per_m_per_s != 0 and v_z > 0:
                 # car has velocity *forward*
                 velocity_change_reward = final_speed_reward_per_m_per_s * (np.linalg.norm(ssD.velocity) - np.linalg.norm(self.last_obs.velocity))
@@ -55,7 +54,7 @@ class LinesightRewardCalculator(RewradCalculator):
 
 
         speedslide_reward = 0
-        if engineered_speedslide_reward != 0 and all(*(ws.has_ground_contact for ws in wheel_state)):
+        if engineered_speedslide_reward != 0 and all((ws.has_ground_contact for ws in wheel_state)):
             # all wheels touch the ground
             speedslide_reward = engineered_speedslide_reward * max(0.0, 1 - abs(speedslide_quality_tarmac(v_x, v_z) - 1))
 
@@ -65,7 +64,7 @@ class LinesightRewardCalculator(RewradCalculator):
 
         # kamikaze reward
         kamikaze_reward = 0
-        if ( any(*(ws.has_ground_contact for ws in wheel_state))): #TODO : # engineered_kamikaze_reward != 0 and rollout_results["actions"][i] <= 2 or
+        if ( any((ws.has_ground_contact for ws in wheel_state))): #TODO : # engineered_kamikaze_reward != 0 and rollout_results["actions"][i] <= 2 or
             kamikaze_reward = engineered_kamikaze_reward
 
         too_close_to_vcp = 0

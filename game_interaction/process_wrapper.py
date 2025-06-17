@@ -109,6 +109,7 @@ class TMIProcessWrapper:
 
         self.automatic_prevent_sim_finish = automatic_prevent_sim_finish
         self.map = track
+        self.logdir = "logs"
 
     def request_image(self, continuously : bool = False, cmd_id : int = -1):
         """Request an image with the specified image and width (specified in class initialization)
@@ -173,11 +174,13 @@ class TMIProcessWrapper:
 
     def _reconfigure_logger(self, log_file : str):
         """This has to be called when executing because this is a sperate process from the main process, therefore needs own log-config."""
+        if not os.path.exists(self.logdir):
+            os.mkdir(self.logdir)
 
         logging.basicConfig(
             level=logging.DEBUG,
             format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-            handlers=[logging.FileHandler(log_file, mode='w')]
+            handlers=[logging.FileHandler(os.path.join(self.logdir, log_file), mode='w')]
         )
 
         self.logger = logging.getLogger(__name__)
@@ -216,8 +219,8 @@ class TMIProcessWrapper:
             self.response_queue.put_nowait({IPCFields.CMD_ID : cmd_id, IPCFields.STATUS : IPCFields.STATUS_ERROR, IPCFields.ERROR : "NoSuchCommand"})
 
 
-    def syncloop(self, logfilepath = "logs/tmi_process.log"):
-        self._reconfigure_logger(logfilepath)
+    def syncloop(self, logfile = "tmi_process.log"):
+        self._reconfigure_logger(logfile)
         self.logger.info("Started syncloop.")
 
         while self.__run_sync_loop:

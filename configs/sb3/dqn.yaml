@@ -23,8 +23,5 @@ algorithm_params:
   exploration_final_eps: 0.05  # Minimalwert für ε
   max_grad_norm: 10  # Max. Gradienten-Norm (Clipping)
   stats_window_size: 100  # Fenstergröße für Logging
-  tensorboard_log: null  # Pfad für TensorBoard-Logs (optional)
-  policy_kwargs: null  # Netzwerkarchitektur (z.B. {"net_arch": [64, 64]})
-  verbose: 1  # Logging-Level (0 = still, 1 = Info, 2 = Debug)
   seed: null  # Zufalls-Seed
   _init_setup_model: true  # Modell sofort initialisieren
