@@ -86,9 +86,7 @@ def main(cfg : TrainConfig):
         
         # get algorithm and start learning process
         vision_model, model = get_models(cfg, tm_env, print_params = True,run_id=RUN_ID_IN_HYDRA_LOG_DIR)
-        # for sb3 the type would be BaseCallBack. For other callbacks we would need to manually write the other types.
-        # TODO check if callbacks have the same class they inherit from 
-        wb3_callback = hydra.utils.instantiate(cfg.wandb_callbacks)(model_save_path=RUN_ID_IN_HYDRA_LOG_DIR)  if cfg.wandb.use else None  
+
 
         # Eval Callback – save best model based on reward
         eval_callback = EvalCallback(
@@ -108,7 +106,11 @@ def main(cfg : TrainConfig):
             save_replay_buffer=False,
             save_vecnormalize=False,
         )
-        callback = CallbackList([eval_callback, checkpoint_callback,wb3_callback])
+        callbacklist = [eval_callback, checkpoint_callback]
+        if cfg.wandb.use:
+            callbacklist.append(hydra.utils.instantiate(cfg.wandb_callbacks)(model_save_path=RUN_ID_IN_HYDRA_LOG_DIR))
+            
+        callback = CallbackList(callbacklist)
         model.learn(**cfg.learn_args, callback=callback)
 
         final_model =  os.path.join(HYDRA_RUN_DIR, "model.zip")
