@@ -36,6 +36,8 @@ from configs.config import TrainConfig
 from utils.printutils import print_model_params
 from trackmania_env.utils.init_linesight_obs import get_linesight_obs_instance
 from trackmania_env.rewards.getrewards import get_reward_calculator
+from trackmania_env.rewards.reward_calculation import RewardLogCallback
+
 import glob
 
 _HYDRA_PARAMS = {
@@ -107,10 +109,14 @@ def main(cfg : TrainConfig):
             save_vecnormalize=False,
         )
         callbacklist = [eval_callback, checkpoint_callback]
-        if cfg.wandb.use:
-            callbacklist.append(hydra.utils.instantiate(cfg.wandb_callbacks)(model_save_path=RUN_ID_IN_HYDRA_LOG_DIR))
+        #if cfg.wandb.use:
+        #    callbacklist.append(hydra.utils.instantiate(cfg.wandb_callbacks)(model_save_path=RUN_ID_IN_HYDRA_LOG_DIR))
+        #    callbacklist.append(RewardLogCallback())
             
-        callback = CallbackList(callbacklist)
+        callback : CallbackList= CallbackList(callbacklist)
+        if cfg.wandb.use:
+            callback.callbacks.extend([hydra.utils.instantiate(cfg.wandb_callbacks)(model_save_path=RUN_ID_IN_HYDRA_LOG_DIR), RewardLogCallback()])
+
         model.learn(**cfg.learn_args, callback=callback)
 
         final_model =  os.path.join(HYDRA_RUN_DIR, "model.zip")

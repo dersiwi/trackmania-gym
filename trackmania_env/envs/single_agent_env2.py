@@ -202,7 +202,7 @@ class TMNF_Single_Agent_Env(gym.Env):
             pass
 
         reward, reward_info = self.rew_calculator.calculate_reward(raw_obs, race_finished, stuck)
-        info["reward_info"] = reward_info
+        info["rewards"] = reward_info
         self.n_steps += 1
         return processed_obs, reward, terminated, truncated, info
     
