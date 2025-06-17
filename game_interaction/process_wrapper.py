@@ -222,7 +222,8 @@ class TMIProcessWrapper:
     def syncloop(self, logfile = "tmi_process.log"):
         self._reconfigure_logger(logfile)
         self.logger.info("Started syncloop.")
-
+        simstep_since_last_act = self.sim_step_count
+        time_since_last_act = time.time()
         while self.__run_sync_loop:
             if self.sim_step_count % 500 == 0:
                 self.logger.debug(f"Sim-Step-Count at {self.sim_step_count}")
@@ -248,6 +249,9 @@ class TMIProcessWrapper:
                     self.__request_frame()
 
                 if self._send_action:
+                    self.logger.debug(f"Executed {self.sim_step_count - simstep_since_last_act} simulation-steps since last action-send; this took around {time.time() - time_since_last_act}s.")
+                    time_since_last_act = time.time()
+                    simstep_since_last_act = self.sim_step_count
                     self.__send_action()
 
                 # ============================ END ON RUN STEP ============================

@@ -45,7 +45,7 @@ if __name__ == "__main__":
     response_queue = Queue() # answers (payload) from TMIProcess Wrapper
    
 
-    p = Process(target=run_wrapper, args=(GIM, args.launch, control_queue, response_queue, IMG_WIDTH, IMG_HEIHGT))
+    p = Process(target=run_wrapper, args=(GIM, args.launch, control_queue, response_queue, "simple1_validated.Challenge.Gbx", IMG_WIDTH, IMG_HEIHGT, True))
     
     p.start()
 
