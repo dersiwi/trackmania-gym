@@ -45,7 +45,8 @@ def main(cfg : TrainConfig):
         response_queue=response_queue,
         obs_manager=get_observation_manager(cfg), 
         reward_calculator=get_reward_calculator(cfg),
-        env_cfg=cfg.rl_env.env)
+        env_cfg=cfg.rl_env.env,
+        platform=cfg.platforms.os)
     
     tm_env.add_env_test_calback(TestLinesightRewards())
     tm_env.add_env_test_calback(PrintRewardsToConsole())

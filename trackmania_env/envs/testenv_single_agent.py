@@ -4,7 +4,7 @@ import keyboard
 from typing import Callable
 import time
 from matplotlib import pyplot as plt
-
+from pynput.keyboard import Key, Listener,KeyCode
 class KEYS:
     """Enum for keys used in TestEnvironment."""
     UP = "nach-oben"
@@ -95,13 +95,15 @@ class TestLinesightRewards(TestEnvironmentCallback):
 
 class TestEnvironment(TMNF_Single_Agent_Env):
 
-    def __init__(self, command_queue, response_queue, obs_manager, reward_calculator, env_cfg):
+    def __init__(self, command_queue, response_queue, obs_manager, reward_calculator, env_cfg,platform =  "windows"):
         super().__init__(command_queue, response_queue, obs_manager, reward_calculator, env_cfg=env_cfg)
 
         self.action_modifier : Callable = None
         self.step_while_doing_nothing = False
         """Variable for setp_with_manual_input. If not input was given, no (environment)-step is executed."""
         self.env_test_callback : list[TestEnvironmentCallback] = []
+
+        self.keyboard = keyboard if platform == "windows" else LinuxKeyboardWrapper()
 
     def _action_modifier_drive_forward(self, action : int) -> int:
         """Action-modifier which is valid option to set for self.action_modifier."""
@@ -145,19 +147,19 @@ class TestEnvironment(TMNF_Single_Agent_Env):
 
             left, right, accelerate, brake = False, False, False, False
 
-            if keyboard.is_pressed(KEYS.UP):
+            if self.keyboard.is_pressed(KEYS.UP):
                 accelerate = True
 
-            if keyboard.is_pressed(KEYS.DOWN):
+            if self.keyboard.is_pressed(KEYS.DOWN):
                 brake = True
 
-            if keyboard.is_pressed(KEYS.LEFT):
+            if self.keyboard.is_pressed(KEYS.LEFT):
                 left = True
             
-            if keyboard.is_pressed(KEYS.RIGHT):
+            if self.keyboard.is_pressed(KEYS.RIGHT):
                 right = True
 
-            if keyboard.is_pressed(KEYS.ESCAPE):
+            if self.keyboard.is_pressed(KEYS.ESCAPE):
                 running = False
 
             
@@ -183,3 +185,31 @@ class TestEnvironment(TMNF_Single_Agent_Env):
 
         for cb in self.env_test_callback:
             cb._call_after_run()
+
+class LinuxKeyboardWrapper:
+    def __init__(self):
+        self.key_map = {
+            "nach-oben": Key.up,
+            "nach-unten": Key.down,
+            "nach-links": Key.left,
+            "nach-rechts": Key.right,
+            "esc": Key.esc,
+        }
+
+        # Keep track of currently pressed keys
+        self.pressed_keys = set()
+
+        self.listener = Listener(on_press=self.on_press, on_release=self.on_release)
+        self.listener.start()
+
+    def on_press(self, key):
+        self.pressed_keys.add(key)
+
+    def on_release(self, key):
+        self.pressed_keys.discard(key)
+
+    def is_pressed(self, key_str):
+        pynput_key = self.key_map.get(key_str)
+        if pynput_key is None:
+            raise ValueError(f"Key '{key_str}' is not mapped in LinuxKeyboardWrapper.")
+        return pynput_key in self.pressed_keys
