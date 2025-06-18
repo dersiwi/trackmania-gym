@@ -6,6 +6,7 @@ import time
 from matplotlib import pyplot as plt
 
 class KEYS:
+    """Enum for keys used in TestEnvironment."""
     UP = "nach-oben"
     DOWN = "nach-unten"
     LEFT = "nach-links"
@@ -13,7 +14,8 @@ class KEYS:
     ESCAPE = "esc"
 
     @staticmethod
-    def get_key_combo(left, right, accelerate, brake):
+    def get_key_combo(left : bool, right : bool, accelerate : bool, brake : bool):
+        """Translates the manual input of trackmania player into a string."""
         combostring = ""
         if left:
             combostring += KEYS.LEFT + " : "
@@ -29,19 +31,31 @@ class KEYS:
     
 
 
-class EnvironmentTestCallback():
+class TestEnvironmentCallback():
+    """TestEnviornmentCallbacks are used to track, log, do whatever with data obtained by an environment per setp."""
 
     def __init__(self):
         pass
 
     def _call_after_step(self, processed_obs, reward, terminated, truncated, info):
+        """This method is called by TestEnvironment.step_with_manual_input(), after everytime this method executes
+        an environment step of the underlying environment."""
         pass
 
     def _call_after_run(self):
+        """This method is called by TestEnvironment.step_with_manual_input(), after the main-loop has been executed via `esc`."""
         pass
 
+class PrintRewardsToConsole(TestEnvironmentCallback):
 
-class TestLinesightRewards(EnvironmentTestCallback):
+    def _call_after_step(self, processed_obs, reward, terminated, truncated, info):
+        print(info["rewards"])
+
+
+
+class TestLinesightRewards(TestEnvironmentCallback):
+    """Tacks vx, vy, vz and plots them after run."""
+    
     def __init__(self):
         super().__init__()
         self.v_x = []
@@ -87,27 +101,43 @@ class TestEnvironment(TMNF_Single_Agent_Env):
         self.action_modifier : Callable = None
         self.step_while_doing_nothing = False
         """Variable for setp_with_manual_input. If not input was given, no (environment)-step is executed."""
-        self.print_rewards_to_console = True
-        """Variable for setp_with_manual_input. Prints each indiviaul reward term to the console after each environment step."""
-
-        self.env_test_callback : EnvironmentTestCallback = None
+        self.env_test_callback : list[TestEnvironmentCallback] = []
 
     def _action_modifier_drive_forward(self, action : int) -> int:
+        """Action-modifier which is valid option to set for self.action_modifier."""
         return 0
     
-    def set_env_test_calback(self, env_test_callback : EnvironmentTestCallback):
-        self.env_test_callback = env_test_callback
+    def add_env_test_calback(self, env_test_callback : TestEnvironmentCallback):
+        """Adds testenvironment-callback used in self.step_with_manual_input()"""
+        self.env_test_callback.append(env_test_callback)
     
     def set_action_modifier(self, action_modifier : Callable) -> None:
         self.action_modifier = action_modifier
 
     def step(self, action):
+        """Calls super().step(action). If no self.action_modifier (e.g. self._action_moifier_drive_forawrd) is defined."""
         if not self.action_modifier == None:
             action = self.action_modifier(action)
 
         return super().step(action)
     
     def step_with_manual_input(self, time_between_actions : float = 0.012):
+        """This method enables to send manual inputs to the TMNF_Single_Agent_Env; basically simulating you playing the game with extra steps.
+        In order to do something with date coming from the environment after each-step, you can define your own TestEnvironmentCallback-class.
+        Implement the methods _call_after_step(obs, rew, terminated, trucated, infos) and _call_after_run(). 
+        Then, before callinth this method add them to this class via this.add_env_test_callback(). 
+
+        After you start this method the main loop starts:
+        ``` 
+        while running:
+            1. press key 
+            2. complete environment step
+            3. call _call_after_step for each added callback
+        4. call _call_after_run
+        ```
+        The run ends, if you press `esc`.
+
+        """
         REVERSE_ACTIONMAP = get_reverse_action_map()
         running = True
         no_actions_since_n_steps = 0 # indicates since how many steps no action was executed 
@@ -146,13 +176,10 @@ class TestEnvironment(TMNF_Single_Agent_Env):
             if terminated or truncated:
                 super().reset()
 
-            if not self.env_test_callback == None:
-                self.env_test_callback._call_after_step(obs, reward, terminated, truncated, info)
-            
-            if self.print_rewards_to_console:
-                print(info["rewards"])
+            for cb in self.env_test_callback:
+                cb._call_after_step(obs, reward, terminated, truncated, info)
 
             time.sleep(time_between_actions)
 
-        if not self.env_test_callback == None:
-            self.env_test_callback._call_after_run()
+        for cb in self.env_test_callback:
+            cb._call_after_run()
