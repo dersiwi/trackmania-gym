@@ -61,8 +61,8 @@ def main(cfg : TrainConfig):
         
         # get algorithm and start learning process
         vision_model, model = get_models(cfg, tm_env, print_params = True)
-        vision_model.to(cfg.platforms.device)
-        model.to(cfg.platforms.device)
+
+
         model.load(model_path)
         
         terminated = False

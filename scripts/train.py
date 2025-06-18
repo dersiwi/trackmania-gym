@@ -27,16 +27,10 @@ from trackmania_env.envs.single_agent_env2 import TMNF_Single_Agent_Env
 from trackmania_env.envs.testenv_single_agent import TestEnvironment
 
 from trackmania_env.observations.observations import get_observation_manager
-from trackmania_env.observations.observation_manager import ObservationManager
-from trackmania_env.observations.observation_test import ObservationTest
- 
-from trackmania_env.observations.linesight_obs_wrapper import LinesightObservationWrapper
-
-from configs.config import TrainConfig
-from utils.printutils import print_model_params
-from trackmania_env.utils.init_linesight_obs import get_linesight_obs_instance
 from trackmania_env.rewards.getrewards import get_reward_calculator
 from trackmania_env.rewards.reward_calculation import RewardLogCallback
+
+from configs.config import TrainConfig
 
 import glob
 
