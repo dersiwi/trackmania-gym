@@ -3,4 +3,4 @@ home: ${oc.env:USERPROFILE,""}  # This is the equivalent of expanduser("~") on W
 tmloader: ${.home}/AppData/Local/TMLoader/TMLoader.exe
 plugin: ${.home}/OneDrive/Dokumente/TMInterface/Plugins/Python_Link.as
 map_dir: ${.home}/OneDrive/Dokumente/TmForever/Tracks/Challenges
-devide: cpu
+device: cpu

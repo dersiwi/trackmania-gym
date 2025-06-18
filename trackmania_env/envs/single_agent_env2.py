@@ -23,6 +23,8 @@ from trackmania_env.observations.observation_manager import ObservationManager
 from trackmania_env.rewards.reward_calculation import RewradCalculator
 from collections import deque
 
+from configs.config import EnvConfig
+
 
 from simstate_space_dict import simstate_space_dict
 
@@ -40,20 +42,14 @@ class TMNF_Single_Agent_Env(gym.Env):
             response_queue : Queue,
             obs_manager : ObservationManager,
             reward_calculator : RewradCalculator,
-            position_buffer_size : int = 20,
-            position_moved_threshold : float = 0.2,
-            reset_mode : str = "respawn",
-            n_previous_actions : int = 10,
-            ignore_stuck_for_n_steps_after_reset : int = 80,
-            max_steps_before_reset : int = 10000,
-            game_speed : float = 1):
+            env_cfg : EnvConfig):
         
         """
         Initializes the custom Gymnasium environment.
         This constructor sets up the basic structure of the environment.
         As required by Gymnasium environments, it defines the action and observation spaces.
 
-        Parameters
+        Parameters  -- [WARNING] -- may be depricated; look at configuration in configs/rl_env/single_agent_env/env:
         ----------
         - coommand_queue            : Command-Queue used for sending commands to TMInterface process
         - response_queue            : Used for getting responsees from TMInterface process
@@ -69,7 +65,7 @@ class TMNF_Single_Agent_Env(gym.Env):
         - game_speed                : sets speed of game, as defined in https://donadigo.com/tminterface/variables
 
         """
-        self.n_prev_actions = n_previous_actions
+        self.n_prev_actions = env_cfg.n_previous_actions
         self.actions : deque = deque([(False,False,False,False)] * self.n_prev_actions, maxlen=self.n_prev_actions)
         """list of actions that may be stored later."""
 
@@ -84,19 +80,19 @@ class TMNF_Single_Agent_Env(gym.Env):
         # variables used for resetting car(posiiton)
         self.start_position : list[float] = [0,0,0]
         self.__start_position_set : bool = False
-        self.reset_mode = reset_mode
+        self.reset_mode = env_cfg.reset_mode
         
-        self.position_buffer = PositionBuffer(position_buffer_size)
-        self.position_buffer_threshold = position_moved_threshold
+        self.position_buffer = PositionBuffer(env_cfg.position_buffer_size)
+        self.position_buffer_threshold = env_cfg.position_moved_threshold
 
         self.rew_calculator = reward_calculator#get_reward_calculator(reward_calculator, self.position_buffer)
         self.rew_calculator.set_position_buffer(self.position_buffer)
         self.obs_manager = obs_manager
         self.obs_manager.set_env(self)
 
-        self.max_steps_before_reset : int = max_steps_before_reset
+        self.max_steps_before_reset : int = env_cfg.max_steps_until_reset
         self.n_steps : int = 0
-        self.ignore_stuck_for_n_steps_after_reset = ignore_stuck_for_n_steps_after_reset
+        self.ignore_stuck_for_n_steps_after_reset = env_cfg.ignore_stuck_for_n_steps_after_reset
 
         # define observation and action space for gym
         self.observation_space = obs_manager.get_observation_dict()
@@ -104,7 +100,7 @@ class TMNF_Single_Agent_Env(gym.Env):
 
         self.__send_command_to_process_wrapper(TMIProcessWrapper.IPCCommands.get_cmd_command(self.__ipc_cmd_id, 
                                                                                              TMInterfaceCommands.set_variable(TMInterfaceCommands.Variables.SPEED, 
-                                                                                                                              value=game_speed)))
+                                                                                                                              value=env_cfg.game_speed)))
 
     def _get_info(self) -> Dict[str,Any]:
         """Helper function for computing additional information (e.g. for debugging or logging)"""

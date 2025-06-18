@@ -10,6 +10,7 @@ class GMIConfig:
     port: int
     track : str
     automatic_prevent_sim_finish : bool
+    reference_line : str
 
 
 @dataclass
@@ -91,7 +92,6 @@ class LinesightObsCfg:
     distance_between_checkpoints: float
     road_width: int  ## a little bit of margin, could be closer to 24 probably ? Don't take risks there are curvy roads
     sync_virtual_and_real_checkpoints : bool
-    reference_line : str
 
 @dataclass
 class SB3LearnArgsConfig:
@@ -133,6 +133,8 @@ class EnvConfig:
     max_steps_until_reset : int
     game_speed : float
     test : bool
+    n_previous_actions : int
+    ignore_stuck_for_n_steps_after_reset : int
 
 @dataclass
 class RLEnvConfig:

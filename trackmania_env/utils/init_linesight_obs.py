@@ -16,7 +16,7 @@ def get_linesight_obs_instance(cfg : TrainConfig):
     zone_centers = load_map_with_extrapolated_centers(
         n_before = linesightcfg.n_zone_centers_extrapolate_before_start_of_map,
         n_after  = linesightcfg.n_zone_centers_extrapolate_after_end_of_map,
-        path_to_file = linesightcfg.reference_line,)
+        path_to_file = cfg.gmi.reference_line,)
 
     (
         zone_transitions,

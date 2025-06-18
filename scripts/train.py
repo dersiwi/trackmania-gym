@@ -77,8 +77,7 @@ def main(cfg : TrainConfig):
                                         response_queue=response_queue, 
                                         obs_manager=obs_manager,
                                         reward_calculator=get_reward_calculator(cfg),
-                                        max_steps_before_reset=cfg.rl_env.env.max_steps_until_reset,
-                                        game_speed=cfg.rl_env.env.game_speed)
+                                        env_cfg=cfg.rl_env.env)
              
         # apply (Observation)-wrappers to the environment
         for _, wrapper_conf in cfg.rl_env.wrappers.items():
