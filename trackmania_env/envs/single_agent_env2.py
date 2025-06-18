@@ -106,9 +106,10 @@ class TMNF_Single_Agent_Env(gym.Env):
                                                                                              TMInterfaceCommands.set_variable(TMInterfaceCommands.Variables.SPEED, 
                                                                                                                               value=game_speed)))
 
-    def _get_info(self) -> Dict[str,Any]:
+    def _get_info(self,ssD) -> Dict[str,Any]:
         """Helper function for computing additional information (e.g. for debugging or logging)"""
-        info = {} 
+        info = {}
+        info["velocity"] = ssD.velocity
         return info
     
 
@@ -191,7 +192,7 @@ class TMNF_Single_Agent_Env(gym.Env):
         
         
         # TODO also store some info for logging or debugging
-        info = self._get_info() 
+        info = self._get_info(ssD=ssD) 
 
         processed_obs = self.obs_manager.get_observation(raw_obs)
         try:
@@ -231,7 +232,7 @@ class TMNF_Single_Agent_Env(gym.Env):
         
         raw_obs = self._get_raw_obs()
         observation = self.obs_manager.get_observation(raw_obs)
-        info = self._get_info()
+        info = self._get_info(ssD=raw_obs[IPCFields.SIMSTATE])
         self.actions = deque([(False,False,False,False)] * self.n_prev_actions, maxlen=self.n_prev_actions)
         
         self.reset_car(raw_obs[IPCFields.SIMSTATE].position)
