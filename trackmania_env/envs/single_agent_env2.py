@@ -101,6 +101,9 @@ class TMNF_Single_Agent_Env(gym.Env):
         self.__send_command_to_process_wrapper(TMIProcessWrapper.IPCCommands.get_cmd_command(self.__ipc_cmd_id, 
                                                                                              TMInterfaceCommands.set_variable(TMInterfaceCommands.Variables.SPEED, 
                                                                                                                               value=env_cfg.game_speed)))
+        self.__send_command_to_process_wrapper(TMIProcessWrapper.IPCCommands.get_cmd_command(self.__ipc_cmd_id, 
+                                                                                                    TMInterfaceCommands.set_variable(TMInterfaceCommands.Variables.COUNTDOWN_SPEED, 
+                                                                                                                                    value=env_cfg.countdown_speed)))
 
     def _get_info(self,ssD) -> Dict[str,Any]:
         """Helper function for computing additional information (e.g. for debugging or logging)"""

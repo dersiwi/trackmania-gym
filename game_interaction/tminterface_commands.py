@@ -9,6 +9,8 @@ class TMInterfaceCommands:
         """Implements variables """
         SPEED = "speed"
         """Defines games-speed, value is float!"""
+        COUNTDOWN_SPEED = "countdown_speed"
+        """Defines games-speed during the countdown phase."""
 
     @staticmethod
     def recover_inputs(filename : str) -> str:

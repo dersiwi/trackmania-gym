@@ -132,6 +132,7 @@ class EnvConfig:
     obs_manager : str ##use basic for other
     max_steps_until_reset : int
     game_speed : float
+    countdown_speed : float
     test : bool
     n_previous_actions : int
     ignore_stuck_for_n_steps_after_reset : int

@@ -8,6 +8,7 @@ env:
   obs_manager : "linesight" ##use basic for other
   max_steps_until_reset : 256
   game_speed : 30
+  countdown_speed : 50
   test : False
   n_previous_actions : 10
   ignore_stuck_for_n_steps_after_reset : 80 
