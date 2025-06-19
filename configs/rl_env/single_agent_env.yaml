@@ -28,6 +28,7 @@ reward_manager:
     velocity_reward_weight : 1
     backward_weight : 0
     distance_to_center_weight : 0.25
+    velocity_change_reward_weight : 10
 
 obsmanager:
   observation_list: 

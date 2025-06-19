@@ -25,6 +25,7 @@ class NextPointRewards(RewradCalculator):
         self.velocity_reward_weight = reward_cfg.rewardterm_weights["velocity_reward_weight"]
         self.backward_weight = reward_cfg.rewardterm_weights["backward_weight"]
         self.distance_to_center_weight = reward_cfg.rewardterm_weights["distance_to_center_weight"]
+        self.velocity_change_reward_weight = reward_cfg.rewardterm_weights["velocity_change_reward_weight"]
 
         self.logger = logging.getLogger(self.__class__.__name__)
         self.logging_freq = 1000
@@ -33,6 +34,10 @@ class NextPointRewards(RewradCalculator):
 
         self.max_lateral_difference = 12 # maximal lateral difference, this is an estimate.
 
+        self.last_simstate : SimStateData = None
+
+    def _get_normed_velocity(self, velocity : list[float, float, float]) -> float:
+        return np.linalg.norm(np.array(velocity) / 1000) #1000 == max velocity
 
     def calculate_reward(self, observations, processed_obs : dict[str, any], race_finished, other_terminations):
         ssD : SimStateData = observations[IPCFields.SIMSTATE]
@@ -44,18 +49,23 @@ class NextPointRewards(RewradCalculator):
             accum_dist_reward = self.refline_manager.get_discrete_distance(next_refline_index) * self.accum_distance_weight
             self.current_refline_idx = next_refline_index
 
+        current_velocity_normed = self._get_normed_velocity(ssD.velocity)
+        velocity_change_reward = 0
+        if not self.last_simstate == None:
+            velocity_change_reward = (current_velocity_normed - self._get_normed_velocity(self.last_simstate.velocity)) * self.velocity_change_reward_weight
+
         
         distance_to_center_reward = self.distance_to_center_weight * (1 - np.clip(self.refline_manager.calculate_lateral_difference(idx = next_refline_index, car_position=ssD.position), 
                                                 a_min = 0, a_max = self.max_lateral_difference) / self.max_lateral_difference) # inverse the distance, such that reward is bigger once distance gets smaller
         
-        velocity_reward = self.velocity_reward_weight * np.linalg.norm(np.array(ssD.velocity) / 1000) #1000 == max velocity
+        velocity_reward = self.velocity_reward_weight * current_velocity_normed
         race_not_finished_reward = (-1) * self.race_not_finished_weight
         race_finished = race_finished * self.race_finished_reward
         other_term_reward = (-1) * other_terminations * self.other_termination_punishment
         backward_punishment = (-1) * np.clip(d, a_min=0, a_max=100) / 100 * self.backward_weight
         
-        reward = accum_dist_reward + race_not_finished_reward + race_finished + other_term_reward + velocity_reward + backward_punishment + distance_to_center_reward
-
+        reward = accum_dist_reward + race_not_finished_reward + race_finished + other_term_reward + velocity_reward + backward_punishment + distance_to_center_reward + velocity_change_reward
+        self.last_observations = ssD
         return reward, {"total" : reward, 
                         "accumulated_distance" : accum_dist_reward,
                         "distance_to_center" : distance_to_center_reward,
@@ -64,7 +74,8 @@ class NextPointRewards(RewradCalculator):
                         "race_finished" : race_finished,
                         "other_terminations":other_term_reward,
                         "vel_reward":velocity_reward,
-                        "backward_punishment" : backward_punishment}
+                        "backward_punishment" : backward_punishment,
+                        "velocity_change_reward" : velocity_change_reward}
 
 
 
