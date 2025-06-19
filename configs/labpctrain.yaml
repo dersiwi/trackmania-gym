@@ -3,11 +3,13 @@ defaults:
   - rl_env: single_agent_env.yaml
   - sb3: ppo.yaml
   - wandb_callbacks : sb3_callback.yaml
-  - models: linesight_cnn.yaml
+  - models: pretrained_resnet.yaml
+
+extractors_out_dim: 64 # every extractor will produce an output with this dimension 
 
 learn_args:
   total_timesteps: 4000000
-  log_interval: 13
+  log_interval: 1
   reset_num_timesteps: True
   progress_bar: True
   tb_log_name: "PPO"
@@ -17,7 +19,8 @@ gmi:
   tm_loader_profile_name: "default"
   headless: False
   port: 8775
-  track : Level1.Challenge.Gbx    ##be sure to also choose correcte reference line; TODO : move to similar location or remove name dependency.
+  track : simple1_validated.Challenge.Gbx
+  reference_line: tracks/reference_line/simple1_validated.npy
   automatic_prevent_sim_finish : True
 
 image:
@@ -28,4 +31,6 @@ wandb:
   use: True
   entity : tmnf-practical-ss25
   project : tmnf_ppo
+  checkpoint_freq : 200000 # after how many steps should the model be saved automatically
+  eval_freq : 400000 # after how many steps should we check if there is a new better model
 
