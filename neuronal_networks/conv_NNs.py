@@ -44,7 +44,7 @@ class PrebuiltResNet(nn.Module):
     :param out_dim: dimension of the output of the model 
     :param pretrained: Whether to load pretrained weights.
     :param trainable_backbone: Whether the backbone should also be trainable
-    :param use_default_weights: If True, uses torchvision's default weight configs for the specified model.
+    :param weights_name: Specify which weights should get loaded for the model
 """
     def __init__(self, 
                  model_name='resnet18', 

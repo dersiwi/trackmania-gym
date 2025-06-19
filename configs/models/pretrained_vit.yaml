@@ -1,6 +1,13 @@
+# Available model names ViT_MODELS:
+# - vit_b_16
+# - vit_l_16
+# - vit_h_14
+# - vit_b_32
+# - vit_l_32
+# for the available weights see https://docs.pytorch.org/vision/main/_modules/torchvision/models/vision_transformer.html#vit_b_16
 _partial_: True
 _target_: neuronal_networks.vit.PrebuiltViT
 model_name: 'vit_b_16'
-out_dims: 21
 pretrained: False
 trainable_backbone: True
+weights_name: "DEFAULT"
