@@ -22,11 +22,14 @@ class NextPointRewards(RewradCalculator):
         self.other_termination_punishment = 2
         self.velocity_reward_weight = 2
         self.backward_weight = 5
+        self.distance_to_center_weight = 1
 
         self.logger = logging.getLogger(self.__class__.__name__)
         self.logging_freq = 1000
         
         self.current_refline_idx : int = 0
+
+        self.max_lateral_difference = 12 # maximal lateral difference, this is an estimate.
 
 
     def calculate_reward(self, observations, race_finished, other_terminations):
@@ -36,8 +39,12 @@ class NextPointRewards(RewradCalculator):
         next_refline_index, d, drel = self.refline_manager.get_distance_to_next_point(ssD.position)
         accum_dist_reward = 0
         if not self.current_refline_idx == next_refline_index: #only give reward if progress in regards to last one was made
-            accum_dist_reward = self.accum_distance_weight * drel
+            accum_dist_reward = self.refline_manager.get_discrete_distance(next_refline_index) * self.accum_distance_weight
             self.current_refline_idx = next_refline_index
+
+        
+        distance_to_center_reward = self.distance_to_center_weight * (1 - np.clip(self.refline_manager.calculate_lateral_difference(idx = next_refline_index, car_position=ssD.position), 
+                                                a_min = 0, a_max = self.max_lateral_difference) / self.max_lateral_difference) # inverse the distance, such that reward is bigger once distance gets smaller
         
         velocity_reward = self.velocity_reward_weight * np.linalg.norm(np.array(ssD.velocity) / 1000) #1000 == max velocity
         race_not_finished_reward = (-1) * self.race_not_finished_weight
@@ -45,10 +52,11 @@ class NextPointRewards(RewradCalculator):
         other_term_reward = (-1) * other_terminations * self.other_termination_punishment
         backward_punishment = (-1) * np.clip(d, a_min=0, a_max=100) / 100 * self.backward_weight
         
-        reward = accum_dist_reward + race_not_finished_reward + race_finished + other_term_reward + velocity_reward + backward_punishment
+        reward = accum_dist_reward + race_not_finished_reward + race_finished + other_term_reward + velocity_reward + backward_punishment + distance_to_center_reward
 
         return reward, {"total" : reward, 
                         "accumulated_distance" : accum_dist_reward,
+                        "distance_to_center" : distance_to_center_reward,
                         "nextpoint_reference_index" : next_refline_index,
                         "race_not_finished":race_not_finished_reward,
                         "race_finished" : race_finished,

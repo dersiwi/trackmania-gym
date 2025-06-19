@@ -49,6 +49,39 @@ class ReferenceLineManager:
         min_idx = np.argmin(distances)
         self.next_point_idx = self.next_point_idx + min_idx
         return self.next_point_idx, distances[min_idx], self.relative_accumulated_distances[self.next_point_idx]
+    
+    def calculate_lateral_difference(self, idx : int, car_position : np.ndarray):
+        """Calculates the lateral distance the car position to the reference line, according to the current linesgement.
+        Intuition: if this is very small, the car is very centered, if it's large, the car is far on the left/right on the track
+        
+        Parameters
+        ----------
+            - idx : index of next! reference-line-point
+            """
+        if idx == 0:
+            return 0 
+        distvector_d1 = car_position - self.reference_line[idx - 1]
+        distance_last_point = np.linalg.norm(distvector_d1)
+
+        #calculate scalar projection sp = (d(i-1)^T s) / |s| of car position onto line-segement s = d(i-1) - d(i)
+        s = self.reference_line[idx] - self.reference_line[idx - 1]
+        sp : float = np.dot(distvector_d1.T, s) / np.linalg.norm(s)
+
+        """sp < 0 : car is before line-segemnt
+           sp € [0,1] : car inside line-segement
+           sp > 1 : should not happen (car after line-segment)""" 
+
+        # pythagoras to get length of normal vector w of s, such that position of car p - w = a * s for some scalar a.
+        lateral_distance = np.sqrt(distance_last_point ** 2 - sp ** 2)
+
+        return lateral_distance
+    
+    def get_discrete_distance(self, refline_idx : int) -> float:
+        """Say d(i) is the accumulated distance for all line-segments until i, then this method returns;
+        d(i) - d(i-1), only the distance between i and i-1."""
+        if refline_idx == 0:
+            return 0
+        return self.relative_accumulated_distances[refline_idx] - self.relative_accumulated_distances[refline_idx - 1]
 
     def reset(self):
         """Resets the current point-index to 0."""

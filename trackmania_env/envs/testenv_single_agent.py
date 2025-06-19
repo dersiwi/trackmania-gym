@@ -5,6 +5,7 @@ from typing import Callable
 import time
 from matplotlib import pyplot as plt
 from pynput.keyboard import Key, Listener,KeyCode
+
 class KEYS:
     """Enum for keys used in TestEnvironment."""
     UP = "nach-oben"
@@ -48,10 +49,19 @@ class TestEnvironmentCallback():
 
 class PrintRewardsToConsole(TestEnvironmentCallback):
 
+    def __init__(self):
+        self.n_step = 0
+        super().__init__()
+
     def _call_after_step(self, processed_obs, reward, terminated, truncated, info):
-        print(info["rewards"])
-
-
+        if self.n_step % 128 == 0:
+            for key in info["rewards"]:
+                print(key, end=" | ")
+            print("\n")
+        for key in info["rewards"]:
+            print(info["rewards"][key], end=" | ")
+        print("\n")
+        self.n_step += 1
 
 class TestLinesightRewards(TestEnvironmentCallback):
     """Tacks vx, vy, vz and plots them after run."""
