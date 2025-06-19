@@ -7,8 +7,8 @@ import numpy as np
 
 class BasicRewardCalculation(RewradCalculator):
 
-    def __init__(self, position_buffer):
-        super().__init__(position_buffer)
+    def __init__(self, reward_cfg):
+        super().__init__(reward_cfg)
 
     def calculate_reward(self, observations, processed_obs : dict[str, any], race_finished, other_terminations) -> tuple[float, dict[str, any]]:
         ssD : SimStateData = observations[IPCFields.SIMSTATE]

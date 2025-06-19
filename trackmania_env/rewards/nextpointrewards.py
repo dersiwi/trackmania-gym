@@ -9,20 +9,22 @@ from trackmania_env.rewards.reward_calculation import RewradCalculator
 from trackmania_env.utils.reference_line_manager import ReferenceLineManager
 
 import logging
+from configs.config import RewardManagerCfg
 
 class NextPointRewards(RewradCalculator):
 
-    def __init__(self, filepath_referenceline : str):
-        super().__init__()
+    def __init__(self, reward_cfg : RewardManagerCfg, filepath_referenceline : str):
+        super().__init__(reward_cfg)
         self.refline_manager = ReferenceLineManager(filepath_referenceline)
 
-        self.accum_distance_weight = 5
-        self.race_not_finished_weight = 0.05
-        self.race_finished_reward = 100
-        self.other_termination_punishment = 2
-        self.velocity_reward_weight = 2
-        self.backward_weight = 5
-        self.distance_to_center_weight = 1
+        self.accum_distance_weight = reward_cfg.rewardterm_weights["accum_distance_wegiht"]
+        self.race_not_finished_weight = reward_cfg.rewardterm_weights["race_not_finished_weight"]
+        
+        self.race_finished_reward = reward_cfg.rewardterm_weights["race_finished_reward"]
+        self.other_termination_punishment = reward_cfg.rewardterm_weights["other_termination_punishment"]
+        self.velocity_reward_weight = reward_cfg.rewardterm_weights["velocity_reward_weight"]
+        self.backward_weight = reward_cfg.rewardterm_weights["backward_weight"]
+        self.distance_to_center_weight = reward_cfg.rewardterm_weights["distance_to_center_weight"]
 
         self.logger = logging.getLogger(self.__class__.__name__)
         self.logging_freq = 1000

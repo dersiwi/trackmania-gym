@@ -10,8 +10,8 @@ from trackmania_env.utils.speedslide_quality import speedslide_quality_tarmac
 
 
 class LinesightRewardCalculator(RewradCalculator):
-    def __init__(self):
-        super().__init__()
+    def __init__(self, reward_cfg):
+        super().__init__(reward_cfg)
         self.last_obs : SimStateData = None
 
 

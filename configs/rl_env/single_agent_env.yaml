@@ -18,6 +18,16 @@ env:
     - 512
     - 1024
 
+reward_manager:
+  rewardterm_weights:
+    accum_distance_wegiht : 1750
+    race_not_finished_weight : 0.05
+    race_finished_reward : 100
+    other_termination_punishment : 0.01
+    velocity_reward_weight : 1
+    backward_weight : 0
+    distance_to_center_weight : 0.25
+
 obsmanager:
   observation_list: 
         - image

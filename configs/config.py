@@ -139,11 +139,18 @@ class EnvConfig:
     new_timeouts : list[int]
 
 @dataclass
+class RewardManagerCfg:
+    rewardterm_weights : dict[str, float]
+    
+@dataclass
 class RLEnvConfig:
     wrappers: WrappersConfig
     env : EnvConfig
     obsmanager : ObservationManager
     linesightobsmanager : LinesightObsCfg
+    reward_manager : RewardManagerCfg
+
+
 
 @dataclass
 class TrainConfig:

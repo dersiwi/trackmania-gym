@@ -6,11 +6,13 @@ import numpy as np
 from numba import jit
 import wandb
 from stable_baselines3.common.callbacks import BaseCallback
+from configs.config import RewardManagerCfg
 
 class RewradCalculator:
     """Responsible for reward calculations for environment"""
 
-    def __init__(self):
+    def __init__(self, reward_cfg : RewardManagerCfg):
+        self.reward_cfg = reward_cfg
         self.pos_buffer = None # do not reset or add anything to this position buffer, read-only! (no reset, no add...)
 
     def set_position_buffer(self, position_buffer : PositionBuffer):
