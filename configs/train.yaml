@@ -1,9 +1,11 @@
 defaults:
-  - platforms: windows.yaml  # or platforms/windows
+  - platforms: linux.yaml  # or platforms/windows
   - rl_env: single_agent_env.yaml
   - sb3: ppo.yaml
   - wandb_callbacks : sb3_callback.yaml
-  - models: linesight_cnn.yaml
+  - models: pretrained_resnet.yaml
+
+extractors_out_dim: 64 # every extractor will produce an output with this dimension 
 
 learn_args:
   total_timesteps: 4000000
@@ -26,7 +28,7 @@ image:
   height: 100
 
 wandb:
-  use: True
+  use: False
   entity : tmnf-practical-ss25
   project : tmnf_ppo
   checkpoint_freq : 200000 # after how many steps should the model be saved automatically

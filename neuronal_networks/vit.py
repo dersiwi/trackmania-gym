@@ -3,10 +3,103 @@ from torch import Tensor
 import torch.nn as nn
 import torchvision.models as models
 import torchvision.transforms as T
-from torchvision.models import vit_b_16
 from einops.layers.torch import Rearrange
 
-VIT_MODELS =  ["vit_b_16","vit_b_32","vit_l_16","vit_l_32","vit_h_14"]
+from torchvision.models.vision_transformer import (
+    WeightsEnum,
+    ViT_H_14_Weights,
+    ViT_B_16_Weights,
+    ViT_L_16_Weights,
+    ViT_B_32_Weights,
+    ViT_L_32_Weights
+)
+
+VIT_MODELS_WEIGHTS: dict[str,WeightsEnum] =  {
+    "vit_h_14": ViT_H_14_Weights,
+    "vit_b_16": ViT_B_16_Weights,
+    "vit_l_16": ViT_L_16_Weights,
+    "vit_b_32": ViT_B_32_Weights,
+    "vit_l_32": ViT_L_32_Weights,
+}
+
+class PrebuiltViT(nn.Module):
+    """
+    A wrapper for Vision Transformers from torchvision.models.
+    For more information on the available vit variants check out:
+        https://docs.pytorch.org/vision/main/models/vision_transformer.html
+
+    :param model_name: Name of the ResNet variant to load (e.g., 'resnet18', 'resnet50').
+    :param in_color_channels: Number of input color channels for the cnn
+    :param out_dim: dimension of the output of the model 
+    :param pretrained: Whether to load pretrained weights.
+    :param trainable_backbone: Whether the backbone should also be trainable
+    :param weights_name: Specify which weights should get loaded for the model
+    """
+    def __init__(self,
+                 model_name='vit_b_16',
+                 in_color_channels=3,
+                 out_dim=21,
+                 pretrained=False,
+                 trainable_backbone=False,
+                weights_name = "DEFAULT"):
+        super().__init__()
+
+        if model_name not in VIT_MODELS_WEIGHTS:
+            raise ValueError(f"Model '{model_name}' must be one of: {VIT_MODELS_WEIGHTS.keys()}")
+
+        # Load model
+        model_fn = getattr(models, model_name)
+        weights = None # not pretrained weights
+        if pretrained:
+            weight_class =  VIT_MODELS_WEIGHTS.get(model_name)
+            try:
+                weights = getattr(weight_class,weights_name)
+            except AttributeError:
+                available_weights = [w for w in dir(weight_class) if not w.startswith('_')]
+                raise ValueError(f"Invalid weights name: '{weights_name}' for model '{model_name}'. "
+                     f"Available weights: {available_weights} or use DEFAULT as weights_name")
+            
+        self.model = model_fn(weights=weights)
+
+        # Freeze backbone if required
+        if not trainable_backbone:
+            for param in self.model.parameters():
+                param.requires_grad = False
+
+        # Resize input to 224x224 since pretrained vit only work with that sizes (required for positional encoding)
+        self.resize = nn.Upsample(size=(224, 224), mode='bilinear', align_corners=False)
+
+        # Handle input channels
+        if in_color_channels != 3:
+            self.color_adjust = nn.Conv2d(
+                in_channels=in_color_channels,
+                out_channels=3,
+                kernel_size=1,
+                stride=1,
+                padding=0,
+                bias=False)
+        else:
+            self.color_adjust = nn.Identity()
+
+        # Replace classification head
+        hidden_dim = self.model.heads.head.in_features
+        self.model.heads.head = nn.Linear(hidden_dim, out_dim)
+
+    def forward(self, x):
+        x = self.color_adjust(x)
+        x = self.resize(x)
+        return self.model(x)
+    """
+    to only use the encoder of the vit replace after self.resize()
+        x = self.model._process_input(x)
+        n = x.shape[0]
+
+        # Expand the class token to the full batch
+        batch_class_token = self.model.class_token.expand(n, -1, -1)
+        x = torch.cat([batch_class_token, x], dim=1)
+
+        x = self.model.encoder(x) [batch_size, num_tokens + 1, hidden_dim] this needs to be flattened then 
+    """
 
 class ViTPreprocessor(nn.Module):
     """
@@ -41,92 +134,6 @@ class ViTPreprocessor(nn.Module):
         x = self.normalize(x)
         return x
 
-
-
-class PrebuiltViT(nn.Module):
-    """
-    A wrapper for Vision Transformers from torchvision.models.
-
-    Parameters:
-    -----------
-    model_name: str
-        One of the ViT model names in torchvision (e.g., 'vit_b_16').
-    in_color_channels: int
-        Number of channels in input images (default: 3).
-    out_dims: int
-        Output dimension of the final classification layer.
-    pretrained: bool
-        Whether to load pretrained ImageNet weights.
-    trainable_backbone: bool
-        Whether the ViT backbone is trainable.
-    """
-    def __init__(self,
-                 model_name='vit_b_16',
-                 in_color_channels=3,
-                 out_dims=21,
-                 pretrained=False,
-                 trainable_backbone=False):
-        super().__init__()
-
-        if model_name not in VIT_MODELS:
-            raise ValueError(f"Model '{model_name}' must be one of: {VIT_MODELS}")
-
-        self.out_dims = out_dims
-        weights = 'DEFAULT' if pretrained else None
-
-        # Load model
-        model_fn = getattr(models, model_name)
-        self.model = model_fn(weights=weights)
-
-        # Freeze backbone if required
-        if not trainable_backbone:
-            for param in self.model.parameters():
-                param.requires_grad = False
-
-        # Resize input to 224x224  (required for positional encoding)
-        self.resize = nn.Upsample(size=(224, 224), mode='bilinear', align_corners=False)
-
-        # Handle input channels
-        if in_color_channels != 3:
-            if pretrained:
-                # For pretrained: use adapter conv to map to 3 channels
-                self.color_adjust = nn.Conv2d(in_color_channels, 3, kernel_size=1, bias=False)
-            else:
-                # For non-pretrained: modify the model's conv_proj input layer directly
-                original_conv = self.model.conv_proj
-                self.model.conv_proj = nn.Conv2d(
-                    in_channels=in_color_channels,
-                    out_channels=original_conv.out_channels,
-                    kernel_size=original_conv.kernel_size,
-                    stride=original_conv.stride,
-                    padding=original_conv.padding,
-                    bias=False
-                )
-                self.color_adjust = nn.Identity()
-        else:
-            self.color_adjust = nn.Identity()
-
-        # Replace classification head
-        hidden_dim = self.model.heads.head.in_features
-        self.model.heads.head = nn.Linear(hidden_dim, out_dims)
-
-    def forward(self, x):
-        if x.ndim == 3:
-            x = x.unsqueeze(0)  # Add batch dim if needed
-        x = self.color_adjust(x)
-        x = self.resize(x)
-        return self.model(x)
-    """
-    to only use the encoder of the vit replace after self.resize()
-        x = self.model._process_input(x)
-        n = x.shape[0]
-
-        # Expand the class token to the full batch
-        batch_class_token = self.model.class_token.expand(n, -1, -1)
-        x = torch.cat([batch_class_token, x], dim=1)
-
-        x = self.model.encoder(x) [batch_size, num_tokens + 1, hidden_dim] this needs to be flattened then 
-    """
 
 
 class PatchEmbedding(nn.Module):
