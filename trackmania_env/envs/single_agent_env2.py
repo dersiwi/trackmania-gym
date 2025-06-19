@@ -7,7 +7,7 @@ from typing import Any,Dict,Tuple,Optional,List
 import gymnasium as gym
 import numpy as np
 import logging
-import torch
+from collections import deque
 
 from gymnasium import spaces
 from queue import Queue
@@ -19,14 +19,12 @@ from game_interaction.ipc_fields import IPCFields
 
 from trackmania_env.utils.position_buffer import PositionBuffer
 from trackmania_env.utils.actionmap import ACTION_MAP
+from trackmania_env.utils.timeoutpolicy import TimeoutPolicy
 from trackmania_env.observations.observation_manager import ObservationManager
 from trackmania_env.rewards.reward_calculation import RewradCalculator
-from collections import deque
+
 
 from configs.config import EnvConfig
-
-
-from simstate_space_dict import simstate_space_dict
 
 
 
@@ -97,6 +95,8 @@ class TMNF_Single_Agent_Env(gym.Env):
         # define observation and action space for gym
         self.observation_space = obs_manager.get_observation_dict()
         self.action_space = gym.spaces.Discrete(len(ACTION_MAP))
+
+        self.timeout_policy = TimeoutPolicy(env_cfg.increase_timeout_intervals, env_cfg.new_timeouts)
 
         self.__send_command_to_process_wrapper(TMIProcessWrapper.IPCCommands.get_cmd_command(self.__ipc_cmd_id, 
                                                                                              TMInterfaceCommands.set_variable(TMInterfaceCommands.Variables.SPEED, 
@@ -173,34 +173,28 @@ class TMNF_Single_Agent_Env(gym.Env):
         race_finished = ssD.player_info.race_finished
 
 
-        # TODO check if episode terminated and or tuncated, terminated if reached the goal, truncated means that a timelimit has been reached but MDP is not in a terminal state
         stuck = False if self.n_steps < self.ignore_stuck_for_n_steps_after_reset else not self.position_buffer.moved_more_than_threshold(self.position_buffer_threshold)
-        timeout = self.n_steps >= self.max_steps_before_reset
-        terminated = stuck or race_finished or timeout
-        self.__log_reset_reason(stuck, race_finished, timeout)
+        terminated = stuck or race_finished
         
+        timeout = self.n_steps >= self.max_steps_before_reset
+        truncated = timeout
+        self.__log_reset_reason(stuck, race_finished, timeout)
 
-        truncated = False
 
         if race_finished:
             self.__send_command_to_process_wrapper(TMIProcessWrapper.IPCCommands.prevent_simulation_finish(self.__ipc_cmd_id))
 
         
         
-        # TODO also store some info for logging or debugging
+
         info = self._get_info(ssD=ssD) 
 
         processed_obs = self.obs_manager.get_observation(raw_obs)
-        try:
-            raw_obs["meters_advanced_along_centerline"] = self.obs_manager.distance_since_track_begin
-            raw_obs["state_zone_center_coordinates_in_car_reference_system"] = self.obs_manager.state_zone_center_coordinates_in_car_reference_system
-        except:
-            # this only works if obs manager is lineisght 
-            pass
+        reward, reward_info = self.rew_calculator.calculate_reward(raw_obs, processed_obs, race_finished, stuck)
 
-        reward, reward_info = self.rew_calculator.calculate_reward(raw_obs, race_finished, stuck)
         info["rewards"] = reward_info
         self.n_steps += 1
+        self.max_steps_before_reset = self.timeout_policy.update_timeout(self.max_steps_before_reset)
         return processed_obs, reward, terminated, truncated, info
     
     def reset(self, seed = None, options = None)-> Tuple[gym.spaces.Dict,Dict[str,Any]]:

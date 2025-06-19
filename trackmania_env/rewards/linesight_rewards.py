@@ -15,7 +15,7 @@ class LinesightRewardCalculator(RewradCalculator):
         self.last_obs : SimStateData = None
 
 
-    def calculate_reward(self, observations, race_finished, other_terminations):
+    def calculate_reward(self, observations, processed_obs : dict[str, any], race_finished, other_terminations):
         ssD : SimStateData = observations[IPCFields.SIMSTATE]
         ssD.simulation_wheels[0]
         constant_reward_per_ms = 1

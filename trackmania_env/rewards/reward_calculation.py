@@ -17,7 +17,7 @@ class RewradCalculator:
         """Set position buffer for this instance"""
         self.pos_buffer = position_buffer
 
-    def calculate_reward(self, observations : dict[str, any], race_finished : bool, other_terminations : bool) -> tuple[float, dict[str, int | float]]:
+    def calculate_reward(self, observations : dict[str, any], processed_obs : dict[str, any], race_finished : bool, other_terminations : bool) -> tuple[float, dict[str, int | float]]:
         """Calculates the rewrad given observations for current environment-step
         Returns 
         -------

@@ -4,26 +4,20 @@ import sys, os
 sys.path.append(os.path.abspath(os.path.join(
     os.path.join(os.path.dirname(__file__), '..'), '..'))) # TODO : <- i don't want this here and it shouldnt have to be here!!!
 
-#from trackmania_rl.tmi_interaction.tminterface2 import MessageType, TMInterface
-from game_interaction.tminterface2 import MessageType, TMInterface
-from game_interaction.process_wrapper import TMIProcessWrapper
-from game_interaction.game_instance_manager2 import GameInstanceManager
-from pathlib import Path
-import numpy as np
-from tminterface.structs import CheckpointData, SimStateData, CheckpointTime
 import time
 from multiprocessing import Process, Queue
 from queue import Full
-
-from bytefield import ArrayField
 import logging
-from game_interaction.ipc_fields import IPCFields
-
-from trackmania_env.utils.actionmap import ACTION_MAP
 import random
 
-from utils.scriptargs import get_argparser, config_logging, get_paths
+from game_interaction.tminterface2 import MessageType, TMInterface
+from game_interaction.process_wrapper import TMIProcessWrapper
+from game_interaction.game_instance_manager2 import GameInstanceManager
+from game_interaction.ipc_fields import IPCFields
 from game_interaction.run_multiprocess_wrapper import start_process_and_wait_for_startsignal, run_wrapper
+
+from trackmania_env.utils.actionmap import ACTION_MAP
+from utils.scriptargs import get_argparser, config_logging, get_paths
 
 if __name__ == "__main__":
     args = get_argparser()

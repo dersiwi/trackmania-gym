@@ -6,11 +6,17 @@ env:
   reset_mode : "respawn"
   reward_calculator : "nextpoint"
   obs_manager : "linesight" ##use basic for other
-  max_steps_until_reset : 512
+  max_steps_until_reset : 256
   game_speed : 5
   test : False
   n_previous_actions : 10
-  ignore_stuck_for_n_steps_after_reset : 80
+  ignore_stuck_for_n_steps_after_reset : 80 
+  increase_timeout_intervals : ## total environment steps after which an increase of timeout happens
+    - 500000
+    - 1500000
+  new_timeouts : ## specifies new values for increase of timeout (initial value is max_steps_until_reset)
+    - 512
+    - 1024
 
 obsmanager:
   observation_list: 
