@@ -115,7 +115,7 @@ def main(cfg : TrainConfig):
         final_model =  os.path.join(HYDRA_RUN_DIR, "model.zip")
         best_model = os.path.join(best_model_path, "best_model.zip")
         checkpoint_files = glob.glob(os.path.join(checkpoint_path, "*.zip"))
-
+        hydra_dir = os.path.join(HYDRA_RUN_DIR, ".hydra")
         # always save final model
         model.save(os.path.join(HydraConfig.get().run.dir, "model"))
 
@@ -136,7 +136,10 @@ def main(cfg : TrainConfig):
                 ckpt_artifact = wandb.Artifact("checkpoint_model", type="model")
                 ckpt_artifact.add_file(ckpt_file)
                 run.log_artifact(ckpt_artifact)
-
+            # Upload config
+            hydra_artifact = wandb.Artifact("hydra",type="hydra_conf")
+            hydra_artifact.add_dir(hydra_dir)
+            wandb.log_artifact(hydra_artifact)
             run.finish()
         
     except Exception as e:
