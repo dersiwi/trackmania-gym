@@ -2,45 +2,84 @@ import torch
 import torch.nn as nn
 import torchvision.models as models
 
+from torchvision.models.resnet import (
+    WeightsEnum,
+    ResNet18_Weights,
+    ResNet34_Weights,
+    ResNet50_Weights,
+    ResNet101_Weights,
+    ResNet152_Weights,
+    ResNeXt50_32X4D_Weights,
+    ResNeXt101_32X8D_Weights,
+    ResNeXt101_64X4D_Weights,
+    Wide_ResNet50_2_Weights,
+    Wide_ResNet101_2_Weights,
+    )
+
+RESNET_MODELS_WEIGHTS: dict[str,WeightsEnum] = {
+    "resnet18": ResNet18_Weights,
+    "resnet34": ResNet34_Weights,
+    "resnet50": ResNet50_Weights,
+    "resnet101": ResNet101_Weights,
+    "resnet152": ResNet152_Weights,
+    # TODO check if the beneath models work
+    "resnext50_32x4d": ResNeXt50_32X4D_Weights,
+    "resnext101_32x8d": ResNeXt101_32X8D_Weights,
+    "resnext101_64x4d": ResNeXt101_64X4D_Weights,
+    "wide_resnet50_2": Wide_ResNet50_2_Weights,
+    "wide_resnet101_2": Wide_ResNet101_2_Weights,
+}
+
+
 class PrebuiltResNet(nn.Module):
     """
     A  wrapper for loading pretrained ResNet models from torchvision.
     This class is intended for use cases where a standard ResNet architecture (e.g., resnet18, resnet50, etc.)
     is needed as a backbone, with the final fully connected layer replaced to match thewanted output dim.
+    For more information on the available resnet variants check out:
+        https://docs.pytorch.org/vision/0.21/models/resnet.html
 
     :param model_name: Name of the ResNet variant to load (e.g., 'resnet18', 'resnet50').
-    :param in_color_channels : Number of input color channels for the cnn
-    :param out_dims: 
+    :param in_color_channels: Number of input color channels for the cnn
+    :param out_dim: dimension of the output of the model 
     :param pretrained: Whether to load pretrained weights.
     :param trainable_backbone: Whether the backbone should also be trainable
+    :param use_default_weights: If True, uses torchvision's default weight configs for the specified model.
 """
     def __init__(self, 
                  model_name='resnet18', 
                  in_color_channels = 3,
-                 out_dims=21, 
+                 out_dim=21, 
                  pretrained=False,
-                 trainable_backbone = False):
+                 trainable_backbone = False,
+                 weights_name = "DEFAULT"):
+        
+        if model_name not in RESNET_MODELS_WEIGHTS:
+            raise ValueError(f"Model '{model_name}' must be one of: {RESNET_MODELS_WEIGHTS.keys()}")
+
         super(PrebuiltResNet, self).__init__()
 
-        # Dynamically load the specified model from torchvision.models
-        if not hasattr(models, model_name):
-            raise ValueError(f"Model '{model_name}' not found in torchvision.models")
-
-        self.out_dims = out_dims
-        # Load the model (with or without pretrained weights)
         """
-        resnet has a preprocessor that rescales the images and also automatically normalizes
-        see https://docs.pytorch.org/vision/0.21/models/generated/torchvision.models.resnet18.html#torchvision.models.resnet18
+        Load the model (with or without pretrained weights)
         """ 
         model_fn = getattr(models, model_name)
-        self.model = model_fn(weights='DEFAULT' if pretrained else None)
+        weights = None # not pretrained weights
+        if pretrained:
+            weight_class =  RESNET_MODELS_WEIGHTS.get(model_name)
+            try:
+                weights = getattr(weight_class,weights_name)
+            except AttributeError:
+                available_weights = [w for w in dir(weight_class) if not w.startswith('_')]
+                raise ValueError(f"Invalid weights name: '{weights_name}' for model '{model_name}'. "
+                     f"Available weights: {available_weights} or use DEFAULT as weights_name")
+            
+        self.model = model_fn(weights= weights)
 
         # Optionally freeze backbone parameters
         if not trainable_backbone:
             for param in self.model.parameters():
                 param.requires_grad = False
 
-        self.color_adjust = nn.Identity()
         """
         Resnets use 3 color channels as their input layer.
         If the in_color_channels is not 3 add a conv layer before the resnet
@@ -56,28 +95,13 @@ class PrebuiltResNet(nn.Module):
         else:
             self.color_adjust = nn.Identity()
 
-        """ this would override the first conv layer of the resnet 
-        if in_color_channels != 3:
-        self.model.conv1 = nn.Conv2d(
-        in_channels=in_color_channels,
-        out_channels=self.model.conv1.out_channels,
-        kernel_size=self.model.conv1.kernel_size,
-        stride=self.model.conv1.stride,
-        padding=self.model.conv1.padding,
-        bias=False
-        )
-        """
         # Get input features of the final fully connected layer
         in_features = self.model.fc.in_features
-        # Replace the classification head
-        self.model.fc = nn.Linear(in_features,out_dims)
+        self.model.fc = nn.Linear(in_features,out_dim)
 
     def forward(self, x):
-        # we defined images to be of shape (w,h,c)
-        # everything down there is ugly need to fix that 
-        #x = x.permute(0,3,1,2)
+        # assume inputs to be of shape (b,c,w,h)
         x = self.color_adjust(x)
-        if x.ndim == 3: x = x.unsqueeze(0)
         return self.model(x)
     
 class Linesight_Vision_Model(nn.Module):
@@ -232,7 +256,7 @@ class BaseCNN(nn.Module):
         num_blocks,
         in_color_channels,
         image_shape,  # (H, W)
-        num_classes=10,
+        out_dim=10,
     ):
         super(BaseCNN, self).__init__()
         self.blocks = nn.ModuleList()
@@ -250,7 +274,7 @@ class BaseCNN(nn.Module):
                 x = block(x)
             flattened_size = x.view(1, -1).size(1)
 
-        self.output_mlp = nn.Linear(flattened_size, num_classes)
+        self.output_mlp = nn.Linear(flattened_size, out_dim)
 
     def _build_blocks(self):
         """To be overridden by subclasses"""
@@ -273,14 +297,14 @@ class NaiveCNN(BaseCNN):
         stride=1,
         padding=1,
         pool_size=2,
-        num_classes=10,
+        out_dim=10,
     ):
         self.initial_out_channels = out_channels
         self.kernel_size = kernel_size
         self.stride = stride
         self.padding = padding
         self.pool_size = pool_size
-        super(NaiveCNN, self).__init__(num_blocks, in_color_channels, image_shape, num_classes)
+        super(NaiveCNN, self).__init__(num_blocks, in_color_channels, image_shape, out_dim)
 
     def _build_blocks(self):
         out_channels = self.initial_out_channels
@@ -301,13 +325,13 @@ class ImprovedCNN(BaseCNN):
         image_shape,
         out_channels1 = 32,
         out_channels2 = 64,
-        num_classes=10,
+        out_dim=10,
         use_skip=True,
     ):
         self.use_skip = use_skip
         self.out_channels1 = out_channels1
         self.out_channels2 = out_channels2
-        super(ImprovedCNN, self).__init__(num_blocks, in_color_channels, image_shape, num_classes)
+        super(ImprovedCNN, self).__init__(num_blocks, in_color_channels, image_shape, out_dim)
 
         
     def _build_blocks(self):
