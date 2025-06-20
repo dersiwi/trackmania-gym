@@ -109,6 +109,9 @@ class TMNF_Single_Agent_Env(gym.Env):
         """Helper function for computing additional information (e.g. for debugging or logging)"""
         info = {}
         info["velocity"] = ssD.velocity
+        info["position"] = ssD.position
+        info["rotation_matrix"] = ssD.rotation_matrix
+        info["dyna_rotation"] = ssD.dyna.current_state.rotation
         return info
     
 

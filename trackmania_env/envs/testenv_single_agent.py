@@ -103,6 +103,56 @@ class TestLinesightRewards(TestEnvironmentCallback):
         plt.show()
 
 
+import numpy as np
+class PrintRotation(TestEnvironmentCallback):
+    def __init__(self):
+        super().__init__()
+        self.n_step = 0
+
+        # Set up interactive plot
+        self.fig = plt.figure()
+        self.ax = self.fig.add_subplot(111, projection='3d')
+        self.quiver = None
+
+        # Start the plot
+        self._setup_plot()
+        plt.ion()
+        plt.show()
+
+    def _setup_plot(self):
+        self.ax.set_xlim([-1, 1])
+        self.ax.set_ylim([-1, 1])
+        self.ax.set_zlim([-1, 1])
+        self.ax.set_xlabel("X")
+        self.ax.set_ylabel("Y")
+        self.ax.set_zlabel("Z")
+        self.ax.set_title("Live Rotation Matrix Axes")
+        # Initial dummy arrows
+        self.quiver = self.ax.quiver(0, 0, 0, 1, 0, 0, color='r', label="X-axis")
+        self.quiver = self.ax.quiver(0, 0, 0, 0, 1, 0, color='g', label="Y-axis")
+        self.quiver = self.ax.quiver(0, 0, 0, 0, 0, 1, color='b', label="Z-axis")
+        self.ax.legend()
+
+    def _update_plot(self, rot_matrix):
+        # Clear and redraw
+        self.ax.cla()
+        self._setup_plot()
+
+        origin = np.array([0, 0, 0])
+        x_axis = rot_matrix[:, 0]
+        y_axis = rot_matrix[:, 1]
+        z_axis = rot_matrix[:, 2]
+
+        self.ax.quiver(*origin, *x_axis, color='r', label="X-axis")
+        self.ax.quiver(*origin, *y_axis, color='g', label="Y-axis")
+        self.ax.quiver(*origin, *z_axis, color='b', label="Z-axis")
+        plt.draw()
+        plt.pause(0.001)
+
+    def _call_after_step(self, processed_obs, reward, terminated, truncated, info):
+        rot_matrix = np.array(info["rotation_matrix"])
+        self._update_plot(rot_matrix)
+
 class TestEnvironment(TMNF_Single_Agent_Env):
 
     def __init__(self, command_queue, response_queue, obs_manager, reward_calculator, env_cfg,platform =  "windows"):
