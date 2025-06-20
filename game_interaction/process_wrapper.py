@@ -7,6 +7,7 @@ import logging, os
 
 from multiprocessing import Queue
 from queue import Empty
+from tminterface.structs import CheckpointData, SimStateData
 
 class TMIProcessWrapper:
 
@@ -26,6 +27,7 @@ class TMIProcessWrapper:
         EXECUTE_COMMAND = 3
         SIMULATION_STARTED = 4
         REVENT_SIM_FINISH = 5
+        REWIND_STATE = 6
 
         @staticmethod
         def get_act_command(command_id : int, action : tuple[bool, bool, bool, bool]) -> dict[str, any]:
@@ -56,6 +58,11 @@ class TMIProcessWrapper:
         def prevent_simulation_finish(command_id : int) -> dict[str, any]:
             """Sends command to call ifcae.prevent_simulation_finish """
             return {IPCFields.CMD_ID : command_id, IPCFields.CMD : TMIProcessWrapper.IPCCommands.REVENT_SIM_FINISH}
+        
+        @staticmethod
+        def rewind_state(command_id : int, state : SimStateData) -> dict[str, any]:
+            """Sends command to call ifcae.prevent_simulation_finish """
+            return {IPCFields.CMD_ID : command_id, IPCFields.CMD : TMIProcessWrapper.IPCCommands.REWIND_STATE, IPCFields.ARGS : state}
 
 
     def __init__(self, gim : GameInstanceManager, launch_game : bool, 
@@ -214,6 +221,9 @@ class TMIProcessWrapper:
             self.__start_cmd_id = cmd[IPCFields.CMD_ID]
         elif command == TMIProcessWrapper.IPCCommands.REVENT_SIM_FINISH:
             self.iface.prevent_simulation_finish()
+            self.response_queue.put_nowait({IPCFields.CMD_ID : cmd_id, IPCFields.STATUS : IPCFields.STATUS_OK})
+        elif command == TMIProcessWrapper.IPCCommands.REWIND_STATE:
+            self.iface.rewind_to_state(cmd[IPCFields.ARGS])
             self.response_queue.put_nowait({IPCFields.CMD_ID : cmd_id, IPCFields.STATUS : IPCFields.STATUS_OK})
         else:
             self.response_queue.put_nowait({IPCFields.CMD_ID : cmd_id, IPCFields.STATUS : IPCFields.STATUS_ERROR, IPCFields.ERROR : "NoSuchCommand"})
