@@ -23,6 +23,7 @@ from trackmania_env.utils.timeoutpolicy import TimeoutPolicy
 from trackmania_env.observations.observation_manager import ObservationManager
 from trackmania_env.rewards.reward_calculation import RewradCalculator
 from trackmania_env.utils.reference_line_manager import ReferenceLineManager
+from trackmania_env.utils.random_respawn_manager import RandomRespawnManager
 
 from configs.config import EnvConfig
 
@@ -93,6 +94,7 @@ class TMNF_Single_Agent_Env(gym.Env):
         self.obs_manager = obs_manager
         self.obs_manager.set_env(self)
 
+        self. respawn_manager = RandomRespawnManager(self.reference_line.reference_line)
         self.max_steps_before_reset : int = env_cfg.max_steps_until_reset
         self.n_steps : int = 0
         self.ignore_stuck_for_n_steps_after_reset = env_cfg.ignore_stuck_for_n_steps_after_reset
@@ -109,6 +111,9 @@ class TMNF_Single_Agent_Env(gym.Env):
         self.__send_command_to_process_wrapper(TMIProcessWrapper.IPCCommands.get_cmd_command(self.__ipc_cmd_id, 
                                                                                                     TMInterfaceCommands.set_variable(TMInterfaceCommands.Variables.COUNTDOWN_SPEED, 
                                                                                                                                     value=env_cfg.countdown_speed)))
+        # this is the defautl simstateData when the car first gets spawned. We will use this for the random reset
+        self.default_ssD = None
+        self.default_set = False
 
     def _get_info(self,ssD) -> Dict[str,Any]:
         """Helper function for computing additional information (e.g. for debugging or logging)"""
@@ -236,6 +241,10 @@ class TMNF_Single_Agent_Env(gym.Env):
         info = self._get_info(ssD=raw_obs[IPCFields.SIMSTATE])
         self.actions = deque([(False,False,False,False)] * self.n_prev_actions, maxlen=self.n_prev_actions)
         
+        if not self.default_set:
+            self.default_set = True
+            self.default_ssD = raw_obs[IPCFields.SIMSTATE]
+
         self.reset_car(raw_obs[IPCFields.SIMSTATE].position)
         self.position_buffer.reset()
         self.rew_calculator.reset()
@@ -287,7 +296,9 @@ class TMNF_Single_Agent_Env(gym.Env):
         with open(filename, "w") as file:
             file.write(f"{self.actions}\n")
 
-    def random_reset(self,next_ref_point:int,simstatedata:SimStateData):
-        simstatedata.rotation_matrix = np.array([[1,0,0],[0,0,1],[0,1,0]])
-        #simstatedata.position = self.
-        self.__send_command_to_process_wrapper(TMIProcessWrapper.IPCCommands.rewind_state(self.__ipc_cmd_id, simstatedata))
+    def random_reset(self,seed = None, options = None):
+        super().reset(seed=seed, options=options)        
+        raw_obs = self._get_raw_obs()
+        ssD = raw_obs[IPCFields.SIMSTATE] 
+        reset_state = (self.respawn_manager.make_ssD_from_ref_point(ssD=ssD))
+        self.__send_command_to_process_wrapper(TMIProcessWrapper.IPCCommands.rewind_state(self.__ipc_cmd_id, reset_state))

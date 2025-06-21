@@ -5,6 +5,7 @@ from typing import Callable
 import time
 from matplotlib import pyplot as plt
 from pynput.keyboard import Key, Listener,KeyCode
+import numpy as np
 
 class KEYS:
     """Enum for keys used in TestEnvironment."""
@@ -13,6 +14,7 @@ class KEYS:
     LEFT = "nach-links"
     RIGHT = "nach-rechts"
     ESCAPE = "esc"
+    SHIFT = "shift"
 
     @staticmethod
     def get_key_combo(left : bool, right : bool, accelerate : bool, brake : bool):
@@ -59,7 +61,7 @@ class PrintRewardsToConsole(TestEnvironmentCallback):
                 print(key, end=" | ")
             print("\n")
         for key in info["rewards"]:
-            print(info["rewards"][key], end=" | ")
+            print(key,info["rewards"][key], end=" | ")
         print("\n")
         self.n_step += 1
 
@@ -102,8 +104,6 @@ class TestLinesightRewards(TestEnvironmentCallback):
         plt.tight_layout()
         plt.show()
 
-
-import numpy as np
 class PrintRotation(TestEnvironmentCallback):
     def __init__(self):
         super().__init__()
@@ -155,8 +155,8 @@ class PrintRotation(TestEnvironmentCallback):
 
 class TestEnvironment(TMNF_Single_Agent_Env):
 
-    def __init__(self, command_queue, response_queue, obs_manager, reward_calculator, env_cfg,platform =  "windows"):
-        super().__init__(command_queue, response_queue, obs_manager, reward_calculator, env_cfg=env_cfg)
+    def __init__(self, command_queue, response_queue, obs_manager, reward_calculator,reference_line, env_cfg,platform =  "windows"):
+        super().__init__(command_queue, response_queue, obs_manager, reward_calculator, reference_line ,env_cfg=env_cfg)
 
         self.action_modifier : Callable = None
         self.step_while_doing_nothing = False
@@ -222,6 +222,8 @@ class TestEnvironment(TMNF_Single_Agent_Env):
             if self.keyboard.is_pressed(KEYS.ESCAPE):
                 running = False
 
+            if self.keyboard.is_pressed(KEYS.SHIFT):
+                super().random_reset()
             
             reverse_action = (left, right, accelerate, brake)
             try:
@@ -254,6 +256,7 @@ class LinuxKeyboardWrapper:
             "nach-links": Key.left,
             "nach-rechts": Key.right,
             "esc": Key.esc,
+            "shift": Key.shift
         }
 
         # Keep track of currently pressed keys
