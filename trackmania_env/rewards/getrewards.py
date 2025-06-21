@@ -18,6 +18,6 @@ def get_reward_calculator(cfg : TrainConfig) -> RewradCalculator:
     elif reward_calculator == "linesight":
         return LinesightRewardCalculator(cfg.rl_env.reward_manager)
     elif reward_calculator == "nextpoint":
-        return NextPointRewards(cfg.rl_env.reward_manager, cfg.gmi.reference_line)
+        return NextPointRewards(cfg.rl_env.reward_manager)
     else:
         raise NameError(f"Rewardcalculator '{reward_calculator}' not known.")

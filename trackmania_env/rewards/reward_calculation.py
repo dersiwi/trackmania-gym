@@ -7,6 +7,7 @@ from numba import jit
 import wandb
 from stable_baselines3.common.callbacks import BaseCallback
 from configs.config import RewardManagerCfg
+from trackmania_env.utils.reference_line_manager import ReferenceLineManager
 
 class RewradCalculator:
     """Responsible for reward calculations for environment"""
@@ -14,10 +15,15 @@ class RewradCalculator:
     def __init__(self, reward_cfg : RewardManagerCfg):
         self.reward_cfg = reward_cfg
         self.pos_buffer = None # do not reset or add anything to this position buffer, read-only! (no reset, no add...)
+        self.refline_manager: ReferenceLineManager = None
 
     def set_position_buffer(self, position_buffer : PositionBuffer):
         """Set position buffer for this instance"""
         self.pos_buffer = position_buffer
+
+    def set_reference_line(self,refline_manager: ReferenceLineManager):
+        """ Set reference line for this instance"""
+        self.refline_manager = refline_manager
 
     def calculate_reward(self, observations : dict[str, any], processed_obs : dict[str, any], race_finished : bool, other_terminations : bool) -> tuple[float, dict[str, int | float]]:
         """Calculates the rewrad given observations for current environment-step
@@ -35,7 +41,6 @@ class RewradCalculator:
     def reset(self) -> None:
         """resets rewrad calculator"""
         pass
-
 
 
 class RewardLogCallback(BaseCallback):

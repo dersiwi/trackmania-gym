@@ -22,7 +22,7 @@ from trackmania_env.utils.actionmap import ACTION_MAP
 from trackmania_env.utils.timeoutpolicy import TimeoutPolicy
 from trackmania_env.observations.observation_manager import ObservationManager
 from trackmania_env.rewards.reward_calculation import RewradCalculator
-
+from trackmania_env.utils.reference_line_manager import ReferenceLineManager
 
 from configs.config import EnvConfig
 
@@ -40,6 +40,7 @@ class TMNF_Single_Agent_Env(gym.Env):
             response_queue : Queue,
             obs_manager : ObservationManager,
             reward_calculator : RewradCalculator,
+            reference_line: ReferenceLineManager,
             env_cfg : EnvConfig):
         
         """
@@ -75,6 +76,9 @@ class TMNF_Single_Agent_Env(gym.Env):
 
         self.logger = logging.getLogger(self.__class__.__name__)
         
+        # reference line 
+        self.reference_line = reference_line
+
         # variables used for resetting car(posiiton)
         self.start_position : list[float] = [0,0,0]
         self.__start_position_set : bool = False
@@ -85,6 +89,7 @@ class TMNF_Single_Agent_Env(gym.Env):
 
         self.rew_calculator = reward_calculator#get_reward_calculator(reward_calculator, self.position_buffer)
         self.rew_calculator.set_position_buffer(self.position_buffer)
+        self.rew_calculator.set_reference_line(self.reference_line)
         self.obs_manager = obs_manager
         self.obs_manager.set_env(self)
 
@@ -281,3 +286,8 @@ class TMNF_Single_Agent_Env(gym.Env):
     def store_actions(self, filename : str):
         with open(filename, "w") as file:
             file.write(f"{self.actions}\n")
+
+    def random_reset(self,next_ref_point:int,simstatedata:SimStateData):
+        simstatedata.rotation_matrix = np.array([[1,0,0],[0,0,1],[0,1,0]])
+        #simstatedata.position = self.
+        self.__send_command_to_process_wrapper(TMIProcessWrapper.IPCCommands.rewind_state(self.__ipc_cmd_id, simstatedata))
