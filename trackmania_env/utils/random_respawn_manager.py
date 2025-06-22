@@ -3,7 +3,7 @@ import numpy as np
 from scipy.spatial.transform import Rotation as rot
 from tminterface.structs import CheckpointData, SimStateData, CheckpointTime
 from scipy.spatial.transform import Rotation 
-
+import random
 # we assume that the standard rotation is 
 X = np.array([1,0,0]) # x = [1 0 0]
 Y = np.array([0,1,0]) # y = [0 1 0]
@@ -33,35 +33,52 @@ class RandomRespawnManager:
 
         copy_ssD = ssD
 
-        # Ensure the reference index is valid for lookahead (we need ref_point_idx + 1 to exist).
-        # Randomly select a valid index (not the last one)
+        # randomly select a valid index (not the last one)
         ref_point_idx = np.random.randint(0, self.n_reference_points - 1)
         current_position = self.reference_line[ref_point_idx]
         next_position = self.reference_line[ref_point_idx + 1]
 
-        # Compute the forward direction vector from the current point to the next.
-        direction = next_position - current_position
-        # Compute rotation matrix
-        rotation_matrix = RandomRespawnManager.make_rotation_v1(Z,direction)
-        copy_ssD.rotation_matrix = rotation_matrix
+        # compute the forward direction vector from the current point to the next.
+        new_z_direction = next_position - current_position
+
+        # compute the rotation matrix such that the new z-direction points in direction (next_position - current_position)
+        rotation_matrix = RandomRespawnManager.make_rotation_from_forward(forward=new_z_direction)
+        #rotation_matrix = RandomRespawnManager.make_rotation_v1(Z,new_z_direction)
+
+        # transform rotation matrix into euler angles and quaternion
+        R = Rotation.from_matrix(rotation_matrix)
+        angles = R.as_euler('yxz', degrees=False)
+        quat = R.as_quat()
         
+        # setting all the relevant SimStateData fields for respawning with new position and orientation
+        # TODO check which fields are unnecessary
+        copy_ssD.flags |= SIM_HAS_DYNA
+
+        copy_ssD.position = current_position #+ np.array([0,5,0])
+
+        copy_ssD.velocity =  np.zeros(3)
+        copy_ssD.dyna.current_state.angular_speed =  np.zeros(3)
+        copy_ssD.dyna.current_state.angular_velocity = np.zeros(3)
+        copy_ssD.dyna.current_state.velocity = np.zeros(3) 
+
         copy_ssD.dyna.current_state.rotation = rotation_matrix
+        copy_ssD.rotation_matrix = rotation_matrix
         copy_ssD.dyna.prev_state.rotation = rotation_matrix
         copy_ssD.dyna.previous_state.rotation = rotation_matrix
         copy_ssD.dyna.temp_state.rotation = rotation_matrix
-        copy_ssD.position = (current_position + np.array([0,2,0]))
-        copy_ssD.velocity = [0.,0.,0.]
-        copy_ssD.flags |= SIM_HAS_DYNA
 
-        RandomRespawnManager.draw_rotation_and_identity(rotation_matrix,direction=direction)
+        copy_ssD.dyna.current_state.quat = quat.tolist()
+        copy_ssD.dyna.prev_state.quat = quat.tolist()
+        copy_ssD.dyna.previous_state.quat = quat.tolist()
+        copy_ssD.dyna.temp_state.quat = quat.tolist()
 
-        R = Rotation.from_matrix(copy_ssD.rotation_matrix)
-        angles = R.as_euler('yxz', degrees=False)
-        #copy_ssD.rotation_matrix = np.eye(3)
+        copy_ssD.dyna.current_state_yaw_pitch_roll = angles
+
+        #RandomRespawnManager.draw_rotation_and_identity(rotation_matrix,direction=direction)
         print("rotation matrix after reset:", copy_ssD.rotation_matrix)
         print("yaw pitch roll after reset:", copy_ssD.yaw_pitch_roll)
         print("manual computed euler angles:",angles)
-
+        print("quat set to:", copy_ssD.dyna.current_state.quat.to_numpy())
         return copy_ssD
 
 
@@ -117,6 +134,24 @@ class RandomRespawnManager:
         R = np.eye(3) + v_skew + (v_skew @ v_skew) * (1 / (1 + cos_theta))
         return R
     
+    @staticmethod
+    def make_rotation_from_forward(forward: np.ndarray, up_hint: np.ndarray = np.array([0, 1, 0])):
+        """
+        Constructs a right-handed rotation matrix from a forward vector and an up hint.
+        Ensures a consistent and upright car orientation.
+        """
+        forward = forward / np.linalg.norm(forward)
+        right = np.cross(up_hint, forward)
+        if np.linalg.norm(right) < 1e-6:
+            # Forward and up_hint are parallel — pick another up
+            up_hint = np.array([1, 0, 0])
+            right = np.cross(up_hint, forward)
+        right = right / np.linalg.norm(right)
+        up = np.cross(forward, right)
+
+        # Construct rotation matrix: columns are right (X), up (Y), forward (Z)
+        return np.column_stack((right, up, forward))
+
     @staticmethod   
     def draw_rotation_and_identity(rotation_matrix, origin=np.array([0, 0, 0]),direction=np.array([0, 0, 0])):
         fig = plt.figure()
