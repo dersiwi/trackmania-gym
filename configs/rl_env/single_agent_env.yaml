@@ -7,7 +7,7 @@ env:
   reward_calculator : "nextpoint"
   obs_manager : "linesight" ##use basic for other
   max_steps_until_reset : 256
-  game_speed : 30
+  game_speed : 2
   countdown_speed : 50
   test : False
   n_previous_actions : 10
@@ -28,7 +28,7 @@ reward_manager:
     velocity_reward_weight : 1
     backward_weight : 0
     distance_to_center_weight : 0.25
-    velocity_change_reward_weight : 10
+    velocity_change_reward_weight : 30
 
 obsmanager:
   observation_list: 
