@@ -5,7 +5,7 @@ from trackmania_env.envs.single_agent_env2 import TMNF_Single_Agent_Env
 from stable_baselines3 import PPO, SAC, DQN
 from stable_baselines3.common.base_class import BaseAlgorithm
 import hydra
-from neuronal_networks.conv_NNs import PrebuiltResNet
+from neuronal_networks.other_vision_encoders import PrebuiltResNet
 from neuronal_networks.custom_extractor import TMN_Extractor
 from utils.printutils import print_model_params
 from omegaconf import DictConfig, OmegaConf

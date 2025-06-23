@@ -11,7 +11,7 @@
 # - "wide_resnet101_2"
 # for the available weights see https://docs.pytorch.org/vision/0.21/_modules/torchvision/models/resnet.html#ResNet18_Weights
 _partial_: True
-_target_: neuronal_networks.conv_NNs.PrebuiltResNet
+_target_: neuronal_networks.other_vision_encoders.PrebuiltResNet
 model_name: "resnet18"
 pretrained: True
 trainable_backbone: True
