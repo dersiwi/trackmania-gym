@@ -28,7 +28,7 @@ from trackmania_env.envs.testenv_single_agent import TestEnvironment
 
 from trackmania_env.observations.observations import get_observation_manager
 from trackmania_env.rewards.getrewards import get_reward_calculator
-from trackmania_env.rewards.reward_calculation import RewardLogCallback
+from trackmania_env.rewards.reward_calculation import RewardLogCallback, AccumRewardLogCallback
 
 from configs.config import TrainConfig
 
@@ -108,7 +108,7 @@ def main(cfg : TrainConfig):
             
         callback : CallbackList= CallbackList(callbacklist)
         if cfg.wandb.use:
-            callback.callbacks.extend([hydra.utils.instantiate(cfg.wandb_callbacks)(model_save_path=RUN_ID_IN_HYDRA_LOG_DIR), RewardLogCallback()])
+            callback.callbacks.extend([hydra.utils.instantiate(cfg.wandb_callbacks)(model_save_path=RUN_ID_IN_HYDRA_LOG_DIR), AccumRewardLogCallback()])
 
         model.learn(**cfg.learn_args, callback=callback)
 

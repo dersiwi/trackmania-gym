@@ -196,6 +196,8 @@ class TMNF_Single_Agent_Env(gym.Env):
         reward, reward_info = self.rew_calculator.calculate_reward(raw_obs, processed_obs, race_finished, stuck)
 
         info["rewards"] = reward_info
+        info["terminated"] = terminated
+        info["truncated"] = truncated
         self.n_steps += 1
         self.max_steps_before_reset = self.timeout_policy.update_timeout(self.max_steps_before_reset)
         return processed_obs, reward, terminated, truncated, info
