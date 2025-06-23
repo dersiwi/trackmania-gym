@@ -297,8 +297,9 @@ class TMNF_Single_Agent_Env(gym.Env):
             file.write(f"{self.actions}\n")
 
     def random_reset(self,seed = None, options = None):
-        super().reset(seed=seed, options=options)        
+        super().reset(seed=seed, options=options) 
+        if not self.default_set: self.reset()       
         raw_obs = self._get_raw_obs()
         ssD = raw_obs[IPCFields.SIMSTATE] 
-        reset_state = (self.respawn_manager.make_ssD_from_ref_point(ssD=ssD))
+        reset_state = (self.respawn_manager.make_ssD_from_ref_point(ssD=self.default_ssD))
         self.__send_command_to_process_wrapper(TMIProcessWrapper.IPCCommands.rewind_state(self.__ipc_cmd_id, reset_state))

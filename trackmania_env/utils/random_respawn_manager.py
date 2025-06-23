@@ -34,7 +34,7 @@ class RandomRespawnManager:
         copy_ssD = ssD
 
         # randomly select a valid index (not the last one)
-        ref_point_idx = np.random.randint(0, self.n_reference_points - 1)
+        ref_point_idx = np.random.randint(1, self.n_reference_points - 1)
         current_position = self.reference_line[ref_point_idx]
         next_position = self.reference_line[ref_point_idx + 1]
 
@@ -42,19 +42,24 @@ class RandomRespawnManager:
         new_z_direction = next_position - current_position
 
         # compute the rotation matrix such that the new z-direction points in direction (next_position - current_position)
-        rotation_matrix = RandomRespawnManager.make_rotation_from_forward(forward=new_z_direction)
         #rotation_matrix = RandomRespawnManager.make_rotation_v1(Z,new_z_direction)
+        rotation_matrix = RandomRespawnManager.make_rotation_from_forward(forward=new_z_direction)
+
+        # if only apply the rotation matrix the car would flip upside down. this additional rotation prevents this
+        flip_rot = Rotation.from_euler('x', np.deg2rad(180), degrees=False).as_matrix()
+        rotation_matrix = flip_rot  @ rotation_matrix 
 
         # transform rotation matrix into euler angles and quaternion
         R = Rotation.from_matrix(rotation_matrix)
         angles = R.as_euler('yxz', degrees=False)
         quat = R.as_quat()
-        
+        quat = quat / np.linalg.norm(quat)
+
         # setting all the relevant SimStateData fields for respawning with new position and orientation
         # TODO check which fields are unnecessary
         copy_ssD.flags |= SIM_HAS_DYNA
 
-        copy_ssD.position = current_position #+ np.array([0,5,0])
+        copy_ssD.position = current_position + np.array([0,5,0])
 
         copy_ssD.velocity =  np.zeros(3)
         copy_ssD.dyna.current_state.angular_speed =  np.zeros(3)
@@ -74,7 +79,12 @@ class RandomRespawnManager:
 
         copy_ssD.dyna.current_state_yaw_pitch_roll = angles
 
-        #RandomRespawnManager.draw_rotation_and_identity(rotation_matrix,direction=direction)
+        for i in range(len(copy_ssD.simulation_wheels)):
+            copy_ssD.simulation_wheels[i].surface_handler.rotation = rotation_matrix
+            copy_ssD.simulation_wheels[i].surface_handler.position = current_position
+
+
+        #RandomRespawnManager.draw_rotation_and_identity(rotation_matrix,direction=new_z_direction)
         print("rotation matrix after reset:", copy_ssD.rotation_matrix)
         print("yaw pitch roll after reset:", copy_ssD.yaw_pitch_roll)
         print("manual computed euler angles:",angles)
@@ -148,7 +158,7 @@ class RandomRespawnManager:
             right = np.cross(up_hint, forward)
         right = right / np.linalg.norm(right)
         up = np.cross(forward, right)
-
+        up = up / np.linalg.norm(up)
         # Construct rotation matrix: columns are right (X), up (Y), forward (Z)
         return np.column_stack((right, up, forward))
 
