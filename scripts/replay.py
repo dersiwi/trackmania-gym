@@ -22,15 +22,16 @@ from utils.hydra_wandb_utils import get_models
 
 
 run_path = "outputs/2025-06-03/14-34-38"
-run_path_hydra = os.path.join(run_path, ".hydra")
-model_path = os.path.join("logs/downloaded/", "checkpoint_800000_steps.zip")
-
+run_path_hydra = "/home/hassan/Downloads/.hydra"
+model_path = "/home/hassan/Downloads/best_model.zip"
 cfg : TrainConfig= OmegaConf.load(os.path.join("configs", "train.yaml"))
+
 _HYDRA_PARAMS = {
     "version_base": "1.3",
-    "config_path": "../configs",
-    "config_name": "train.yaml",
+    "config_path": run_path_hydra,
+    "config_name": "config.yaml",
 }
+
 @hydra.main(**_HYDRA_PARAMS)
 def main(cfg : TrainConfig):
 
@@ -50,7 +51,10 @@ def main(cfg : TrainConfig):
                                 obs_manager=obs_manager,
                                 reward_calculator=get_reward_calculator(cfg),
                                 env_cfg=cfg.rl_env.env)
-        #gym.make_vec("TMNF_Single_Agent_ENV_v0",num_envs=2,)
+        
+        tm_env.training = False
+        # set this true if normalising wrapper is in use
+        tm_env.norm_reward = False
 
         
         # apply (Observation)-wrappers to the environment
@@ -60,7 +64,7 @@ def main(cfg : TrainConfig):
             tm_env = wrapper(env=tm_env)
         
         # get algorithm and start learning process
-        vision_model, model = get_models(cfg, tm_env, print_params = True)
+        vision_model, model = get_models(cfg, tm_env, print_params = True,load_model_path= model_path)
 
 
         model.load(model_path)
@@ -70,7 +74,7 @@ def main(cfg : TrainConfig):
         while not terminated:
             action, state = model.predict(observations)
             observations, reward, terminated, truncated, info = tm_env.step(action)
-
+            if terminated or truncated: tm_env.reset()
     except Exception as e:
         traceback.print_exc()
 

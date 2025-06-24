@@ -12,8 +12,8 @@ from omegaconf import DictConfig, OmegaConf
 import wandb
 from wandb.wandb_run import Run
 from itertools import chain
-
-def get_models(cfg : TrainConfig, tm_env : TMNF_Single_Agent_Env, print_params : bool = False,run_id:str = "test") -> tuple[nn.Module, BaseAlgorithm | PPO]:
+from stable_baselines3 import PPO
+def get_models(cfg : TrainConfig, tm_env : TMNF_Single_Agent_Env, print_params : bool = False,run_id:str = "test",load_model_path: str | None = None) -> tuple[nn.Module, BaseAlgorithm | PPO]:
 
     """instanciates vision-model as well as sb3 algorithm according to parameters
     
@@ -40,10 +40,16 @@ def get_models(cfg : TrainConfig, tm_env : TMNF_Single_Agent_Env, print_params :
     out_dim =  cfg.extractors_out_dim)
     )
 
-    algorithm_params = OmegaConf.to_container(cfg.sb3.algorithm_params, resolve=True)
-
-    model_constructor = hydra.utils.instantiate(cfg.sb3.constructor)
-    model : BaseAlgorithm | PPO | SAC | DQN = model_constructor(env= tm_env, policy_kwargs=policy_kwargs,tensorboard_log= run_id,device=device ,**algorithm_params)
+    if not (load_model_path is None):
+        # TODO remove the PPO and make this modular so it can be used with different algos
+        model = PPO.load(path = load_model_path,env=tm_env,custom_objects={
+            "features_extractor_class": TMN_Extractor,
+            "features_extractor_kwargs": policy_kwargs["features_extractor_kwargs"]
+        })
+    else:
+        algorithm_params = OmegaConf.to_container(cfg.sb3.algorithm_params, resolve=True)
+        model_constructor = hydra.utils.instantiate(cfg.sb3.constructor)
+        model : BaseAlgorithm | PPO | SAC | DQN = model_constructor(env= tm_env, policy_kwargs=policy_kwargs,tensorboard_log= run_id,device=device ,**algorithm_params)
     
     if print_params:
         print("\nExtractor, Policy and Critic architecturs:\n" + "-"*30)
