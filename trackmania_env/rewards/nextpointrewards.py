@@ -13,9 +13,9 @@ from configs.config import RewardManagerCfg
 
 class NextPointRewards(RewradCalculator):
 
-    def __init__(self, reward_cfg : RewardManagerCfg, filepath_referenceline : str):
+    def __init__(self, reward_cfg : RewardManagerCfg):
         super().__init__(reward_cfg)
-        self.refline_manager = ReferenceLineManager(filepath_referenceline)
+        #self.refline_manager = ReferenceLineManager(filepath_referenceline)
 
         self.accum_distance_weight = reward_cfg.rewardterm_weights["accum_distance_wegiht"]
         self.race_not_finished_weight = reward_cfg.rewardterm_weights["race_not_finished_weight"]

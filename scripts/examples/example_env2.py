@@ -13,7 +13,7 @@ sys.path.append(os.path.abspath(os.path.join(
 
 
 from trackmania_env.envs.single_agent_env2 import TMNF_Single_Agent_Env
-from trackmania_env.envs.testenv_single_agent import TestEnvironment, TestLinesightRewards, PrintRewardsToConsole
+from trackmania_env.envs.testenv_single_agent import TestEnvironment, TestLinesightRewards, PrintRewardsToConsole, PrintRotation
 
 from trackmania_env.utils.actionmap import get_reverse_action_map
 
@@ -25,6 +25,7 @@ from game_interaction.process_wrapper import TMIProcessWrapper
 from game_interaction.run_multiprocess_wrapper import start_process_and_wait_for_startsignal
 from trackmania_env.observations.observations import get_observation_manager
 from trackmania_env.rewards.getrewards import get_reward_calculator
+from trackmania_env.utils.reference_line_manager import ReferenceLineManager
 
 import hydra
 from configs.config import TrainConfig
@@ -45,11 +46,13 @@ def main(cfg : TrainConfig):
         response_queue=response_queue,
         obs_manager=get_observation_manager(cfg), 
         reward_calculator=get_reward_calculator(cfg),
+        reference_line=  ReferenceLineManager(cfg.gmi.reference_line),
         env_cfg=cfg.rl_env.env,
         platform=cfg.platforms.os)
     
     tm_env.add_env_test_calback(TestLinesightRewards())
     tm_env.add_env_test_calback(PrintRewardsToConsole())
+    #tm_env.add_env_test_calback(PrintRotation())
     
     tm_env.step_with_manual_input()
     

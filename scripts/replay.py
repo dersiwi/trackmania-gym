@@ -16,6 +16,7 @@ from game_interaction.process_wrapper import TMIProcessWrapper
 from gymnasium import ObservationWrapper
 from trackmania_env.rewards.getrewards import get_reward_calculator
 from trackmania_env.observations.observations import get_observation_manager
+from trackmania_env.utils.reference_line_manager import ReferenceLineManager
 
 
 from utils.hydra_wandb_utils import get_models
@@ -50,6 +51,7 @@ def main(cfg : TrainConfig):
                                 response_queue=response_queue, 
                                 obs_manager=obs_manager,
                                 reward_calculator=get_reward_calculator(cfg),
+                                reference_line = ReferenceLineManager(cfg.gmi.reference_line),
                                 env_cfg=cfg.rl_env.env)
         
         tm_env.training = False
