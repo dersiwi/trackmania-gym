@@ -182,12 +182,16 @@ class TMNF_Single_Agent_Env(gym.Env):
         self.actions.append(action)
         self._send_action(action)
 
+        
+
 
         raw_obs = self._get_raw_obs()
         ssD : SimStateData = raw_obs[IPCFields.SIMSTATE]
         self.position_buffer.add(ssD.position)
         race_finished = ssD.player_info.race_finished
 
+        # advance the reference line
+        self.reference_line.calculate_and_step_next_point(ssD.position)
 
         stuck = False if self.n_steps < self.ignore_stuck_for_n_steps_after_reset else not self.position_buffer.moved_more_than_threshold(self.position_buffer_threshold)
         terminated = stuck or race_finished
@@ -238,19 +242,24 @@ class TMNF_Single_Agent_Env(gym.Env):
         (one of the TM Youtube channels said that random spawning helps)
         """
         
-        raw_obs = self._get_raw_obs()
-        observation = self.obs_manager.get_observation(raw_obs)
-        info = self._get_info(ssD=raw_obs[IPCFields.SIMSTATE])
         self.actions = deque([(False,False,False,False)] * self.n_prev_actions, maxlen=self.n_prev_actions)
         
+
+
+        self.reset_car(None)    # TODO : Think about reasonable position to pass, or pass none at all
+        self.position_buffer.reset()
+        self.rew_calculator.reset()
+        self.reference_line.reset()
+        self.n_steps = 0
+
+        raw_obs = self._get_raw_obs()
+        self.reference_line.calculate_and_step_next_point(raw_obs[IPCFields.SIMSTATE].position)
+        observation = self.obs_manager.get_observation(raw_obs)
+        info = self._get_info(ssD=raw_obs[IPCFields.SIMSTATE])
+
         if not self.default_set:
             self.default_set = True
             self.default_ssD = raw_obs[IPCFields.SIMSTATE]
-
-        self.reset_car(raw_obs[IPCFields.SIMSTATE].position)
-        self.position_buffer.reset()
-        self.rew_calculator.reset()
-        self.n_steps = 0
 
         return observation, info
     

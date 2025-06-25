@@ -5,7 +5,7 @@ env:
   position_moved_threshold : 0.8
   reset_mode : "respawn"
   reward_calculator : "nextpoint"
-  obs_manager : "linesight" ##use basic for other
+  obs_manager : "nextpointobs" ##use basic for other
   max_steps_until_reset : 256
   game_speed : 2
   countdown_speed : 50

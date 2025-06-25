@@ -34,10 +34,17 @@ class ObservationManager:
             self.observation_list.remove("image")
 
     def set_env(self, environment):
-        self.env = environment
+        from trackmania_env.envs.single_agent_env2 import TMNF_Single_Agent_Env
+        self.env : TMNF_Single_Agent_Env = environment
 
 
     def get_values_from_state_dict(self, obs : SimStateData) -> np.ndarray:
+        """This method gets a raw-observation simstate-obejcet (@param : obs) and converts it into a flattened
+        vector, that is given to the feature-extractor network of the policy.
+        
+        Returns
+        -------
+        Vector of shape [N,] where N is the amount of non-image observation-fields."""
         return self._filter_and_flatten_from_list(obs)
     
     def _filter_and_flatten_from_list(self, simstatedata : SimStateData) -> np.ndarray:

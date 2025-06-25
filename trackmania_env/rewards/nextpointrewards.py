@@ -43,7 +43,7 @@ class NextPointRewards(RewradCalculator):
         ssD : SimStateData = observations[IPCFields.SIMSTATE]
         reward = 0
         
-        next_refline_index, d, drel = self.refline_manager.get_distance_to_next_point(ssD.position)
+        next_refline_index, d, drel = self.refline_manager.get_distance_to_next_point()
         accum_dist_reward = 0
         if not self.current_refline_idx == next_refline_index: #only give reward if progress in regards to last one was made
             accum_dist_reward = self.refline_manager.get_discrete_distance(next_refline_index) * self.accum_distance_weight
@@ -83,6 +83,5 @@ class NextPointRewards(RewradCalculator):
 
 
     def reset(self):
-        self.refline_manager.reset()
         self.current_refline_idx
         return super().reset()
