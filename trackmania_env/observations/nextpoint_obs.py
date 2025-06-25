@@ -50,12 +50,9 @@ class NextPointObsManager(ObservationManager):
             velocity_delta = np.linalg.norm(np.array(obs.velocity) - np.array(self.last_obs.velocity))
 
         lateral_dist = self.env.reference_line.calculate_lateral_difference(next_idx, obs.position)
-
-        #comming_refline_points = self.get_next_refline_points(next_idx, obs.position, dyna_current.rotation.to_numpy().T) TODO : Big bug 
-        # only temporary, referenceline points are not converted into car coordinate system
-        comming_refline_points = self.env.reference_line.get_reference_line_points(begin_idx=next_idx,
-                                                                end_idx= next_idx + self.reference_line_points_lookahead, 
-                                                                interpolate = True).ravel()
+        
+        orientation = np.array(dyna_current.rotation.to_numpy(), dtype=float).T
+        comming_refline_points = self.get_next_refline_points(next_idx, obs.position, orientation).ravel()
 
         self.last_obs = obs
 
