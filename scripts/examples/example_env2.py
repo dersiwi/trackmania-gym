@@ -13,7 +13,12 @@ sys.path.append(os.path.abspath(os.path.join(
 
 
 from trackmania_env.envs.single_agent_env2 import TMNF_Single_Agent_Env
-from trackmania_env.envs.testenv_single_agent import TestEnvironment, TestLinesightRewards, PrintRewardsToConsole, PrintRotation
+from trackmania_env.envs.testenv_single_agent import (
+    TestEnvironment,
+    TestLinesightRewards,
+    PrintRewardsToConsole,
+    PrintRotation,
+    Test_RefLine_Next_Point_Manager)
 
 from trackmania_env.utils.actionmap import get_reverse_action_map
 
@@ -50,10 +55,10 @@ def main(cfg : TrainConfig):
         env_cfg=cfg.rl_env.env,
         platform=cfg.platforms.os)
     
-    tm_env.add_env_test_calback(TestLinesightRewards())
-    tm_env.add_env_test_calback(PrintRewardsToConsole())
+    #tm_env.add_env_test_calback(TestLinesightRewards())
+    #tm_env.add_env_test_calback(PrintRewardsToConsole())
     #tm_env.add_env_test_calback(PrintRotation())
-    
+    tm_env.add_env_test_calback(Test_RefLine_Next_Point_Manager())
     tm_env.step_with_manual_input()
     
     control_queue.put(TMIProcessWrapper.IPCCommands.get_end_syncloop_command(1000)) #1000 doesnt matter.

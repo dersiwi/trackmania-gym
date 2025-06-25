@@ -153,6 +153,44 @@ class PrintRotation(TestEnvironmentCallback):
         rot_matrix = np.array(info["rotation_matrix"])
         self._update_plot(rot_matrix)
 
+
+class Test_RefLine_Next_Point_Manager(TestEnvironmentCallback):
+    def __init__(self):
+        super().__init__()
+        # Set up a single 2D plot for the map
+        self.fig, self.ax = plt.subplots(figsize=(6, 6))
+        self._setup_plot()
+
+        plt.ion()
+        plt.show()
+
+    def _call_after_step(self, processed_obs, reward, terminated, truncated, info):
+        points = info["comming_refline_points"]
+        ref_line = info["ref_line"]
+        inv_orientation = info["orientation"].T
+        position = info["position"]
+
+        # Transform points to world coordinates
+        points = (inv_orientation @ points.T).T + position
+
+        # Clear and redraw plot
+        self.ax.cla()
+        self._setup_plot()
+
+        # Plot reference line (black), transformed points (red), and position (green)
+        self.ax.plot(-1. * ref_line[:, 0], ref_line[:, 2], color='black', linestyle='-')
+        self.ax.plot(-1. * points[:, 0], points[:, 2], color='red', marker='o', linestyle='-')
+        self.ax.scatter(-1. * position[0], position[2], color='green', marker='x', s=50)
+
+        plt.draw()
+        plt.pause(0.001)
+
+    def _setup_plot(self):
+        self.ax.set_title("XZ View (World Space)")
+        self.ax.set_xlabel("X Axis")
+        self.ax.set_ylabel("Z Axis")
+        self.ax.set_aspect('equal')
+
 class TestEnvironment(TMNF_Single_Agent_Env):
 
     def __init__(self, command_queue, response_queue, obs_manager, reward_calculator,reference_line, env_cfg,platform =  "windows"):

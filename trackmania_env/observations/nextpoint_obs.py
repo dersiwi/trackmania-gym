@@ -52,7 +52,8 @@ class NextPointObsManager(ObservationManager):
         lateral_dist = self.env.reference_line.calculate_lateral_difference(next_idx, obs.position)
         
         orientation = np.array(dyna_current.rotation.to_numpy(), dtype=float).T
-        comming_refline_points = self.get_next_refline_points(next_idx, obs.position, orientation).ravel()
+        comming_refline_points = self.get_next_refline_points(next_idx, obs.position, orientation)
+
 
         self.last_obs = obs
 
@@ -60,11 +61,14 @@ class NextPointObsManager(ObservationManager):
                                             drel,
                                             velocity_delta,
                                             lateral_dist,
-                                            comming_refline_points,
+                                            comming_refline_points.ravel(),
                                             mobile_states], dtype =  np.float32)
         
         assert floatvec.shape[0] == self.statevector_dim
 
+        self.info["ref_line"] = self.env.reference_line.reference_line
+        self.info["position"] = obs.position
+        self.info["orientation"] = orientation
         self.info["d"] = d
         self.info["drel"] = drel
         self.info["velocity_delta"] = velocity_delta
@@ -79,9 +83,9 @@ class NextPointObsManager(ObservationManager):
         comming_refline_points = self.env.reference_line.get_reference_line_points(begin_idx=next_refline_idx,
                                                                 end_idx= next_refline_idx + self.reference_line_points_lookahead, 
                                                                 interpolate = True)
-        comming_refline_points_rel_to_car : np.ndarray = np.array(car_orientation).dot((comming_refline_points - np.array(car_position)).T)
-        comming_refline_points_rel_to_car_flattened = comming_refline_points_rel_to_car.ravel()
-        return comming_refline_points_rel_to_car_flattened
+        comming_refline_points_rel_to_car : np.ndarray = np.array(car_orientation).dot((comming_refline_points - np.array(car_position)).T).T # (n,3)
+        #comming_refline_points_rel_to_car_flattened = comming_refline_points_rel_to_car.ravel()
+        return comming_refline_points_rel_to_car
 
 
     def get_mobil_states(self, game_states:SimStateData):
