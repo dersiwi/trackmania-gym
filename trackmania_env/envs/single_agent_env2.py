@@ -209,9 +209,10 @@ class TMNF_Single_Agent_Env(gym.Env):
 
         info = self._get_info(ssD=ssD) 
 
-        processed_obs = self.obs_manager.get_observation(raw_obs)
+        processed_obs,obs_info = self.obs_manager.get_observation(raw_obs)
         reward, reward_info = self.rew_calculator.calculate_reward(raw_obs, processed_obs, race_finished, stuck)
 
+        info.update(obs_info)
         info["rewards"] = reward_info
         info["terminated"] = terminated
         info["truncated"] = truncated
@@ -254,9 +255,9 @@ class TMNF_Single_Agent_Env(gym.Env):
 
         raw_obs = self._get_raw_obs()
         self.reference_line.calculate_and_step_next_point(raw_obs[IPCFields.SIMSTATE].position)
-        observation = self.obs_manager.get_observation(raw_obs)
+        observation,obs_info = self.obs_manager.get_observation(raw_obs)
         info = self._get_info(ssD=raw_obs[IPCFields.SIMSTATE])
-
+        info.update(obs_info)
         if not self.default_set:
             self.default_set = True
             self.default_ssD = raw_obs[IPCFields.SIMSTATE]

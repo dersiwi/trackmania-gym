@@ -30,6 +30,8 @@ class ObservationManager:
 
         self.env = None
 
+        self.info = {}
+
         if self.obs_have_img:
             self.observation_list.remove("image")
 
@@ -123,7 +125,7 @@ class ObservationManager:
 
         return imgs / 255
     
-    def get_observation(self, raw_observation : dict[str, np.ndarray | SimStateData]) -> np.ndarray | dict[str, np.ndarray] | torch.Tensor | dict[str, torch.Tensor]:
+    def get_observation(self, raw_observation : dict[str, np.ndarray | SimStateData]) -> tuple[np.ndarray | dict[str, np.ndarray] | torch.Tensor | dict[str, torch.Tensor],dict[str,any]]:
         """
         Takes raw observations from TMInterface and dissects them into image
         """
@@ -134,6 +136,6 @@ class ObservationManager:
 
         if self.obs_have_img:
             imgs = self.cnvt_imgs(raw_observation[IPCFields.IMG])
-            return {"image" : imgs, "state" : state_observation_vector}
+            return {"image" : imgs, "state" : state_observation_vector},self.info
         else:
-            return state_observation_vector
+            return state_observation_vector,self.info

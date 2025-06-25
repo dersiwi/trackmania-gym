@@ -64,6 +64,14 @@ class NextPointObsManager(ObservationManager):
                                             mobile_states], dtype =  np.float32)
         
         assert floatvec.shape[0] == self.statevector_dim
+
+        self.info["d"] = d
+        self.info["drel"] = drel
+        self.info["velocity_delta"] = velocity_delta
+        self.info["lateral_dist"] = lateral_dist
+        self.info["comming_refline_points"] = comming_refline_points
+        self.info["mobile_states"] = mobile_states
+
         return floatvec
 
 
