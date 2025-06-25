@@ -45,7 +45,7 @@ obsmanager:
         - scene_mobil.async_vehicle_state.rest_field
         - rotation_matrix
         
-  colorspace : "rgb"
+  colorspace : "grayscale"
   convert_torch : true
 
 linesightobsmanager:

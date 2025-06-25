@@ -99,7 +99,7 @@ class ObservationManager:
         n_channels = 1 if self.colorspace == ObservationManager.Colorspace.GRAYSCALE else 3
 
         return spaces.Dict({
-                "image": spaces.Box(low=0, high=255, shape=(self.img_width, self.img_height, n_channels), dtype=np.uint8),
+                "image": spaces.Box(low=0, high=1.0, shape=(self.img_width, self.img_height, n_channels), dtype=np.float32),
                 "state": spaces.Box(low=-np.inf, high=np.inf, shape=(statevector_dim,), dtype=np.float32),
             })
     
@@ -121,8 +121,8 @@ class ObservationManager:
         if self.convert_torch:
             imgs = torch.from_numpy(imgs)
 
-        return imgs
-
+        return imgs / 255
+    
     def get_observation(self, raw_observation : dict[str, np.ndarray | SimStateData]) -> np.ndarray | dict[str, np.ndarray] | torch.Tensor | dict[str, torch.Tensor]:
         """
         Takes raw observations from TMInterface and dissects them into image

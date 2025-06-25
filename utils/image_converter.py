@@ -11,5 +11,6 @@ class ImageConverter:
     def bgra_to_graysacle(image_bgra : np.ndarray) -> np.ndarray:
         """Converts bgra image to grayscale. Reuturns image as 8-bit-integer."""
         b, g, r = image_bgra[:, :, 0], image_bgra[:, :, 1], image_bgra[:, :, 2]
-        gray = 0.114 * b + 0.587 * g + 0.299 * r
-        return gray.astype(np.uint8)
+        gray : np.ndarray = 0.114 * b + 0.587 * g + 0.299 * r
+        gray = gray[:, :, np.newaxis]
+        return gray.astype(np.float32)
