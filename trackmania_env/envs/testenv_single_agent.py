@@ -162,9 +162,9 @@ class PrintVectorToNextReferencePoint(Live3dPlotEnvironmentCallback):
 
 
     def _setup_plot(self):
-        self.ax.set_xlim([-1, 1])
-        self.ax.set_ylim([-1, 1])
-        self.ax.set_zlim([-1, 1])
+        self.ax.set_xlim([-2, 2])
+        self.ax.set_ylim([-2, 2])
+        self.ax.set_zlim([-2, 2])
         self.ax.set_xlabel("X")
         self.ax.set_ylabel("Y")
         self.ax.set_zlabel("Z")
@@ -187,6 +187,39 @@ class PrintVectorToNextReferencePoint(Live3dPlotEnvironmentCallback):
         self.ax.quiver(*origin, *info["comming_refline_points"][0], color='r', label="X-axis")
         self.fig.canvas.draw()
         plt.pause(0.001)
+
+class PrintVector2DToNextReferencePoint(TestEnvironmentCallback):
+    def __init__(self):
+        super().__init__()
+
+        self.fig, self.ax = plt.subplots(figsize=(5,5))
+        self._setup_plot()
+
+        plt.ion()
+        plt.show()
+
+    def _call_after_step(self, processed_obs, reward, terminated, truncated, info):
+        self.ax.cla()  # Clear previous plot
+        self._setup_plot()  # Reset labels/aspect
+
+        points :np.ndarray= info["comming_refline_points"]
+
+        self.ax.scatter(points[0, 0], points[0, 2], color='green', marker='x', s=50)
+
+        self.fig.canvas.draw()
+        self.fig.canvas.flush_events()
+
+    def _call_after_run(self):
+        plt.ioff()
+        plt.show()
+
+    def _setup_plot(self):
+        self.ax.set_title("XZ-View (Car Coordinate System)")
+        self.ax.set_xlabel("X Axis")
+        self.ax.set_ylabel("Z Axis")
+        self.ax.set_aspect('equal')
+        self.ax.set_xlim(-5, 5)
+        self.ax.set_ylim(-5, 5)
 
 
 class Test_RefLine_Next_Point_Manager(TestEnvironmentCallback):
@@ -403,7 +436,8 @@ class TestEnvironment(TMNF_Single_Agent_Env):
                 running = False
 
             if self.keyboard.is_pressed(KEYS.SHIFT):
-                super().random_reset()
+                #super().random_reset()
+                pass
             
             reverse_action = (left, right, accelerate, brake)
             try:

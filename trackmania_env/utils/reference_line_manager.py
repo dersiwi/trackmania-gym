@@ -3,7 +3,7 @@ import logging
 
 class ReferenceLineManager:
     
-    def __init__(self, filepath : str, lookahead_size : int = 50):
+    def __init__(self, filepath : str, lookahead_size : int = 120):
         """
         Parameters
         ---------
@@ -25,6 +25,7 @@ class ReferenceLineManager:
 
         self.next_point_idx = 0
         self.lookahead : int = lookahead_size
+        self.base_lookahead : int = self.lookahead
 
         self.logger = logging.getLogger(self.__class__.__name__)
 
@@ -66,7 +67,7 @@ class ReferenceLineManager:
 
         return refline[begin_idx : end_idx : stride]
 
-    def calculate_and_step_next_point(self, car_position : np.ndarray) -> tuple[int, float, float]:
+    def calculate_and_step_next_point(self, car_position : np.ndarray, recursion_depth : int = 0) -> tuple[int, float, float]:
         """Calculates the distance to the next point of the reference line that has not been passed. 
         The reference line has N points and this method returns the distance to the next point, as well as the index of the next point. 
         A point i has been passed, once the distance to point i+1 d(i+1) is smaller than the distance to the current point i : d(i) >= d(i+1).
@@ -76,7 +77,13 @@ class ReferenceLineManager:
         This is done, such that the environment can do this calculation ONCE, and all other instances,
         like observation or reward-manager can access the values without continuously advancing the nextpoint.
 
-        I.e. this method should only be called ONCE ! every environment step.
+        I.e. this method should only be called ONCE ! every environment step; calculations from this method can be accessed using self.get_distance_to_next_point()
+
+        Parameters
+        ----------
+            - car_position : position of the car in reference-line coordinate system (global), shape [3,]
+            - recursion_depth : Please do not set this to any value. If the index of the nearest reference line point is the last point
+                within the lookaheda, this method is called again with a bigger lookahead, in order to actually determine the nearest point.
         
         
         Returns
@@ -92,6 +99,20 @@ class ReferenceLineManager:
 
         # find smallest distance and set index accordinly
         min_idx = np.argmin(distances)
+
+
+        if recursion_depth > 0:
+            self.logger.info(f"Updated index to : {self.next_point_idx}, Recursion depth : {recursion_depth}, Lookahead size : {self.lookahead}")
+
+        if self.next_point_idx + min_idx == self.next_point_idx + self.lookahead - 1 and not self.next_point_idx + min_idx == self.n_reference_points - 1 and recursion_depth < 10:
+            # check if the index was the last point; and if so, set the index and run the method again (maximum of 10 times, in order to not reach max recursion depth.)
+            self.next_point_idx = self.next_point_idx + min_idx
+            self.lookahead = 3 * self.lookahead # tripple lookahead size (random but whatever) to minimize recursion calls
+            return self.calculate_and_step_next_point(car_position, recursion_depth=recursion_depth+1)
+        
+        if recursion_depth > 0: # reset lookahead again
+            self.lookahead = self.base_lookahead
+
         self.next_point_idx = self.next_point_idx + min_idx
         self.calculate_and_step_nextpoint_return = (self.next_point_idx, distances[min_idx], self.relative_accumulated_distances[self.next_point_idx])
         return self.next_point_idx, distances[min_idx], self.relative_accumulated_distances[self.next_point_idx]
