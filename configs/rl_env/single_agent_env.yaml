@@ -7,7 +7,7 @@ env:
   reward_calculator : "nextpoint"
   obs_manager : "nextpointobs" ##use basic for other
   max_steps_until_reset : 256
-  game_speed : 2
+  game_speed : 1
   countdown_speed : 50
   test : False
   n_previous_actions : 10
@@ -21,13 +21,13 @@ env:
 
 reward_manager:
   rewardterm_weights:
-    accum_distance_wegiht : 1750
+    accum_distance_wegiht : 43.75
     race_not_finished_weight : 0.05
     race_finished_reward : 100
-    other_termination_punishment : 0.01
+    other_termination_punishment : 20
     velocity_reward_weight : 1
     backward_weight : 0
-    distance_to_center_weight : 0.25
+    distance_to_center_weight : 1
     velocity_change_reward_weight : 30
 
 obsmanager:

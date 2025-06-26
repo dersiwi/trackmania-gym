@@ -23,7 +23,8 @@ from trackmania_env.envs.testenv_single_agent import (
     Test_3D_Next_Point_Manager,
     PrintVectorToNextReferencePoint,
     Test_Lateral_Dist_Next_Point_Manager,
-    PrintVector2DToNextReferencePoint)
+    PrintVector2DToNextReferencePoint,
+    Test_Reward_Next_Point_Manager)
 
 from trackmania_env.utils.actionmap import get_reverse_action_map
 
@@ -69,7 +70,8 @@ def main(cfg : TrainConfig):
     #tm_env.add_env_test_calback(Test_1D_Next_Point_Manager(key_to_plot="refline_idx",y_lim=(0,3540)))
     #tm_env.add_env_test_calback(PrintVector2DToNextReferencePoint())
     #tm_env.add_env_test_calback(PrintVectorToNextReferencePoint())
-    tm_env.add_env_test_calback(Test_Lateral_Dist_Next_Point_Manager(tm_env.reference_line.reference_line))
+    #tm_env.add_env_test_calback(Test_Lateral_Dist_Next_Point_Manager(tm_env.reference_line.reference_line))
+    tm_env.add_env_test_calback(Test_Reward_Next_Point_Manager("velocity_change_reward"))
     #tm_env.add_env_test_calback(Test_3D_Next_Point_Manager(key_to_plot="velocity_delta",y_lim=(-50,50)))
     tm_env.step_with_manual_input()
     

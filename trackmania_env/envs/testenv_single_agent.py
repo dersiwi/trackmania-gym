@@ -423,6 +423,57 @@ class Test_Lateral_Dist_Next_Point_Manager(TestEnvironmentCallback):
         self.ax.set_ylabel("Z Axis")
         self.ax.set_aspect('equal')
 
+class Test_Reward_Next_Point_Manager(TestEnvironmentCallback):
+    def __init__(self, key_to_plot, y_lim=(-1, 1)):
+        """
+        All available reward keys :
+            - accum_dist_reward  
+            - race_not_finished_reward 
+            - race_finished  
+            - other_term_reward  
+            - backward_punishment  
+            - distance_to_center_reward  
+            - velocity_change_reward
+        """
+        super().__init__()
+        self.key_to_plot = key_to_plot
+        self.y_lim = y_lim  # fixed y-axis scale
+        self.vals = {}
+
+        self.fig, self.ax = plt.subplots(figsize=(15, 15))
+        self._setup_plot()
+
+        plt.ion()
+        plt.show()
+
+    def _call_after_step(self, processed_obs, reward, terminated, truncated, info):
+        rewards = info["rewards"]
+        for k in rewards:
+            if k in ["nextpoint_reference_index"]:
+                continue
+            if k not in self.vals: self.vals[k] = []
+            self.vals[k].append(rewards[k])
+
+        # Plot
+        self.ax.cla()
+        self._setup_plot()
+
+        # Plot each reward key
+        for key, values in self.vals.items():
+            if key in ["nextpoint_reference_index"]: continue
+            self.ax.plot(values, label=key)
+
+        self.ax.legend()
+        plt.draw()
+        plt.pause(0.001)
+
+    def _setup_plot(self):
+        self.ax.set_title(f"Tracking '{self.key_to_plot}' Over Time")
+        self.ax.set_xlabel("Step")
+        self.ax.set_ylabel(self.key_to_plot)
+        #self.ax.set_ylim(*self.y_lim)  # fixed Y-axis limits
+
+
 class TestEnvironment(TMNF_Single_Agent_Env):
 
     def __init__(self, command_queue, response_queue, obs_manager, reward_calculator,reference_line, env_cfg,platform =  "windows"):
