@@ -13,6 +13,20 @@ import wandb
 from wandb.wandb_run import Run
 from itertools import chain
 from stable_baselines3 import PPO
+
+def get_vision_model(cfg : TrainConfig, in_color_channels : int, extractor_out_dim : int) -> nn.Module:
+    """Create and return vision model according to configuration"""
+    vision_model_constructor = hydra.utils.instantiate(cfg.models)
+
+    #this may not be pretty, but not having the correct input channels has caused headaches
+    expected_inchannel = 1 if cfg.rl_env.obsmanager.colorspace == "grayscale" else 3
+    assert in_color_channels == expected_inchannel, f"Expected {expected_inchannel} color channels, got {in_color_channels}"
+
+    vision_model : nn.Module | PrebuiltResNet = vision_model_constructor(
+        in_color_channels=in_color_channels,
+        out_dim = extractor_out_dim)
+    return vision_model
+
 def get_models(cfg : TrainConfig, tm_env : TMNF_Single_Agent_Env, print_params : bool = False,run_id:str = "test",load_model_path: str | None = None) -> tuple[nn.Module, BaseAlgorithm | PPO]:
 
     """instanciates vision-model as well as sb3 algorithm according to parameters
@@ -27,10 +41,8 @@ def get_models(cfg : TrainConfig, tm_env : TMNF_Single_Agent_Env, print_params :
 
     Returns vision model as well as the algorithm."""
     device = cfg.platforms.device
-    vision_model_constructor = hydra.utils.instantiate(cfg.models)
-    vision_model : nn.Module | PrebuiltResNet = vision_model_constructor(
-        in_color_channels=tm_env.observation_space["image"].shape[0],
-        out_dim = cfg.extractors_out_dim)
+
+    vision_model = get_vision_model(cfg, tm_env.observation_space["image"].shape[0], cfg.extractors_out_dim)
   
     policy_kwargs = dict(
     features_extractor_class=TMN_Extractor,

@@ -29,6 +29,7 @@ class ObservationManager:
         self.img_height = img_height
 
         self.env = None
+        self.n_channels = 1 if self.colorspace == ObservationManager.Colorspace.GRAYSCALE else 3
 
         self.info = {}
 
@@ -98,10 +99,9 @@ class ObservationManager:
     def get_observation_dict(self) -> spaces.Dict:
         """Returns observation dict for environment according to initialization."""
         statevector_dim = get_flattened_dict_dim([simstate_space_dict[obsname] for obsname in self.observation_list])
-        n_channels = 1 if self.colorspace == ObservationManager.Colorspace.GRAYSCALE else 3
 
         return spaces.Dict({
-                "image": spaces.Box(low=0, high=1.0, shape=(self.img_width, self.img_height, n_channels), dtype=np.float32),
+                "image": spaces.Box(low=0, high=1.0, shape=(self.n_channels, self.img_height, self.img_width), dtype=np.float32),
                 "state": spaces.Box(low=-np.inf, high=np.inf, shape=(statevector_dim,), dtype=np.float32),
             })
     
@@ -136,6 +136,7 @@ class ObservationManager:
 
         if self.obs_have_img:
             imgs = self.cnvt_imgs(raw_observation[IPCFields.IMG])
+            assert imgs.shape == (self.n_channels, self.img_height, self.img_width), f"Expected shape to be ({self.n_channels},{self.img_height}, {self.img_width}) but got {imgs.shape}"
             return {"image" : imgs, "state" : state_observation_vector},self.info
         else:
             return state_observation_vector,self.info

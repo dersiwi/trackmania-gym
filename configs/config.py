@@ -158,6 +158,7 @@ class TrainConfig:
     gmi: GMIConfig
     image: ImageConfig
     total_timesteps: int
+    extractors_out_dim : int
     learn_args: SB3LearnArgsConfig
     platforms: Optional[PlatformConfig] = None
     models: Optional[PretrainedResNetConfig] = None

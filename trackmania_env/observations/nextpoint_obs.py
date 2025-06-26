@@ -27,15 +27,15 @@ class NextPointObsManager(ObservationManager):
         self.last_obs : SimStateData = None
 
         self.statevector_dim = 0
-
+        
     def get_observation_dict(self) -> spaces.Dict:
         """Returns observation dict for environment according to initialization."""
         self.statevector_dim = 5 + 3 * self.reference_line_points_lookahead \
             + 4*NUM_SURFACE_CATEGORIES + 3*4 + 4*1 # get_mobile_states
-        n_channels = 1 if self.colorspace == ObservationManager.Colorspace.GRAYSCALE else 3
+
 
         return spaces.Dict({
-                "image": spaces.Box(low=0, high=1.0, shape=(n_channels,self.img_width, self.img_height), dtype=np.uint8),
+                "image": spaces.Box(low=0, high=1.0, shape=(self.n_channels, self.img_height, self.img_width), dtype=np.uint8),
                 "state": spaces.Box(low=-np.inf, high=np.inf, shape=(self.statevector_dim,), dtype=np.float32),
             })
     
