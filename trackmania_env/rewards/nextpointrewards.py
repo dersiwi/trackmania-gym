@@ -44,8 +44,11 @@ class NextPointRewards(RewradCalculator):
         
         next_refline_index, d, drel = self.refline_manager.get_distance_to_next_point()
         accum_dist_reward = 0
-        if not self.current_refline_idx == next_refline_index: #only give reward if progress in regards to last one was made
-            accum_dist_reward = self.refline_manager.get_discrete_distance(next_refline_index) * self.accum_distance_weight
+        if self.current_refline_idx < next_refline_index: #only give reward if progress in regards to last one was made
+
+            for i in range(next_refline_index - self.current_refline_idx):
+                accum_dist_reward += self.refline_manager.get_discrete_distance(self.current_refline_idx + i) * self.accum_distance_weight
+
             self.current_refline_idx = next_refline_index
 
         current_velocity_normed = self._get_normed_velocity(ssD.velocity)
@@ -57,7 +60,7 @@ class NextPointRewards(RewradCalculator):
         if next_refline_index > 0:
             # only calculate reward to centerline once car is within the firsrt linesgement, 
             # e.g. if the agent drives backwards out of map immediately he will always get max reward, because this term will always be 1/12 * self.ditsance_to_center_weight
-            distance_to_center_reward = self.distance_to_center_weight * (1 - np.clip(self.refline_manager.calculate_lateral_difference(idx = next_refline_index, car_position=ssD.position), 
+            distance_to_center_reward = self.distance_to_center_weight * (0.5 - np.clip(self.refline_manager.calculate_lateral_difference(idx = next_refline_index, car_position=ssD.position), 
                                                     a_min = 0, a_max = self.max_lateral_difference) / self.max_lateral_difference) # inverse the distance, such that reward is bigger once distance gets smaller
             
         #velocity_reward = self.velocity_reward_weight * current_velocity_normed
