@@ -82,7 +82,7 @@ class NextPointObsManager(ObservationManager):
     def get_next_refline_points(self, next_refline_idx : int, car_position : np.ndarray, car_orientation : np.ndarray) -> np.ndarray:
         comming_refline_points = self.env.reference_line.get_reference_line_points(begin_idx=next_refline_idx,
                                                                 end_idx= next_refline_idx + self.reference_line_points_lookahead * self.refeence_line_stride, 
-                                                                interpolate = True, 
+                                                                extrapolate= True, 
                                                                 stride = self.refeence_line_stride)
         
         assert comming_refline_points.shape[0] == self.reference_line_points_lookahead, f"Expected to get {self.reference_line_points_lookahead} points from reflinemanager, got {comming_refline_points.shape[0]}"
