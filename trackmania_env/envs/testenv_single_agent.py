@@ -6,6 +6,7 @@ import time
 from matplotlib import pyplot as plt
 from pynput.keyboard import Key, Listener,KeyCode
 import numpy as np
+from trackmania_env.utils.reference_line_manager import ReferenceLineManager
 
 class KEYS:
     """Enum for keys used in TestEnvironment."""
@@ -38,7 +39,8 @@ class TestEnvironmentCallback():
     """TestEnviornmentCallbacks are used to track, log, do whatever with data obtained by an environment per setp."""
 
     def __init__(self):
-        pass
+        self.n_step = 0
+        """Counts environment-steps aka. how often _call_after_step was called."""
 
     def _call_after_step(self, processed_obs, reward, terminated, truncated, info):
         """This method is called by TestEnvironment.step_with_manual_input(), after everytime this method executes
@@ -49,10 +51,25 @@ class TestEnvironmentCallback():
         """This method is called by TestEnvironment.step_with_manual_input(), after the main-loop has been executed via `esc`."""
         pass
 
+class Live3dPlotEnvironmentCallback(TestEnvironmentCallback):
+
+    def __init__(self):
+        # Set up interactive plot
+        self.fig = plt.figure()
+        self.ax = self.fig.add_subplot(111, projection='3d')
+
+        # Start the plot
+        self._setup_plot()
+        plt.ion()
+        plt.show()
+
+    def _setup_plot(self):
+        """Responsible for settingup"""
+        pass
+
 class PrintRewardsToConsole(TestEnvironmentCallback):
 
     def __init__(self):
-        self.n_step = 0
         super().__init__()
 
     def _call_after_step(self, processed_obs, reward, terminated, truncated, info):
@@ -70,54 +87,37 @@ class TestLinesightRewards(TestEnvironmentCallback):
     
     def __init__(self):
         super().__init__()
-        self.v_x = []
-        self.v_y = []
-        self.v_z = []
+        self.velocities = [[], [], []] #v_x, v_y, v_z
 
     def _call_after_step(self, processed_obs, reward, terminated, truncated, info):
         velocity = info["velocity"]
-        self.v_x.append(velocity[0])
-        self.v_y.append(velocity[1])
-        self.v_z.append(velocity[2])
+        for i in range(len(self.velocities)):
+            self.velocities[i].append(velocity[i])
+
 
     def _call_after_run(self):
         time = range(len(self.v_x))  
 
         plt.figure(figsize=(12, 6))
 
-        plt.subplot(3, 1, 1)
-        plt.plot(time, self.v_y, label='v_x')
-        plt.ylabel('v_x')
-        plt.grid(True)
+        for idx, name, color in zip([1,2,3], ["v_x", "v_y", "v_z"], ["blue", "orange", "green"]):
 
-        plt.subplot(3, 1, 2)
-        plt.plot(time, self.v_y, label='v_y', color='orange')
-        plt.ylabel('v_y')
-        plt.grid(True)
-
-        plt.subplot(3, 1, 3)
-        plt.plot(time, self.v_z, label='v_z', color='green')
-        plt.ylabel('v_z')
-        plt.xlabel('Time Step')
-        plt.grid(True)
+            plt.subplot(3, 1, idx)
+            plt.plot(time, self.velocities[idx-1], label=name, color=color)
+            plt.ylabel(name)
+            if idx == 3:
+                plt.xlabel('Time Step')
+            plt.grid(True)
 
         plt.tight_layout()
         plt.show()
 
-class PrintRotation(TestEnvironmentCallback):
+class PrintRotation(Live3dPlotEnvironmentCallback):
     def __init__(self):
-        super().__init__()
-        self.n_step = 0
-
-        # Set up interactive plot
-        self.fig = plt.figure()
-        self.ax = self.fig.add_subplot(111, projection='3d')
         self.quiver = None
+        super().__init__()
 
-        # Start the plot
-        self._setup_plot()
-        plt.ion()
-        plt.show()
+
 
     def _setup_plot(self):
         self.ax.set_xlim([-1, 1])
@@ -152,6 +152,41 @@ class PrintRotation(TestEnvironmentCallback):
     def _call_after_step(self, processed_obs, reward, terminated, truncated, info):
         rot_matrix = np.array(info["rotation_matrix"])
         self._update_plot(rot_matrix)
+
+
+class PrintVectorToNextReferencePoint(Live3dPlotEnvironmentCallback):
+    def __init__(self):
+        self.quiver = None
+        super().__init__()
+
+
+
+    def _setup_plot(self):
+        self.ax.set_xlim([-1, 1])
+        self.ax.set_ylim([-1, 1])
+        self.ax.set_zlim([-1, 1])
+        self.ax.set_xlabel("X")
+        self.ax.set_ylabel("Y")
+        self.ax.set_zlabel("Z")
+        self.ax.set_title("Live Rotation Matrix Axes")
+        # Initial dummy arrows
+        self.quiver = self.ax.quiver(0, 0, 0, 1, 0, 0, color='r', label="X-axis")
+        self.quiver = self.ax.quiver(0, 0, 0, 0, 1, 0, color='g', label="Y-axis")
+        self.quiver = self.ax.quiver(0, 0, 0, 0, 0, 1, color='b', label="Z-axis")
+        self.ax.legend()
+
+
+
+    def _call_after_step(self, processed_obs, reward, terminated, truncated, info):
+        
+        self.ax.cla()
+        self._setup_plot()
+
+        origin = np.array([0, 0, 0])
+
+        self.ax.quiver(*origin, *info["comming_refline_points"][0], color='r', label="X-axis")
+        self.fig.canvas.draw()
+        plt.pause(0.001)
 
 
 class Test_RefLine_Next_Point_Manager(TestEnvironmentCallback):
