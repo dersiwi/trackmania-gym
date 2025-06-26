@@ -29,7 +29,7 @@ def get_models(cfg : TrainConfig, tm_env : TMNF_Single_Agent_Env, print_params :
     device = cfg.platforms.device
     vision_model_constructor = hydra.utils.instantiate(cfg.models)
     vision_model : nn.Module | PrebuiltResNet = vision_model_constructor(
-        in_color_channels=tm_env.observation_space["image"].shape[-1],
+        in_color_channels=tm_env.observation_space["image"].shape[0],
         out_dim = cfg.extractors_out_dim)
   
     policy_kwargs = dict(

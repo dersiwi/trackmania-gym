@@ -13,4 +13,5 @@ class ImageConverter:
         b, g, r = image_bgra[:, :, 0], image_bgra[:, :, 1], image_bgra[:, :, 2]
         gray : np.ndarray = 0.114 * b + 0.587 * g + 0.299 * r
         gray = gray[:, :, np.newaxis]
+        gray = np.transpose(gray, (2, 0, 1))
         return gray.astype(np.float32)

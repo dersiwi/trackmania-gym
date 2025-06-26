@@ -35,7 +35,7 @@ class NextPointObsManager(ObservationManager):
         n_channels = 1 if self.colorspace == ObservationManager.Colorspace.GRAYSCALE else 3
 
         return spaces.Dict({
-                "image": spaces.Box(low=0, high=1.0, shape=(self.img_width, self.img_height, n_channels), dtype=np.uint8),
+                "image": spaces.Box(low=0, high=1.0, shape=(n_channels,self.img_width, self.img_height), dtype=np.uint8),
                 "state": spaces.Box(low=-np.inf, high=np.inf, shape=(self.statevector_dim,), dtype=np.float32),
             })
     
