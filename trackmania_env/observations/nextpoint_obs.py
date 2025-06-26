@@ -30,7 +30,7 @@ class NextPointObsManager(ObservationManager):
 
     def get_observation_dict(self) -> spaces.Dict:
         """Returns observation dict for environment according to initialization."""
-        self.statevector_dim = 4 + 3 * self.reference_line_points_lookahead \
+        self.statevector_dim = 6 + 3 * self.reference_line_points_lookahead \
             + 4*NUM_SURFACE_CATEGORIES + 3*4 + 4*1 # get_mobile_states
         n_channels = 1 if self.colorspace == ObservationManager.Colorspace.GRAYSCALE else 3
 
@@ -47,9 +47,11 @@ class NextPointObsManager(ObservationManager):
         mobile_states = self.get_mobil_states(obs)
         next_idx, d, drel = self.env.reference_line.get_distance_to_next_point()
 
-        velocity_delta : int = 0
+        velocity_delta : np.ndarray =  np.array([0,0,0])
         if not self.last_obs == None:
-            velocity_delta = np.linalg.norm(np.array(obs.velocity) - np.array(self.last_obs.velocity))
+            velocity_delta = np.array(obs.velocity) - np.array(self.last_obs.velocity)
+
+
 
         lateral_dist = self.env.reference_line.calculate_lateral_difference(next_idx, obs.position)
         
@@ -67,7 +69,7 @@ class NextPointObsManager(ObservationManager):
                                             mobile_states], dtype =  np.float32)
         
         assert floatvec.shape[0] == self.statevector_dim, f"Floatvector has size {floatvec.shape[0]}, however should be size {self.statevector_dim}"
-
+        
         self.info["position"] = obs.position
         self.info["orientation"] = orientation
         self.info["d"] = d

@@ -201,6 +201,103 @@ class Test_RefLine_Next_Point_Manager(TestEnvironmentCallback):
         self.ax.set_ylabel("Z Axis")
         self.ax.set_aspect('equal')
 
+    """
+    y_lim:
+     - d = (0,2000)
+     - drel = (0,1)
+     - velocity_delta = (0,100)
+    
+    """
+class Test_1D_Next_Point_Manager(TestEnvironmentCallback):
+    def __init__(self, key_to_plot, y_lim=(-10, 10)):
+        super().__init__()
+        self.key_to_plot = key_to_plot
+        self.y_lim = y_lim  # fixed y-axis scale
+        self.vals = []
+
+        self.fig, self.ax = plt.subplots(figsize=(6, 4))
+        self._setup_plot()
+
+        plt.ion()
+        plt.show()
+
+    def _call_after_step(self, processed_obs, reward, terminated, truncated, info):
+        info["refline_idx"]  = info["rewards"]["nextpoint_reference_index"]
+        assert self.key_to_plot in info, f"The Key '{self.key_to_plot}' is not in the info dict"
+        val = info[self.key_to_plot]
+        assert np.ndim(val) <= 1, f"The value for '{self.key_to_plot}' must be 1D, got shape {np.shape(val)}"
+
+        self.vals.append(val)
+
+        # Plot
+        self.ax.cla()
+        self._setup_plot()
+
+        self.ax.plot(range(len(self.vals)),self.vals)
+
+        self.ax.legend()
+        plt.draw()
+        plt.pause(0.001)
+
+    def _setup_plot(self):
+        self.ax.set_title(f"Tracking '{self.key_to_plot}' Over Time")
+        self.ax.set_xlabel("Step")
+        self.ax.set_ylabel(self.key_to_plot)
+        self.ax.set_ylim(*self.y_lim)  # fixed Y-axis limits
+
+class Test_3D_Next_Point_Manager(TestEnvironmentCallback):
+    def __init__(self, key_to_plot, y_lim=(-1, 1)):
+        super().__init__()
+        self.key_to_plot = key_to_plot
+        self.y_lim = y_lim
+        self.vals = []
+
+        # Set up 3 vertically stacked subplots for x, y, z
+        self.fig, self.axes = plt.subplots(3, 1, figsize=(8, 8), sharex=True)
+        self._setup_plot()
+
+        plt.ion()
+        plt.tight_layout()
+        plt.show()
+
+    def _call_after_step(self, processed_obs, reward, terminated, truncated, info):
+        assert self.key_to_plot in info, f"The key '{self.key_to_plot}' is not in the info dict"
+
+        val = np.asarray(info[self.key_to_plot])
+        assert val.ndim == 1 and val.shape[0] == 3, \
+            f"The value for '{self.key_to_plot}' must be a 3D vector, got shape {val.shape}"
+
+        self.vals.append(val)
+
+        # Clear subplots
+        for ax in self.axes:
+            ax.cla()
+
+        # Convert to array for plotting
+        vals_array = np.array(self.vals)  # shape: (steps, 3)
+        labels = ['x', 'y', 'z']
+        colors = ['red', 'green', 'blue']
+
+        for i in range(3):
+            self.axes[i].plot(vals_array[:, i], color=colors[i])
+            self.axes[i].set_ylabel(labels[i])
+            self.axes[i].set_ylim(*self.y_lim)
+            self.axes[i].grid(True)
+
+        self.axes[2].set_xlabel("Step")
+        self.fig.suptitle(f"3D Vector Components of '{self.key_to_plot}'")
+
+        plt.draw()
+        plt.pause(0.001)
+
+    def _setup_plot(self):
+        labels = ['x', 'y', 'z']
+        for i, ax in enumerate(self.axes):
+            ax.set_ylabel(labels[i])
+            ax.set_ylim(*self.y_lim)
+            ax.grid(True)
+        self.axes[2].set_xlabel("Step")
+
 class TestEnvironment(TMNF_Single_Agent_Env):
 
     def __init__(self, command_queue, response_queue, obs_manager, reward_calculator,reference_line, env_cfg,platform =  "windows"):
