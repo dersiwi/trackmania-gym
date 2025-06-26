@@ -3,7 +3,7 @@ import logging
 
 class ReferenceLineManager:
     
-    def __init__(self, filepath : str, lookahead_size : int = 10):
+    def __init__(self, filepath : str, lookahead_size : int = 50):
         """
         Parameters
         ---------
@@ -31,30 +31,40 @@ class ReferenceLineManager:
         self.calculate_and_step_nextpoint_return : tuple[int, float, float] = None
 
 
-    def get_reference_line_points(self, begin_idx : int, end_idx : int, interpolate : bool = False) -> np.ndarray:
+    def get_reference_line_points(self, begin_idx : int, end_idx : int, interpolate : bool = False, stride : int = 1) -> np.ndarray:
         """Getter for reference-line points. Basically slices refline[begin_idx : end_idx].
          If end_idx > len(refline) and interpolate == True, then this method interpolates end-points,
           such that the line is extended to the desired length 
+
+          Paremeters
+          ----------
+            - begin_idx : start-index of the slice
+            - end_idx   : final index of the slice
+            - interpolate : If set, interpolates indexes after finish of race 
+            - stride    : Determines the amount of points skipped in the licing. By default set to 1, meaning this method performs a regular slice.
+                            If set to 2 e.g. it returns only every second point. Beware, that if setting this to > 1, the amont of points specified by [begin_idx, end_idx]
+                            should be devisible by slice.
           
           Returns
           -------
             - positions of reference-line points; shape [N, 3]"""
         
         assert begin_idx >= 0, "Cannot interpolate the beginning of the line, Begin_idx has to be greater than one"
-
+        refline = self.reference_line
+        
         if end_idx >= self.n_reference_points:
             if interpolate:
-                num_points = end_idx - self.reference_line + 1
+                num_points = end_idx - self.n_reference_points + 1
                 p1, p2 = self.reference_line[-2], self.reference_line[-1]
                 direction = p2 - p1
                 direction = direction / np.linalg.norm(direction) * self.mean_segment_length # normalize and add mean length
 
                 new_points = [p2 + i * direction for i in range(1, num_points + 1)]
-                return np.vstack([self.reference_line[begin_idx : self.n_reference_points], new_points])
+                refline = np.vstack([self.reference_line, new_points])
             else:
-                raise ValueError("")
+                raise ValueError(f"end_idx = {end_idx} >= {self.n_reference_points} = number of reference line points and interpolate was set to False. Either use interpolation, or acceptable indices.")
 
-        return self.reference_line[begin_idx : end_idx]
+        return refline[begin_idx : end_idx : stride]
 
     def calculate_and_step_next_point(self, car_position : np.ndarray) -> tuple[int, float, float]:
         """Calculates the distance to the next point of the reference line that has not been passed. 
@@ -93,7 +103,7 @@ class ReferenceLineManager:
         environment step, AFTER calculate_and_step_next_point has been called in this environment step.
         If not, the previous values are returned.
 
-        Returns (same as self.calculate_and_step_next_point)
+        Returns (what was calculated by self.calculate_and_step_next_point)
         -------
         Tuple [i, d, drel] 
             - i : current index to next point

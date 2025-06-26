@@ -22,6 +22,8 @@ class NextPointObsManager(ObservationManager):
     def __init__(self, observation_list, colorspace, convert_torch, img_width, img_height):
         super().__init__(observation_list, colorspace, convert_torch, img_width, img_height)
         self.reference_line_points_lookahead = 40
+        self.refeence_line_stride = 10
+        assert self.reference_line_points_lookahead % self.refeence_line_stride == 0
         self.last_obs : SimStateData = None
 
         self.statevector_dim = 0
@@ -64,7 +66,7 @@ class NextPointObsManager(ObservationManager):
                                             comming_refline_points.ravel(),
                                             mobile_states], dtype =  np.float32)
         
-        assert floatvec.shape[0] == self.statevector_dim
+        assert floatvec.shape[0] == self.statevector_dim, f"Floatvector has size {floatvec.shape[0]}, however should be size {self.statevector_dim}"
 
         self.info["position"] = obs.position
         self.info["orientation"] = orientation
@@ -80,8 +82,12 @@ class NextPointObsManager(ObservationManager):
 
     def get_next_refline_points(self, next_refline_idx : int, car_position : np.ndarray, car_orientation : np.ndarray) -> np.ndarray:
         comming_refline_points = self.env.reference_line.get_reference_line_points(begin_idx=next_refline_idx,
-                                                                end_idx= next_refline_idx + self.reference_line_points_lookahead, 
-                                                                interpolate = True)
+                                                                end_idx= next_refline_idx + self.reference_line_points_lookahead * self.refeence_line_stride, 
+                                                                interpolate = True, 
+                                                                stride = self.refeence_line_stride)
+        
+        assert comming_refline_points.shape[0] == self.reference_line_points_lookahead, f"Expected to get {self.reference_line_points_lookahead} points from reflinemanager, got {comming_refline_points.shape[0]}"
+        
         comming_refline_points_rel_to_car : np.ndarray = np.array(car_orientation).dot((comming_refline_points - np.array(car_position)).T).T # (n,3)
         #comming_refline_points_rel_to_car_flattened = comming_refline_points_rel_to_car.ravel()
         return comming_refline_points_rel_to_car

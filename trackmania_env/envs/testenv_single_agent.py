@@ -191,8 +191,8 @@ class Test_RefLine_Next_Point_Manager(TestEnvironmentCallback):
         self.ax.plot(-1. * points[:, 0], points[:, 2], color='red', marker='o', linestyle='-')
         self.ax.scatter(-1. * position[0], position[2], color='green', marker='x', s=50)
         self.ax.scatter(-1. * self.reference_line[next_refline_index, 0], self.reference_line[next_refline_index, 2], color='blue', marker='x', s=50)
-
-        plt.draw()
+        
+        self.fig.canvas.draw()
         plt.pause(0.001)
 
     def _setup_plot(self):
