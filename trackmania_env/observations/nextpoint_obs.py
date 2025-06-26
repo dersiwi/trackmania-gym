@@ -66,7 +66,6 @@ class NextPointObsManager(ObservationManager):
         
         assert floatvec.shape[0] == self.statevector_dim
 
-        self.info["ref_line"] = self.env.reference_line.reference_line
         self.info["position"] = obs.position
         self.info["orientation"] = orientation
         self.info["d"] = d

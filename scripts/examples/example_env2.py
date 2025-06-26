@@ -58,7 +58,7 @@ def main(cfg : TrainConfig):
     #tm_env.add_env_test_calback(TestLinesightRewards())
     #tm_env.add_env_test_calback(PrintRewardsToConsole())
     #tm_env.add_env_test_calback(PrintRotation())
-    tm_env.add_env_test_calback(Test_RefLine_Next_Point_Manager())
+    tm_env.add_env_test_calback(Test_RefLine_Next_Point_Manager(tm_env.reference_line.reference_line))
     tm_env.step_with_manual_input()
     
     control_queue.put(TMIProcessWrapper.IPCCommands.get_end_syncloop_command(1000)) #1000 doesnt matter.

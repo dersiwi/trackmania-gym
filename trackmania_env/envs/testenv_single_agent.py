@@ -155,8 +155,9 @@ class PrintRotation(TestEnvironmentCallback):
 
 
 class Test_RefLine_Next_Point_Manager(TestEnvironmentCallback):
-    def __init__(self):
+    def __init__(self, reference_line : np.ndarray):
         super().__init__()
+        self.reference_line = reference_line
         # Set up a single 2D plot for the map
         self.fig, self.ax = plt.subplots(figsize=(6, 6))
         self._setup_plot()
@@ -166,9 +167,10 @@ class Test_RefLine_Next_Point_Manager(TestEnvironmentCallback):
 
     def _call_after_step(self, processed_obs, reward, terminated, truncated, info):
         points = info["comming_refline_points"]
-        ref_line = info["ref_line"]
         inv_orientation = info["orientation"].T
         position = info["position"]
+
+        next_refline_index = info["rewards"]["nextpoint_reference_index"]
 
         # 1. Check determinant ≈ 1 since in_rotation should be a rotation matrix 
         det = np.linalg.det(inv_orientation)
@@ -184,10 +186,11 @@ class Test_RefLine_Next_Point_Manager(TestEnvironmentCallback):
         self.ax.cla()
         self._setup_plot()
 
-        # Plot reference line (black), transformed points (red), and position (green)
-        self.ax.plot(-1. * ref_line[:, 0], ref_line[:, 2], color='black', linestyle='-')
+        # Plot reference line (black), transformed points (red), and position (green), and next reference-line-point (blue)
+        self.ax.plot(-1. * self.reference_line[:, 0], self.reference_line[:, 2], color='black', linestyle='-')
         self.ax.plot(-1. * points[:, 0], points[:, 2], color='red', marker='o', linestyle='-')
         self.ax.scatter(-1. * position[0], position[2], color='green', marker='x', s=50)
+        self.ax.scatter(-1. * self.reference_line[next_refline_index, 0], self.reference_line[next_refline_index, 2], color='blue', marker='x', s=50)
 
         plt.draw()
         plt.pause(0.001)
