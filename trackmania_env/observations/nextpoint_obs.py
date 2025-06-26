@@ -30,12 +30,12 @@ class NextPointObsManager(ObservationManager):
 
     def get_observation_dict(self) -> spaces.Dict:
         """Returns observation dict for environment according to initialization."""
-        self.statevector_dim = 6 + 3 * self.reference_line_points_lookahead \
+        self.statevector_dim = 5 + 3 * self.reference_line_points_lookahead \
             + 4*NUM_SURFACE_CATEGORIES + 3*4 + 4*1 # get_mobile_states
         n_channels = 1 if self.colorspace == ObservationManager.Colorspace.GRAYSCALE else 3
 
         return spaces.Dict({
-                "image": spaces.Box(low=0, high=255, shape=(self.img_width, self.img_height, n_channels), dtype=np.uint8),
+                "image": spaces.Box(low=0, high=1.0, shape=(self.img_width, self.img_height, n_channels), dtype=np.uint8),
                 "state": spaces.Box(low=-np.inf, high=np.inf, shape=(self.statevector_dim,), dtype=np.float32),
             })
     
@@ -46,14 +46,12 @@ class NextPointObsManager(ObservationManager):
 
         mobile_states = self.get_mobil_states(obs)
         next_idx, d, drel = self.env.reference_line.get_distance_to_next_point()
+        lateral_dist = self.env.reference_line.calculate_lateral_difference(next_idx, obs.position)
 
         velocity_delta : np.ndarray =  np.array([0,0,0])
         if not self.last_obs == None:
             velocity_delta = np.array(obs.velocity) - np.array(self.last_obs.velocity)
 
-
-
-        lateral_dist = self.env.reference_line.calculate_lateral_difference(next_idx, obs.position)
         
         orientation = np.array(dyna_current.rotation.to_numpy(), dtype=float).T
         comming_refline_points = self.get_next_refline_points(next_idx, obs.position, orientation)
@@ -61,8 +59,7 @@ class NextPointObsManager(ObservationManager):
 
         self.last_obs = obs
 
-        floatvec : np.ndarray = np.hstack([d,
-                                            drel,
+        floatvec : np.ndarray = np.hstack([drel,
                                             velocity_delta,
                                             lateral_dist,
                                             comming_refline_points.ravel(),
@@ -75,9 +72,9 @@ class NextPointObsManager(ObservationManager):
         self.info["d"] = d
         self.info["drel"] = drel
         self.info["velocity_delta"] = velocity_delta
-        self.info["lateral_dist"] = lateral_dist
         self.info["comming_refline_points"] = comming_refline_points
         self.info["mobile_states"] = mobile_states
+        self.info["lateral_dist"] = lateral_dist
 
         return floatvec
 
