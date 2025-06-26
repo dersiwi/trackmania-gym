@@ -170,6 +170,13 @@ class Test_RefLine_Next_Point_Manager(TestEnvironmentCallback):
         inv_orientation = info["orientation"].T
         position = info["position"]
 
+        # 1. Check determinant ≈ 1 since in_rotation should be a rotation matrix 
+        det = np.linalg.det(inv_orientation)
+        assert np.isclose(det, 1.0, atol=1e-5), f"Determinant not close to 1: det = {det}"
+        # 2. Check if inv_orientation @ orientation ≈ Identity
+        ident = inv_orientation @ info["orientation"]
+        assert np.allclose(ident, np.eye(3), atol=1e-5), f"Matrix product not identity:\n{ident}"
+
         # Transform points to world coordinates
         points = (inv_orientation @ points.T).T + position
 
