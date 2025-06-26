@@ -28,7 +28,6 @@ class NextPointRewards(RewradCalculator):
         self.velocity_change_reward_weight = reward_cfg.rewardterm_weights["velocity_change_reward_weight"]
 
         self.logger = logging.getLogger(self.__class__.__name__)
-        self.logging_freq = 1000
         
         self.current_refline_idx : int = 0
 

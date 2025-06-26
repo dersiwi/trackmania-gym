@@ -12,9 +12,9 @@ class ReferenceLineManager:
         """
         self.reference_line : np.ndarray = np.load(filepath)
         self.n_reference_points : int = self.reference_line.shape[0]
+        """Reference line is a numpy array of shape (N, 3), where N is the number of points along the track."""
+
         assert self.reference_line.shape[1] == 3, f"Expecting shape (N,3), but got {self.reference_line.shape}"
-        """Reference line is a numpy array of shape (N, 3), where N is the number of points along the track. The position is interesting however.
-        It seems that it is not x,y,z; as thought but rather x,z,y OR y,z,x (TODO)"""
 
         # calculate accumulated distances for each linesegment.
         self.segment_lengths = np.linalg.norm(self.reference_line[1:] - self.reference_line[:-1], axis=1)
@@ -32,7 +32,7 @@ class ReferenceLineManager:
         self.calculate_and_step_nextpoint_return : tuple[int, float, float] = None
 
 
-    def get_reference_line_points(self, begin_idx : int, end_idx : int, interpolate : bool = False, stride : int = 1) -> np.ndarray:
+    def get_reference_line_points(self, begin_idx : int, end_idx : int, extrapolate : bool = False, stride : int = 1) -> np.ndarray:
         """Getter for reference-line points. Basically slices refline[begin_idx : end_idx].
          If end_idx > len(refline) and interpolate == True, then this method interpolates end-points,
           such that the line is extended to the desired length 
@@ -41,7 +41,7 @@ class ReferenceLineManager:
           ----------
             - begin_idx : start-index of the slice
             - end_idx   : final index of the slice
-            - interpolate : If set, interpolates indexes after finish of race 
+            - extrapolate : If set, interpolates indexes after finish of race 
             - stride    : Determines the amount of points skipped in the licing. By default set to 1, meaning this method performs a regular slice.
                             If set to 2 e.g. it returns only every second point. Beware, that if setting this to > 1, the amont of points specified by [begin_idx, end_idx]
                             should be devisible by slice.
@@ -54,18 +54,21 @@ class ReferenceLineManager:
         refline = self.reference_line
         
         if end_idx >= self.n_reference_points:
-            if interpolate:
-                num_points = end_idx - self.n_reference_points + 1
-                p1, p2 = self.reference_line[-2], self.reference_line[-1]
-                direction = p2 - p1
-                direction = direction / np.linalg.norm(direction) * self.mean_segment_length # normalize and add mean length
-
-                new_points = [p2 + i * direction for i in range(1, num_points + 1)]
-                refline = np.vstack([self.reference_line, new_points])
+            if extrapolate:
+                extrapolated_points = self._extrapolate_linear_at_end(num_points = end_idx - self.n_reference_points + 1)
+                refline = np.vstack([self.reference_line, extrapolated_points])
             else:
                 raise ValueError(f"end_idx = {end_idx} >= {self.n_reference_points} = number of reference line points and interpolate was set to False. Either use interpolation, or acceptable indices.")
 
         return refline[begin_idx : end_idx : stride]
+    
+
+    def _extrapolate_linear_at_end(self, num_points : int) -> np.ndarray:
+        """Extrapolates num_points after the last reference line point. It does by calculating the last vector and adding as often as needed"""
+        p1, p2 = self.reference_line[-2], self.reference_line[-1]
+        direction = p2 - p1
+        direction = direction / np.linalg.norm(direction) * self.mean_segment_length # normalize and multiply by mean length
+        return [p2 + i * direction for i in range(1, num_points + 1)]
 
     def calculate_and_step_next_point(self, car_position : np.ndarray, recursion_depth : int = 0) -> tuple[int, float, float]:
         """Calculates the distance to the next point of the reference line that has not been passed. 
@@ -140,6 +143,7 @@ class ReferenceLineManager:
         Parameters
         ----------
             - idx : index of next! reference-line-point
+            - car_position : position of the car in reference-line-coordinate system (global)
             """
         if idx == 0:
             return 0 
