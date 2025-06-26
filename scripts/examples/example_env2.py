@@ -1,41 +1,19 @@
 import sys, os
-from pathlib import Path
-import gymnasium as gym
-from contextlib import redirect_stdout
-import numpy as np
-from multiprocessing import Queue, Process
-import time 
-import logging
-
 
 sys.path.append(os.path.abspath(os.path.join(
     os.path.join(os.path.dirname(__file__), '..'), '..'))) # TODO : <- i don't want this here and it shouldnt have to be here!!!
 
-
-from trackmania_env.envs.single_agent_env2 import TMNF_Single_Agent_Env
-from trackmania_env.envs.testenv_single_agent import (
-    TestEnvironment,
-    TestLinesightRewards,
-    PrintRewardsToConsole,
-    PrintRotation,
-    Test_RefLine_Next_Point_Manager,
-    Test_1D_Next_Point_Manager,
-    Test_3D_Next_Point_Manager,
-    PrintVectorToNextReferencePoint,
-    Test_Lateral_Dist_Next_Point_Manager,
-    PrintVector2DToNextReferencePoint,
-    Test_Reward_Next_Point_Manager)
-
-from trackmania_env.utils.actionmap import get_reverse_action_map
-
-
-
 from game_interaction.process_wrapper import TMIProcessWrapper
-
 
 from game_interaction.run_multiprocess_wrapper import start_process_and_wait_for_startsignal
 from trackmania_env.observations.observations import get_observation_manager
 from trackmania_env.rewards.getrewards import get_reward_calculator
+
+from trackmania_env.envs.single_agent_env2 import TMNF_Single_Agent_Env
+from trackmania_env.envs.testenv_single_agent import TestEnvironment
+import trackmania_env.envs.testcases_single_agent as testcases
+
+from trackmania_env.utils.actionmap import get_reverse_action_map
 from trackmania_env.utils.reference_line_manager import ReferenceLineManager
 
 import hydra
@@ -61,18 +39,16 @@ def main(cfg : TrainConfig):
         env_cfg=cfg.rl_env.env,
         platform=cfg.platforms.os)
     
-    #tm_env.add_env_test_calback(TestLinesightRewards())
-    #tm_env.add_env_test_calback(PrintRewardsToConsole())
-    #tm_env.add_env_test_calback(PrintRotation())
-    #tm_env.add_env_test_calback(Test_RefLine_Next_Point_Manager(tm_env.reference_line.reference_line))
-    #tm_env.add_env_test_calback(Test_RefLine_Next_Point_Manager())
+    #tm_env.add_env_test_calback(testcases.PrintRotation())
+    #tm_env.add_env_test_calback(testcases.Test_RefLine_Next_Point_Manager(tm_env.reference_line.reference_line))
+    #tm_env.add_env_test_calback(testcases.Test_RefLine_Next_Point_Manager())
 
-    #tm_env.add_env_test_calback(Test_1D_Next_Point_Manager(key_to_plot="refline_idx",y_lim=(0,3540)))
-    #tm_env.add_env_test_calback(PrintVector2DToNextReferencePoint())
-    #tm_env.add_env_test_calback(PrintVectorToNextReferencePoint())
-    #tm_env.add_env_test_calback(Test_Lateral_Dist_Next_Point_Manager(tm_env.reference_line.reference_line))
-    tm_env.add_env_test_calback(Test_Reward_Next_Point_Manager("velocity_change_reward"))
-    #tm_env.add_env_test_calback(Test_3D_Next_Point_Manager(key_to_plot="velocity_delta",y_lim=(-50,50)))
+    #tm_env.add_env_test_calback(testcases.Test_1D_Next_Point_Manager(key_to_plot="refline_idx",y_lim=(0,3540)))
+    #tm_env.add_env_test_calback(testcases.PrintVector2DToNextReferencePoint())
+    #tm_env.add_env_test_calback(testcases.PrintVectorToNextReferencePoint())
+    #tm_env.add_env_test_calback(testcases.Test_Lateral_Dist_Next_Point_Manager(tm_env.reference_line.reference_line))
+    tm_env.add_env_test_calback(testcases.Test_Reward_Next_Point_Manager())
+    #tm_env.add_env_test_calback(testcases.Test_3D_Next_Point_Manager(key_to_plot="velocity_delta",y_lim=(-50,50)))
     tm_env.step_with_manual_input()
     
     control_queue.put(TMIProcessWrapper.IPCCommands.get_end_syncloop_command(1000)) #1000 doesnt matter.
