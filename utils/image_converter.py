@@ -5,7 +5,10 @@ class ImageConverter:
     @staticmethod
     def bgra_to_rgb(image_bgra : np.ndarray) -> np.ndarray:
         """Converts brga image to rgb image"""
-        return image_bgra[:, :, :3][:, :, ::-1].copy() #copy necessary because otherwise it has negative stride (aka memory accessed backwards) which is not supported by pytorch.
+        rgb = image_bgra[:, :, :3][:, :, ::-1].copy()  # (H, W, 3) in RGB order
+        chw = np.transpose(rgb, (2, 1, 0))  # (H, W, C) -> (C, W, H)
+        return chw
+        #return image_bgra[:, :, :3][:, :, ::-1].copy() #copy necessary because otherwise it has negative stride (aka memory accessed backwards) which is not supported by pytorch.
     
     @staticmethod
     def bgra_to_graysacle(image_bgra : np.ndarray) -> np.ndarray:

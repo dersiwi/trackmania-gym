@@ -62,7 +62,7 @@ class LinesightObservationWrapper(ObservationManager):
             +1 # min_dist
         )
         return spaces.Dict({
-                "image": spaces.Box(low=0, high=255, shape=(self.img_width, self.img_height, n_channels), dtype=np.uint8),
+                "image": spaces.Box(low=0, high=255, shape=(n_channels,self.img_width, self.img_height), dtype=np.uint8),
                 "state": spaces.Box(low=-np.inf, high=np.inf, shape=(float_input_dim,), dtype=np.float32),
             })
     
