@@ -1,18 +1,18 @@
+import sys, os
+sys.path.append(os.path.abspath(os.path.join(
+    os.path.join(os.path.dirname(__file__), '..'), '..'))) # TODO : <- i don't want this here and it shouldnt have to be here!!!
+
 import torch
 import torch.nn as nn
 import matplotlib.pyplot as plt
-
-from neuronal_networks.conv_NNs import VisionModelSix
-import sys, os
-
-sys.path.append(os.path.abspath(os.path.join(
-    os.path.join(os.path.dirname(__file__), '..'), '..'))) # TODO : <- i don't want this here and it shouldnt have to be here!!!
 
 class VerboseExecution(nn.Module):
     def __init__(self, model: nn.Module):
         super().__init__()
         self.model = model
         self.activations = {}
+        self.fig = None
+        self.axes = None
 
         # Register hooks for all submodules
         for name, layer in model.named_modules():
@@ -20,28 +20,40 @@ class VerboseExecution(nn.Module):
                 layer.register_forward_hook(self.save_activation(name))
 
     def save_activation(self, name):
+        # hook signature is defined by pytorch
         def hook(module, input, output):
             self.activations[name] = output.detach().cpu()
-            print(f"[Hook] {name}: {output.shape}")
+            #print(f"[Hook] {name}: {output.shape}")
         return hook
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         return self.model(x)
 
-    def visualize(self, num_maps=6):
-        for name, activation in self.activations.items():
-            print(f"Visualizing layer: {name}")
-            self._plot_feature_maps(activation, name, num_maps)
+    def visualize(self, num_maps=6, num_rows = 4):
+        total_layers = min(num_rows,len(self.activations))
 
-    def _plot_feature_maps(self, feature_tensor, layer_name, num_maps):
-        feature_tensor = feature_tensor[0]  # first item in batch
-        num_maps = min(num_maps, feature_tensor.shape[0])
-        fig, axes = plt.subplots(1, num_maps, figsize=(15, 5))
-        for i in range(num_maps):
-            axes[i].imshow(feature_tensor[i], cmap='viridis')
-            axes[i].axis('off')
-            axes[i].set_title(f"{layer_name}\nChannel {i}")
-        plt.tight_layout()
-        plt.show()
+        # Create figure/axes only once
+        if self.fig is None or self.axes is None:
+            self.fig, self.axes = plt.subplots(total_layers, num_maps, figsize=(num_maps * 3, total_layers * 3))
+            if total_layers == 1:
+                self.axes = [self.axes]  # Normalize shape if 1 row
+            elif num_maps == 1:
+                self.axes = [[ax] for ax in self.axes]  # Normalize if 1 column
+
+        for row_idx, (layer_name, activation) in enumerate(self.activations.items()):
+            if row_idx >= num_rows: break
+            feature_tensor = activation[0]  # first image in batch
+            num_to_plot = min(num_maps, feature_tensor.shape[0])
+
+            for col_idx in range(num_maps):
+                ax = self.axes[row_idx][col_idx]
+                ax.clear()
+                if col_idx < num_to_plot:
+                    ax.imshow(feature_tensor[col_idx],  origin='lower' ,cmap='viridis')
+                    ax.set_title(f"{layer_name}\nC{col_idx}", fontsize=8)
+                ax.axis('off')
+
+        self.fig.canvas.draw_idle()
+        plt.pause(0.001)  # Non-blocking update
 
 
