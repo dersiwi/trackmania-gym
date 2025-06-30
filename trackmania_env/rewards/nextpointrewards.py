@@ -17,7 +17,7 @@ class NextPointRewards(RewradCalculator):
         super().__init__(reward_cfg)
         #self.refline_manager = ReferenceLineManager(filepath_referenceline)
 
-        self.accum_distance_weight = reward_cfg.rewardterm_weights["accum_distance_wegiht"]
+        self.accum_distance_weight = reward_cfg.rewardterm_weights["accum_distance_weight"]
         self.race_not_finished_weight = reward_cfg.rewardterm_weights["race_not_finished_weight"]
         
         self.race_finished_reward = reward_cfg.rewardterm_weights["race_finished_reward"]
@@ -37,12 +37,9 @@ class NextPointRewards(RewradCalculator):
 
     def _get_normed_velocity(self, velocity : list[float, float, float]) -> float:
         return np.linalg.norm(np.array(velocity) / 1000) #1000 == max velocity
-
-    def calculate_reward(self, observations, processed_obs : dict[str, any], race_finished, other_terminations):
-        ssD : SimStateData = observations[IPCFields.SIMSTATE]
-        reward = 0
-        
-        next_refline_index, d, drel = self.refline_manager.get_distance_to_next_point()
+    
+    def _calculate_accum_distance_reward(self, next_refline_index : int) -> float:
+        """Calculates the reward along indicating the distance driven along the centerline"""
         accum_dist_reward = 0
         if self.current_refline_idx < next_refline_index: #only give reward if progress in regards to last one was made
 
@@ -50,6 +47,15 @@ class NextPointRewards(RewradCalculator):
                 accum_dist_reward += self.refline_manager.get_discrete_distance(self.current_refline_idx + i) * self.accum_distance_weight
 
             self.current_refline_idx = next_refline_index
+
+        return accum_dist_reward
+
+    def calculate_reward(self, observations, processed_obs : dict[str, any], race_finished, other_terminations):
+        ssD : SimStateData = observations[IPCFields.SIMSTATE]
+        reward = 0
+        
+        next_refline_index, d, drel = self.refline_manager.get_distance_to_next_point()
+        accum_dist_reward = self._calculate_accum_distance_reward(next_refline_index)
 
         current_velocity_normed = self._get_normed_velocity(ssD.velocity)
         velocity_change_reward = 0
@@ -85,5 +91,5 @@ class NextPointRewards(RewradCalculator):
 
 
     def reset(self):
-        self.current_refline_idx
+        self.current_refline_idx = 0
         return super().reset()
