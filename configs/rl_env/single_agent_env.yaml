@@ -18,7 +18,7 @@ env:
   new_timeouts : ## specifies new values for increase of timeout (initial value is max_steps_until_reset)
     - 512
     - 1024
-  terminate_after_steps_without_progress : 64
+  terminate_after_steps_without_progress : 256
 
 reward_manager:
   rewardterm_weights:

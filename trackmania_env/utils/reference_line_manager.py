@@ -3,12 +3,18 @@ import logging
 
 class ReferenceLineManager:
     
-    def __init__(self, filepath : str, lookahead_size : int = 120):
+    def __init__(self, filepath : str, lookahead_size : int = 120, 
+                 search_recursively : bool = True, recursive_lookahead_increase_factor : int = 3, max_recursion_depth : int = 1):
         """
         Parameters
         ---------
         - filepath : string for complete filepath of reference-line
         - lookahead_size : when calculating the distance to next point, looks at only this many next points.
+        
+        Parameters for self.calculate_and_step_next_point
+        - search_recursively : Enables the manager to search for the next point recursively (self.calculate_and_step_next_point)
+        - recursive_lookahead_increase_factor : Factor by which lookahead size is increased in each recursion step.
+        - max_recursion_depth : amount of recursive search-calls
         """
         self.reference_line : np.ndarray = np.load(filepath)
         self.n_reference_points : int = self.reference_line.shape[0]
@@ -30,6 +36,10 @@ class ReferenceLineManager:
         self.logger = logging.getLogger(self.__class__.__name__)
 
         self.calculate_and_step_nextpoint_return : tuple[int, float, float] = None
+
+        self.search_recursively : bool = search_recursively
+        self.recursive_lookahead_increase_factor = recursive_lookahead_increase_factor
+        self.max_recursion_depth : int = max_recursion_depth
 
 
     def get_reference_line_points(self, begin_idx : int, end_idx : int, extrapolate : bool = False, stride : int = 1) -> np.ndarray:
@@ -107,10 +117,10 @@ class ReferenceLineManager:
         if recursion_depth > 0:
             self.logger.info(f"Updated index to : {self.next_point_idx}, Recursion depth : {recursion_depth}, Lookahead size : {self.lookahead}")
 
-        if self.next_point_idx + min_idx == self.next_point_idx + self.lookahead - 1 and not self.next_point_idx + min_idx == self.n_reference_points - 1 and recursion_depth < 10:
+        if self.next_point_idx + min_idx == self.next_point_idx + self.lookahead - 1 and not self.next_point_idx + min_idx == self.n_reference_points - 1 and recursion_depth < self.max_recursion_depth and self.search_recursively:
             # check if the index was the last point; and if so, set the index and run the method again (maximum of 10 times, in order to not reach max recursion depth.)
             self.next_point_idx = self.next_point_idx + min_idx
-            self.lookahead = 3 * self.lookahead # tripple lookahead size (random but whatever) to minimize recursion calls
+            self.lookahead = self.recursive_lookahead_increase_factor * self.lookahead # tripple lookahead size (random but whatever) to minimize recursion calls
             return self.calculate_and_step_next_point(car_position, recursion_depth=recursion_depth+1)
         
         if recursion_depth > 0: # reset lookahead again
