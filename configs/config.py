@@ -138,6 +138,8 @@ class EnvConfig:
     ignore_stuck_for_n_steps_after_reset : int
     increase_timeout_intervals : list[int]
     new_timeouts : list[int]
+    terminate_after_steps_without_progress : int
+
 
 @dataclass
 class RewardManagerCfg:

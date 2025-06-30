@@ -94,10 +94,15 @@ class TMNF_Single_Agent_Env(gym.Env):
         self.obs_manager = obs_manager
         self.obs_manager.set_env(self)
 
-        self. respawn_manager = RandomRespawnManager(self.reference_line.reference_line)
+        self.respawn_manager = RandomRespawnManager(self.reference_line.reference_line)
         self.max_steps_before_reset : int = env_cfg.max_steps_until_reset
         self.n_steps : int = 0
         self.ignore_stuck_for_n_steps_after_reset = env_cfg.ignore_stuck_for_n_steps_after_reset
+
+        #these variables track the progress of the agent along the centerline and terminate, if no progress has been made for too long
+        self.terminate_after_steps_without_progress = env_cfg.terminate_after_steps_without_progress
+        self.n_steps_since_last_progress = 0
+        self.idx_since_last_advance = 0
 
         # define observation and action space for gym
         self.observation_space = obs_manager.get_observation_dict()
@@ -149,14 +154,20 @@ class TMNF_Single_Agent_Env(gym.Env):
     def _send_action(self, action : tuple[bool, bool, bool, bool]):
         self.__send_command_to_process_wrapper(TMIProcessWrapper.IPCCommands.get_act_command(self.__ipc_cmd_id, action))
 
-    def __log_reset_reason(self, stuck, race_finished, timeout):
+    def __log_reset_reason(self, stuck, race_finished, timeout, no_progress):
         if stuck:
             self.logger.info(f"Resetting environment because car is STUCk")
         elif race_finished:
             self.logger.info(f"Resttting environment because RACE FINISHED")
         elif timeout:
-            self.logger.info(f"Resttting environment because TIMEOUT")  
+            self.logger.info(f"Resttting environment because TIMEOUT")
+        elif no_progress:
+            self.logger.info(f"Resttting environment because NO PROGRESS was made along reference line for more than {self.terminate_after_steps_without_progress} env-steps.")
 
+    def determine_termination_trucation(self, idx, obs : SimStateData) -> tuple[bool, bool]:
+        terminated = truncated = False
+
+        return terminated, truncated
 
     def step(self, action) -> Tuple[gym.spaces.Dict,float,bool,bool,Dict[str,Any]]:
         """
@@ -191,14 +202,22 @@ class TMNF_Single_Agent_Env(gym.Env):
         race_finished = ssD.player_info.race_finished
 
         # advance the reference line
-        self.reference_line.calculate_and_step_next_point(ssD.position)
+        i, _, _ = self.reference_line.calculate_and_step_next_point(ssD.position)
 
         stuck = False if self.n_steps < self.ignore_stuck_for_n_steps_after_reset else not self.position_buffer.moved_more_than_threshold(self.position_buffer_threshold)
-        terminated = stuck or race_finished
+        
+        # figure out if car has made any progress
+        if i > self.idx_since_last_advance:
+            self.n_steps_since_last_progress = 0
+            self.idx_since_last_advance = i
+        else:
+            self.n_steps_since_last_progress += 1
+        no_progress = self.n_steps_since_last_progress >= self.terminate_after_steps_without_progress
+        terminated = stuck or race_finished or no_progress 
         
         timeout = self.n_steps >= self.max_steps_before_reset
         truncated = timeout
-        self.__log_reset_reason(stuck, race_finished, timeout)
+        self.__log_reset_reason(stuck, race_finished, timeout, no_progress)
 
 
         if race_finished:
@@ -210,7 +229,7 @@ class TMNF_Single_Agent_Env(gym.Env):
         info = self._get_info(ssD=ssD) 
 
         processed_obs, obs_info = self.obs_manager.get_observation(raw_obs)
-        reward, reward_info = self.rew_calculator.calculate_reward(raw_obs, processed_obs, race_finished, stuck)
+        reward, reward_info = self.rew_calculator.calculate_reward(raw_obs, processed_obs, race_finished, stuck or no_progress)
 
         info.update(obs_info)
         info["rewards"] = reward_info
@@ -252,6 +271,8 @@ class TMNF_Single_Agent_Env(gym.Env):
         self.rew_calculator.reset()
         self.reference_line.reset()
         self.n_steps = 0
+        self.n_steps_since_last_progress = 0
+        self.idx_since_last_advance = 0
 
         raw_obs = self._get_raw_obs()
         self.reference_line.calculate_and_step_next_point(raw_obs[IPCFields.SIMSTATE].position)
