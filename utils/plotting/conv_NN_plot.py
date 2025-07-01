@@ -4,6 +4,8 @@ sys.path.append(os.path.abspath(os.path.join(
 
 import torch
 import torch.nn as nn
+import matplotlib
+matplotlib.use("TkAgg")
 import matplotlib.pyplot as plt
 
 class VerboseExecution(nn.Module):

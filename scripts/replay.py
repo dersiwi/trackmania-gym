@@ -16,16 +16,17 @@ from game_interaction.process_wrapper import TMIProcessWrapper
 from gymnasium import ObservationWrapper
 from trackmania_env.rewards.getrewards import get_reward_calculator
 from trackmania_env.observations.observations import get_observation_manager
+from trackmania_env.terminations.get_termination_manager import get_termination_manager
+
 from trackmania_env.utils.reference_line_manager import ReferenceLineManager
 
 
 from utils.hydra_wandb_utils import get_models
 
 
-run_path = "outputs/2025-06-03/14-34-38"
-run_path_hydra = "/home/hassan/Downloads/.hydra"
-model_path = "/home/hassan/Downloads/best_model.zip"
-cfg : TrainConfig= OmegaConf.load(os.path.join("configs", "train.yaml"))
+run_path_hydra = r"C:\Users\siwis\OneDrive\Dokumente\Studium\Master\1.Semester\trackmania\interaction_template\outputs\.hydra"
+model_path = r"C:\Users\siwis\OneDrive\Dokumente\Studium\Master\1.Semester\trackmania\interaction_template\outputs\best_model.zip"
+#cfg : TrainConfig= OmegaConf.load(os.path.join("configs", "train.yaml"))
 
 _HYDRA_PARAMS = {
     "version_base": "1.3",
@@ -51,6 +52,7 @@ def main(cfg : TrainConfig):
                                 response_queue=response_queue, 
                                 obs_manager=obs_manager,
                                 reward_calculator=get_reward_calculator(cfg),
+                                termination_manger=get_termination_manager(cfg),
                                 reference_line = ReferenceLineManager(cfg.gmi.reference_line),
                                 env_cfg=cfg.rl_env.env)
         
@@ -67,13 +69,10 @@ def main(cfg : TrainConfig):
         
         # get algorithm and start learning process
         vision_model, model = get_models(cfg, tm_env, print_params = True,load_model_path= model_path)
-
-
-        model.load(model_path)
         
         terminated = False
         observations, info = tm_env.reset()
-        while not terminated:
+        while True:
             action, state = model.predict(observations)
             observations, reward, terminated, truncated, info = tm_env.step(action)
             if terminated or truncated: tm_env.reset()

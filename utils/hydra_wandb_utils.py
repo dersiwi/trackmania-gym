@@ -51,15 +51,18 @@ def get_models(cfg : TrainConfig, tm_env : TMNF_Single_Agent_Env, print_params :
     device= device,
     out_dim =  cfg.extractors_out_dim)
     )
+    algorithm_params = OmegaConf.to_container(cfg.sb3.algorithm_params, resolve=True)
 
     if not (load_model_path is None):
         # TODO remove the PPO and make this modular so it can be used with different algos
+        model = PPO(policy = "MultiInputPolicy",env= tm_env, policy_kwargs=policy_kwargs,tensorboard_log= run_id,device=device ,**algorithm_params)
+        model.set_parameters(load_model_path)
+        """ TODO : this didnt work on windows but apparently on linux???
         model = PPO.load(path = load_model_path,env=tm_env,custom_objects={
             "features_extractor_class": TMN_Extractor,
             "features_extractor_kwargs": policy_kwargs["features_extractor_kwargs"]
-        })
+        })"""
     else:
-        algorithm_params = OmegaConf.to_container(cfg.sb3.algorithm_params, resolve=True)
         model_constructor = hydra.utils.instantiate(cfg.sb3.constructor)
         model : BaseAlgorithm | PPO | SAC | DQN = model_constructor(env= tm_env, policy_kwargs=policy_kwargs,tensorboard_log= run_id,device=device ,**algorithm_params)
     
