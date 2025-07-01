@@ -129,6 +129,7 @@ class EnvConfig:
     position_moved_threshold : float
     reset_mode : str
     reward_calculator : str
+    termination_manager : str
     obs_manager : str ##use basic for other
     max_steps_until_reset : int
     game_speed : float

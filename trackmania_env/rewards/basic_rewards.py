@@ -17,6 +17,4 @@ class BasicRewardCalculation(RewradCalculator):
 
         if race_finished:
             reward += 10000
-        if other_terminations:
-            reward -= 1000
         return reward, {}

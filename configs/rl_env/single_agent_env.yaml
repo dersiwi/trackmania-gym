@@ -6,11 +6,14 @@ env:
   reset_mode : "respawn"
   reward_calculator : "nextpoint"
   obs_manager : "nextpointobs" ##use basic for other
-  max_steps_until_reset : 256
+  termination_manager : "no_progress"
   game_speed : 5
   countdown_speed : 50
   test : False
   n_previous_actions : 10
+
+  # these ones are important for termination manager
+  max_steps_until_reset : 1024  ##aka timeout
   ignore_stuck_for_n_steps_after_reset : 80 
   increase_timeout_intervals : ## total environment steps after which an increase of timeout happens
     - 124000
@@ -18,7 +21,7 @@ env:
   new_timeouts : ## specifies new values for increase of timeout (initial value is max_steps_until_reset)
     - 512
     - 1024
-  terminate_after_steps_without_progress : 256
+  terminate_after_steps_without_progress : 64
 
 reward_manager:
   rewardterm_weights:

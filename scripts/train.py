@@ -29,6 +29,7 @@ from trackmania_env.envs.testenv_single_agent import TestEnvironment
 from trackmania_env.utils.reference_line_manager import ReferenceLineManager
 from trackmania_env.observations.observations import get_observation_manager
 from trackmania_env.rewards.getrewards import get_reward_calculator
+from trackmania_env.terminations.get_termination_manager import get_termination_manager
 from trackmania_env.rewards.reward_calculation import RewardLogCallback, AccumRewardLogCallback
 
 from configs.config import TrainConfig
@@ -72,6 +73,7 @@ def main(cfg : TrainConfig):
                                         response_queue=response_queue, 
                                         obs_manager=obs_manager,
                                         reward_calculator=get_reward_calculator(cfg),
+                                        termination_manger=get_termination_manager(cfg),
                                         reference_line = ReferenceLineManager(cfg.gmi.reference_line),
                                         env_cfg=cfg.rl_env.env)
              

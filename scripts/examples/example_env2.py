@@ -8,6 +8,7 @@ from game_interaction.process_wrapper import TMIProcessWrapper
 from game_interaction.run_multiprocess_wrapper import start_process_and_wait_for_startsignal
 from trackmania_env.observations.observations import get_observation_manager
 from trackmania_env.rewards.getrewards import get_reward_calculator
+from trackmania_env.terminations.get_termination_manager import get_termination_manager
 
 from trackmania_env.envs.single_agent_env2 import TMNF_Single_Agent_Env
 from trackmania_env.envs.testenv_single_agent import TestEnvironment
@@ -35,7 +36,8 @@ def main(cfg : TrainConfig):
         response_queue=response_queue,
         obs_manager=get_observation_manager(cfg), 
         reward_calculator=get_reward_calculator(cfg),
-        reference_line=  ReferenceLineManager(cfg.gmi.reference_line),
+        termination_manger=get_termination_manager(cfg),
+        reference_line=ReferenceLineManager(cfg.gmi.reference_line),
         env_cfg=cfg.rl_env.env,
         platform=cfg.platforms.os)
     

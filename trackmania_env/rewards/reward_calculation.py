@@ -25,8 +25,16 @@ class RewradCalculator:
         """ Set reference line for this instance"""
         self.refline_manager = refline_manager
 
-    def calculate_reward(self, observations : dict[str, any], processed_obs : dict[str, any], race_finished : bool, other_terminations : bool) -> tuple[float, dict[str, int | float]]:
+    def calculate_reward(self, observations : dict[str, any], processed_obs : dict[str, any], race_finished : bool, other_terminations : dict[str, bool]) -> tuple[float, dict[str, int | float]]:
         """Calculates the rewrad given observations for current environment-step
+        
+        Parameters
+        ----------
+            - observations  : raw observations obtained from game
+            - provessed_obs : observations after being processed by manager
+            - race_finished : True, if race has been finished organically
+            - other_terminations    : Information dict given by Termination Manager; contains information about other possible terminatio reasons.
+
         Returns 
         -------
             - reward : which is the cummulative reward of all reward terms

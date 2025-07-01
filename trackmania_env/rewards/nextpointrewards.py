@@ -50,7 +50,7 @@ class NextPointRewards(RewradCalculator):
 
         return accum_dist_reward
 
-    def calculate_reward(self, observations, processed_obs : dict[str, any], race_finished, other_terminations):
+    def calculate_reward(self, observations, processed_obs : dict[str, any], race_finished, other_terminations : dict[str, bool]):
         ssD : SimStateData = observations[IPCFields.SIMSTATE]
         reward = 0
         
@@ -72,7 +72,13 @@ class NextPointRewards(RewradCalculator):
         #velocity_reward = self.velocity_reward_weight * current_velocity_normed
         race_not_finished_reward = (-1) * self.race_not_finished_weight
         race_finished = race_finished * self.race_finished_reward
-        other_term_reward = (-1) * other_terminations * self.other_termination_punishment
+        ot = False
+        if "stuck" in other_terminations:
+            ot = other_terminations["stuck"]
+        if "no_progress" in other_terminations:
+            ot = ot or other_terminations["no_progress"]
+
+        other_term_reward = (-1) * ot * self.other_termination_punishment
         backward_punishment = (-1) * np.clip(d, a_min=0, a_max=100) / 100 * self.backward_weight
         
         reward = accum_dist_reward + race_not_finished_reward + race_finished + other_term_reward + backward_punishment + distance_to_center_reward + velocity_change_reward

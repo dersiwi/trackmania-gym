@@ -19,9 +19,9 @@ from game_interaction.ipc_fields import IPCFields
 
 from trackmania_env.utils.position_buffer import PositionBuffer
 from trackmania_env.utils.actionmap import ACTION_MAP
-from trackmania_env.utils.timeoutpolicy import TimeoutPolicy
 from trackmania_env.observations.observation_manager import ObservationManager
 from trackmania_env.rewards.reward_calculation import RewradCalculator
+from trackmania_env.terminations.termination_manager import TerminationManager
 from trackmania_env.utils.reference_line_manager import ReferenceLineManager
 from trackmania_env.utils.random_respawn_manager import RandomRespawnManager
 
@@ -41,6 +41,7 @@ class TMNF_Single_Agent_Env(gym.Env):
             response_queue : Queue,
             obs_manager : ObservationManager,
             reward_calculator : RewradCalculator,
+            termination_manger : TerminationManager,
             reference_line: ReferenceLineManager,
             env_cfg : EnvConfig):
         
@@ -61,7 +62,6 @@ class TMNF_Single_Agent_Env(gym.Env):
         - reward_calculator         : Instance of reward calcualtor used to calculate rewards in environment.
         - n_previous_actions        : tracks actions for this many steps. 
         - ignore_stuck_for_n_steps_after_reset : Ignores the position-buffer-reset-trigger for this many steps after reset. (Set to 1 if you dont want to use this)
-        - max_steps_before_reset    : specifies timeout (environment resets after this many steps)
         - game_speed                : sets speed of game, as defined in https://donadigo.com/tminterface/variables
 
         """
@@ -91,24 +91,22 @@ class TMNF_Single_Agent_Env(gym.Env):
         self.rew_calculator = reward_calculator#get_reward_calculator(reward_calculator, self.position_buffer)
         self.rew_calculator.set_position_buffer(self.position_buffer)
         self.rew_calculator.set_reference_line(self.reference_line)
+        
         self.obs_manager = obs_manager
         self.obs_manager.set_env(self)
+        
+        self.termination_manager = termination_manger
+        self.termination_manager.set_env(self)
 
         self.respawn_manager = RandomRespawnManager(self.reference_line.reference_line)
-        self.max_steps_before_reset : int = env_cfg.max_steps_until_reset
-        self.n_steps : int = 0
-        self.ignore_stuck_for_n_steps_after_reset = env_cfg.ignore_stuck_for_n_steps_after_reset
 
-        #these variables track the progress of the agent along the centerline and terminate, if no progress has been made for too long
-        self.terminate_after_steps_without_progress = env_cfg.terminate_after_steps_without_progress
-        self.n_steps_since_last_progress = 0
-        self.idx_since_last_advance = 0
+        self.n_steps : int = 0
+        self.total_steps : int = 0
+
 
         # define observation and action space for gym
         self.observation_space = obs_manager.get_observation_dict()
         self.action_space = gym.spaces.Discrete(len(ACTION_MAP))
-
-        self.timeout_policy = TimeoutPolicy(env_cfg.increase_timeout_intervals, env_cfg.new_timeouts)
 
         self.__send_command_to_process_wrapper(TMIProcessWrapper.IPCCommands.get_cmd_command(self.__ipc_cmd_id, 
                                                                                              TMInterfaceCommands.set_variable(TMInterfaceCommands.Variables.SPEED, 
@@ -154,15 +152,10 @@ class TMNF_Single_Agent_Env(gym.Env):
     def _send_action(self, action : tuple[bool, bool, bool, bool]):
         self.__send_command_to_process_wrapper(TMIProcessWrapper.IPCCommands.get_act_command(self.__ipc_cmd_id, action))
 
-    def __log_reset_reason(self, stuck, race_finished, timeout, no_progress):
-        if stuck:
-            self.logger.info(f"Resetting environment because car is STUCk")
-        elif race_finished:
-            self.logger.info(f"Resttting environment because RACE FINISHED")
-        elif timeout:
-            self.logger.info(f"Resttting environment because TIMEOUT")
-        elif no_progress:
-            self.logger.info(f"Resttting environment because NO PROGRESS was made along reference line for more than {self.terminate_after_steps_without_progress} env-steps.")
+    def __log_reset_reason(self, terminated_info : dict[str, bool]):
+        for key in terminated_info:
+            if terminated_info[key]:
+                self.logger.info(f"Resetting environment because '{key}'")
 
     def determine_termination_trucation(self, idx, obs : SimStateData) -> tuple[bool, bool]:
         terminated = truncated = False
@@ -204,39 +197,27 @@ class TMNF_Single_Agent_Env(gym.Env):
         # advance the reference line
         i, _, _ = self.reference_line.calculate_and_step_next_point(ssD.position)
 
-        stuck = False if self.n_steps < self.ignore_stuck_for_n_steps_after_reset else not self.position_buffer.moved_more_than_threshold(self.position_buffer_threshold)
+        terminated, truncated, terminated_info = self.termination_manager.calculate_terminations(ssD)
+        terminated_info["race_finished"] = race_finished
+        terminated = terminated or race_finished
         
-        # figure out if car has made any progress
-        if i > self.idx_since_last_advance:
-            self.n_steps_since_last_progress = 0
-            self.idx_since_last_advance = i
-        else:
-            self.n_steps_since_last_progress += 1
-        no_progress = self.n_steps_since_last_progress >= self.terminate_after_steps_without_progress
-        terminated = stuck or race_finished or no_progress 
-        
-        timeout = self.n_steps >= self.max_steps_before_reset
-        truncated = timeout
-        self.__log_reset_reason(stuck, race_finished, timeout, no_progress)
-
+        if terminated or truncated:
+            self.__log_reset_reason(terminated_info)
 
         if race_finished:
             self.__send_command_to_process_wrapper(TMIProcessWrapper.IPCCommands.prevent_simulation_finish(self.__ipc_cmd_id))
 
-        
-        
-
         info = self._get_info(ssD=ssD) 
 
         processed_obs, obs_info = self.obs_manager.get_observation(raw_obs)
-        reward, reward_info = self.rew_calculator.calculate_reward(raw_obs, processed_obs, race_finished, stuck or no_progress)
+        reward, reward_info = self.rew_calculator.calculate_reward(raw_obs, processed_obs, race_finished, terminated_info)
 
         info.update(obs_info)
         info["rewards"] = reward_info
         info["terminated"] = terminated
         info["truncated"] = truncated
         self.n_steps += 1
-        self.max_steps_before_reset = self.timeout_policy.update_timeout(self.max_steps_before_reset)
+        self.total_steps += 1
         return processed_obs, reward, terminated, truncated, info
     
     def reset(self, seed = None, options = None)-> Tuple[gym.spaces.Dict,Dict[str,Any]]:
@@ -270,9 +251,8 @@ class TMNF_Single_Agent_Env(gym.Env):
         self.position_buffer.reset()
         self.rew_calculator.reset()
         self.reference_line.reset()
+        self.termination_manager.reset()
         self.n_steps = 0
-        self.n_steps_since_last_progress = 0
-        self.idx_since_last_advance = 0
 
         raw_obs = self._get_raw_obs()
         self.reference_line.calculate_and_step_next_point(raw_obs[IPCFields.SIMSTATE].position)
