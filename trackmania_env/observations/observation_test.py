@@ -17,7 +17,7 @@ class ObservationTest(ObservationManager):
         self.log_directory = log_directory
         self.log_frequency = log_frequency
         self.step = 0
-        self.log_images = False
+        self.log_images = True
 
 
     def get_observation(self, raw_observation : dict[str, np.ndarray | SimStateData]) -> np.ndarray | dict[str, np.ndarray] | torch.Tensor | dict[str, torch.Tensor]:
@@ -26,20 +26,29 @@ class ObservationTest(ObservationManager):
         """
         self.step += 1
 
-        processed_obs = super().get_observation(raw_observation)
+        processed_obs, info = super().get_observation(raw_observation)
 
         if self.step % self.log_frequency == 0 and self.log_images:
-            img = Image.fromarray(raw_observation[IPCFields.IMG])
+            assert raw_observation[IPCFields.IMG].shape == (self.img_width, self.img_height, 4), f"Got unexpected shape {raw_observation[IPCFields.IMG].shape}"
+            
+            np.save(os.path.join(self.log_directory, f"raw_image_{self.step}.npy"), raw_observation[IPCFields.IMG])
+            img = Image.fromarray(raw_observation[IPCFields.IMG].astype('uint8'), 'RGBA')
             img.save(os.path.join(self.log_directory, f"raw_image_{self.step}.png"))
 
             if self.convert_torch:
                 processed_img = processed_obs["image"].numpy()
-            
-            pimg = Image.fromarray(processed_img)
+                np.save( os.path.join(self.log_directory,f"processed_image_{self.step}.npy"), processed_img)
+            if self.colorspace == ObservationManager.Colorspace.GRAYSCALE:
+                processed_img = processed_img.squeeze()
+                assert processed_img.shape == (100, 100), f"Got unexpected shape {processed_img.shape}"
+                mode = "L"
+            else:
+                mode = "RGB"
+            pimg = Image.fromarray(processed_img, mode=mode)
             pimg.save(os.path.join(self.log_directory, f"processed_image_{self.step}.png"))
 
-        # print position of and veloctiy of car.
-        ssD : SimStateData = raw_observation[IPCFields.SIMSTATE]
-        print(ssD.position, ssD.velocity)
+            # print position of and veloctiy of car.
+            ssD : SimStateData = raw_observation[IPCFields.SIMSTATE]
+            print(ssD.position, ssD.velocity)
 
-        return processed_obs
+        return processed_obs, info
