@@ -30,8 +30,18 @@ class NextPointObsManager(ObservationManager):
         
     def get_observation_dict(self) -> spaces.Dict:
         """Returns observation dict for environment according to initialization."""
-        self.statevector_dim = 5 + 3 * self.reference_line_points_lookahead \
-            + 4*NUM_SURFACE_CATEGORIES + 3*4 + 4*1 # get_mobile_states
+        self.statevector_dim = (
+            #mobile states 
+            4*NUM_SURFACE_CATEGORIES
+            + 3*4
+            + 4*1
+            # refline points
+            + 3 * self.reference_line_points_lookahead
+            # others
+            + 3*1 # drel + speed + latera_dist
+        )
+       # 5 + 3 * self.reference_line_points_lookahead \
+       #     + 4*NUM_SURFACE_CATEGORIES + 3*3 + 4*1 +1 # get_mobile_states 
 
 
         return spaces.Dict({
@@ -52,6 +62,7 @@ class NextPointObsManager(ObservationManager):
         if not self.last_obs == None:
             velocity_delta = np.array(obs.velocity) - np.array(self.last_obs.velocity)
 
+        speed = obs.display_speed
         
         orientation = np.array(dyna_current.rotation.to_numpy(), dtype=float).T
         comming_refline_points = self.get_next_refline_points(next_idx, obs.position, orientation)
@@ -60,7 +71,8 @@ class NextPointObsManager(ObservationManager):
         self.last_obs = obs
 
         floatvec : np.ndarray = np.hstack([drel,
-                                            velocity_delta,
+                                           # velocity_delta,
+                                            speed,
                                             lateral_dist,
                                             comming_refline_points.ravel(),
                                             mobile_states], dtype =  np.float32)

@@ -27,6 +27,9 @@ class NextPointRewards(RewradCalculator):
         self.distance_to_center_weight = reward_cfg.rewardterm_weights["distance_to_center_weight"]
         self.velocity_change_reward_weight = reward_cfg.rewardterm_weights["velocity_change_reward_weight"]
 
+        self.speed_reward_weight = reward_cfg.rewardterm_weights["speed_reward_weight"] # should be 1000
+
+
         self.logger = logging.getLogger(self.__class__.__name__)
         
         self.current_refline_idx : int = 0
@@ -62,6 +65,8 @@ class NextPointRewards(RewradCalculator):
         if not self.last_simstate == None:
             velocity_change_reward = (current_velocity_normed - self._get_normed_velocity(self.last_simstate.velocity)) * self.velocity_change_reward_weight
 
+        speed_reward = ssD.display_speed / self.speed_reward_weight #TODO figure out good weight
+
         distance_to_center_reward = 0
         if next_refline_index > 0:
             # only calculate reward to centerline once car is within the firsrt linesgement, 
@@ -81,7 +86,7 @@ class NextPointRewards(RewradCalculator):
         other_term_reward = (-1) * ot * self.other_termination_punishment
         backward_punishment = (-1) * np.clip(d, a_min=0, a_max=100) / 100 * self.backward_weight
         
-        reward = accum_dist_reward + race_not_finished_reward + race_finished + other_term_reward + backward_punishment + distance_to_center_reward + velocity_change_reward
+        reward = accum_dist_reward + race_not_finished_reward + race_finished + other_term_reward + backward_punishment + distance_to_center_reward + speed_reward #+ velocity_change_reward
         self.last_simstate = ssD
         return reward, {"total" : reward, 
                         "accumulated_distance" : accum_dist_reward,
@@ -91,7 +96,8 @@ class NextPointRewards(RewradCalculator):
                         "race_finished" : race_finished,
                         "other_terminations":other_term_reward,
                         "backward_punishment" : backward_punishment,
-                        "velocity_change_reward" : velocity_change_reward}
+                        "velocity_change_reward" : velocity_change_reward,
+                        "speed_reward":speed_reward}
 
 
 
