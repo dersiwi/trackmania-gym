@@ -72,11 +72,11 @@ def main(cfg : TrainConfig):
         # get algorithm and start learning process
         vision_model, model = get_models(cfg, tm_env, print_params = True,load_model_path= model_path)
         verbose_model = VerboseExecution(model.policy.features_extractor.extractors["image"])
-        
+        model.policy.eval()
         terminated = False
         observations, info = tm_env.reset()
         while True:
-            action, state = model.predict(observations)
+            action, state = model.predict(observations, deterministic=True)
             observations, reward, terminated, truncated, info = tm_env.step(action)
             verbose_model.visualize(num_maps=6,num_rows=4)
             if terminated or truncated:

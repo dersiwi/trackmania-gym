@@ -23,9 +23,9 @@ from trackmania_env.utils.reference_line_manager import ReferenceLineManager
 
 from utils.hydra_wandb_utils import get_models
 
-
-run_path_hydra = r"C:\Users\siwis\OneDrive\Dokumente\Studium\Master\1.Semester\trackmania\interaction_template\outputs\.hydra"
-model_path = r"C:\Users\siwis\OneDrive\Dokumente\Studium\Master\1.Semester\trackmania\interaction_template\outputs\best_model.zip"
+run = "Level1"
+run_path_hydra = f"C:\\Users\\siwis\\OneDrive\\Dokumente\\Studium\\Master\\1.Semester\\trackmania\\interaction_template\\outputs\\{run}\\.hydra"
+model_path = f"C:\\Users\\siwis\\OneDrive\\Dokumente\\Studium\\Master\\1.Semester\\trackmania\\interaction_template\\outputs\\{run}\\best_model.zip"
 #cfg : TrainConfig= OmegaConf.load(os.path.join("configs", "train.yaml"))
 
 _HYDRA_PARAMS = {
@@ -69,11 +69,13 @@ def main(cfg : TrainConfig):
         
         # get algorithm and start learning process
         vision_model, model = get_models(cfg, tm_env, print_params = True,load_model_path= model_path)
+        model.policy.features_extractor.eval()
+        model.policy.eval()
         
         terminated = False
         observations, info = tm_env.reset()
         while True:
-            action, state = model.predict(observations)
+            action, state = model.predict(observations, deterministic=True)
             observations, reward, terminated, truncated, info = tm_env.step(action)
             if terminated or truncated: tm_env.reset()
     except Exception as e:
