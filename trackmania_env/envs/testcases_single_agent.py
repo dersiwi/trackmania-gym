@@ -323,9 +323,10 @@ class Test_3D_Next_Point_Manager(TestEnvironmentCallback):
         self.axes[2].set_xlabel("Step")
 
 class Test_Lateral_Dist_Next_Point_Manager(TestEnvironmentCallback):
-    def __init__(self, reference_line: np.ndarray):
+    def __init__(self, reference_line_manager):
         super().__init__()
-        self.reference_line = reference_line
+        self.ref_line_manager =  reference_line_manager
+        self.reference_line = self.ref_line_manager.reference_line
 
         # Plot 1: Map view (XZ)
         self.fig, self.ax = plt.subplots(figsize=(6, 6))
@@ -335,7 +336,7 @@ class Test_Lateral_Dist_Next_Point_Manager(TestEnvironmentCallback):
         self.bar_fig, self.bar_ax = plt.subplots(figsize=(4, 4))
         self.bar_container = self.bar_ax.bar(["Distance"], [0.0], color='magenta')
         self.bar_ax.set_ylim(0, 10)  # Adjust max Y limit as needed
-        self.bar_ax.set_ylabel("Euclidean Distance (m)")
+        self.bar_ax.set_ylabel("Euclidean Distance")
 
         plt.ion()
         plt.show()
@@ -343,7 +344,11 @@ class Test_Lateral_Dist_Next_Point_Manager(TestEnvironmentCallback):
     def _call_after_step(self, processed_obs, reward, terminated, truncated, info):
         position = info["position"]
         next_refline_index = info["rewards"]["nextpoint_reference_index"]
+        
         ref_line_point = self.reference_line[next_refline_index]
+        diff_vec = ref_line_point - position
+        lateral_distance = self.ref_line_manager.calculate_lateral_difference(next_refline_index,position)
+
 
         # Clear and redraw main map plot
         self.ax.cla()
@@ -354,8 +359,8 @@ class Test_Lateral_Dist_Next_Point_Manager(TestEnvironmentCallback):
         self.ax.scatter(-1. * position[0], position[2], color='green', marker='x', s=50)
         self.ax.scatter(-1. * ref_line_point[0], ref_line_point[2], color='blue', marker='x', s=50)
 
+    
         # Compute difference vector and draw it as an arrow
-        diff_vec = ref_line_point - position
         self.ax.arrow(-1. * position[0], position[2], -1. * diff_vec[0], diff_vec[2],
                       head_width=0.1, head_length=0.2, fc='magenta', ec='magenta', length_includes_head=True)
 
@@ -363,10 +368,9 @@ class Test_Lateral_Dist_Next_Point_Manager(TestEnvironmentCallback):
         self.fig.canvas.draw()
 
         # === Distance Bar Plot Update ===
-        distance = np.linalg.norm(diff_vec)
-        self.bar_container[0].set_height(distance)
-        self.bar_ax.set_ylim(0, max(10, distance + 1))  # Auto-expand if needed
-        self.bar_ax.set_title(f"Distance to Ref Point: {distance:.2f} m")
+        self.bar_container[0].set_height(lateral_distance)
+        self.bar_ax.set_ylim(0, max(10, lateral_distance + 1))  # Auto-expand if needed
+        self.bar_ax.set_title(f"Distance to Ref Point: {lateral_distance:.2f}")
 
         self.bar_fig.canvas.draw()
 
