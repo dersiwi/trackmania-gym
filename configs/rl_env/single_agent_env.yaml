@@ -7,7 +7,7 @@ env:
   reward_calculator : "nextpoint"
   obs_manager : "nextpointobs" ##use basic for other
   termination_manager : "no_progress"
-  game_speed : 5
+  game_speed : 1
   countdown_speed : 50
   test : False
   n_previous_actions : 10
@@ -33,7 +33,8 @@ reward_manager:
     backward_weight : 0
     distance_to_center_weight : 1
     velocity_change_reward_weight : 30
-
+    speed_reward_weight: 1000
+    
 obsmanager:
   observation_list: 
         - image

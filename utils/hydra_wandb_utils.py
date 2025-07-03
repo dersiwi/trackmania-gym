@@ -13,6 +13,7 @@ import wandb
 from wandb.wandb_run import Run
 from itertools import chain
 from stable_baselines3 import PPO
+from neuronal_networks.lr_schedulers import LR_Scheduler
 
 def get_vision_model(cfg : TrainConfig, in_color_channels : int, extractor_out_dim : int) -> nn.Module:
     """Create and return vision model according to configuration"""
@@ -63,8 +64,9 @@ def get_models(cfg : TrainConfig, tm_env : TMNF_Single_Agent_Env, print_params :
             "features_extractor_kwargs": policy_kwargs["features_extractor_kwargs"]
         })"""
     else:
+        lr : LR_Scheduler = hydra.utils.instantiate(cfg.lr_scheduler)
         model_constructor = hydra.utils.instantiate(cfg.sb3.constructor)
-        model : BaseAlgorithm | PPO | SAC | DQN = model_constructor(env= tm_env, policy_kwargs=policy_kwargs,tensorboard_log= run_id,device=device ,**algorithm_params)
+        model : BaseAlgorithm | PPO | SAC | DQN = model_constructor(env= tm_env,learning_rate = lr.get_scheduler(), policy_kwargs=policy_kwargs,tensorboard_log= run_id,device=device ,**algorithm_params)
     
     if print_params:
         print("\nExtractor, Policy and Critic architecturs:\n" + "-"*30)
