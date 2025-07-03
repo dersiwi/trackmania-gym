@@ -41,14 +41,14 @@ def main(cfg : TrainConfig):
         env_cfg=cfg.rl_env.env,
         platform=cfg.platforms.os)
     
-    tm_env.add_env_test_calback(testcases.PrintRewardsToConsole())
+    #tm_env.add_env_test_calback(testcases.PrintRewardsToConsole())
     #tm_env.add_env_test_calback(testcases.Test_RefLine_Next_Point_Manager(tm_env.reference_line.reference_line))
     #tm_env.add_env_test_calback(testcases.Test_RefLine_Next_Point_Manager())
 
     #tm_env.add_env_test_calback(testcases.Test_1D_Next_Point_Manager(key_to_plot="refline_idx",y_lim=(0,3540)))
     #tm_env.add_env_test_calback(testcases.PrintVector2DToNextReferencePoint())
     #tm_env.add_env_test_calback(testcases.PrintVectorToNextReferencePoint())
-    #tm_env.add_env_test_calback(testcases.Test_Lateral_Dist_Next_Point_Manager(tm_env.reference_line.reference_line))
+    tm_env.add_env_test_calback(testcases.Test_Lateral_Dist_Next_Point_Manager(tm_env.reference_line))
     #tm_env.add_env_test_calback(testcases.Test_Reward_Next_Point_Manager())
     #tm_env.add_env_test_calback(testcases.Test_3D_Next_Point_Manager(key_to_plot="velocity_delta",y_lim=(-50,50)))
     tm_env.step_with_manual_input()
