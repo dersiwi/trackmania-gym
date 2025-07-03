@@ -19,6 +19,7 @@ Implemented TestCases;
     - Test_Reward_Next_Point_Manager    : Prints specific, or all rewards in realtime
 """
 import numpy as np
+from scipy.stats import norm
 from matplotlib import pyplot as plt
 from trackmania_env.envs.testenv_single_agent import TestEnvironmentCallback, Live3dPlotEnvironmentCallback
 
@@ -337,14 +338,21 @@ class Test_Lateral_Dist_Next_Point_Manager(TestEnvironmentCallback):
         self.bar_container = self.bar_ax.bar(["Distance"], [0.0], color='magenta')
         self.bar_ax.set_ylim(0, 10)  # Adjust max Y limit as needed
         self.bar_ax.set_ylabel("Euclidean Distance")
-
+        
+        #plot 3
+        self.gauss_plot = plt.subplots(figsize=(6, 6))
+        self.gauss_dist = norm(0,np.sqrt(12))
+        # Create values for the smooth Gaussian curve
+        self.x_vals = np.linspace(-50, 50, 500)
+        self.y_vals = self.gauss_dist.pdf(self.x_vals)
+        self.gauss_curve = self.gauss_dist.rvs(size=1000) 
         plt.ion()
         plt.show()
 
     def _call_after_step(self, processed_obs, reward, terminated, truncated, info):
         position = info["position"]
         next_refline_index = info["rewards"]["nextpoint_reference_index"]
-        
+
         ref_line_point = self.reference_line[next_refline_index]
         diff_vec = ref_line_point - position
         lateral_distance = self.ref_line_manager.calculate_lateral_difference(next_refline_index,position)
@@ -373,6 +381,15 @@ class Test_Lateral_Dist_Next_Point_Manager(TestEnvironmentCallback):
         self.bar_ax.set_title(f"Distance to Ref Point: {lateral_distance:.2f}")
 
         self.bar_fig.canvas.draw()
+
+        prob = self.gauss_dist.pdf(lateral_distance)
+        fig, ax = self.gauss_plot  # unpack the figure and axes
+        ax.clear()  # clear previous plots if needed
+
+        # Plot the Gaussian curve
+        ax.plot(self.x_vals, self.y_vals, label='Gaussian PDF', color='blue')
+        ax.axvline(lateral_distance, color='red', linestyle='--', label=f'Sample x = {lateral_distance}')
+        ax.plot(lateral_distance, prob, 'ro')  # red dot at the point
 
         # Pause for real-time updates
         plt.pause(0.001)
