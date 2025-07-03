@@ -1,0 +1,12 @@
+# Available model names MobileNet models:
+# - mobilenet_v2
+# - mobilenet_v3_small
+# - mobilenet_v3_large
+# for the available weights see https://docs.pytorch.org/vision/main/_modules/torchvision/models/mobilenetv2.html#mobilenet_v2
+# and https://docs.pytorch.org/vision/main/_modules/torchvision/models/mobilenetv3.html#mobilenet_v3_large
+_partial_: True
+_target_: neuronal_networks.mobile_net.PrebuiltMobileNet
+model_name: "mobilenet_v3_small"
+pretrained: True
+trainable_backbone: True
+weights_name: "DEFAULT"
