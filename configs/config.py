@@ -145,6 +145,7 @@ class EnvConfig:
 @dataclass
 class RewardManagerCfg:
     rewardterm_weights : dict[str, float]
+    lateral_distance_mode : str
     
 @dataclass
 class RLEnvConfig:

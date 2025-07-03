@@ -7,7 +7,7 @@ from numba import jit
 
 from trackmania_env.rewards.reward_calculation import RewradCalculator
 from trackmania_env.utils.reference_line_manager import ReferenceLineManager
-
+from scipy.stats import norm
 import logging
 from configs.config import RewardManagerCfg
 
@@ -30,11 +30,15 @@ class NextPointRewards(RewradCalculator):
         self.speed_reward_weight = reward_cfg.rewardterm_weights["speed_reward_weight"] # should be 1000
 
 
+
         self.logger = logging.getLogger(self.__class__.__name__)
         
         self.current_refline_idx : int = 0
 
         self.max_lateral_difference = 12 # maximal lateral difference, this is an estimate.
+        self.lateral_distance_mode = reward_cfg.lateral_distance_mode
+        self.mean, self.sigma, self.yshift, self.multiplicator, self.dist_scale = 0, 1.0, -1, 5, 0.3
+
 
         self.last_simstate : SimStateData = None
 
@@ -42,7 +46,7 @@ class NextPointRewards(RewradCalculator):
         return np.linalg.norm(np.array(velocity) / 1000) #1000 == max velocity
     
     def _calculate_accum_distance_reward(self, next_refline_index : int) -> float:
-        """Calculates the reward along indicating the distance driven along the centerline"""
+        """Calculates the reward along indicating the distance driven along the centerline"""        
         accum_dist_reward = 0
         if self.current_refline_idx < next_refline_index: #only give reward if progress in regards to last one was made
 
@@ -52,6 +56,32 @@ class NextPointRewards(RewradCalculator):
             self.current_refline_idx = next_refline_index
 
         return accum_dist_reward
+    
+    def _calculate_lateral_distance_reward(self, next_refline_idx : int, car_position : np.ndarray) -> float:
+
+        if next_refline_idx <= 0:
+            # only calculate reward to centerline once car is within the firsrt linesgement, 
+            # e.g. if the agent drives backwards out of map immediately he will always get max reward, because this term will always be 1/12 * self.ditsance_to_center_weight
+            return 0 
+        
+        distance_to_center_reward = 0
+        absolute_dist = np.clip(self.refline_manager.calculate_lateral_difference(idx = next_refline_idx, car_position=car_position), a_min = 0, a_max = self.max_lateral_difference)
+
+
+        if self.lateral_distance_mode == "triangle":
+            # inverse the distance, such that reward is bigger once distance gets smaller
+            distance_to_center_reward = 0.5 - absolute_dist / self.max_lateral_difference
+            
+        elif self.lateral_distance_mode == "gauss":
+            distance_to_center_reward = self.multiplicator * norm.pdf(absolute_dist * self.dist_scale, loc =self.mean, scale = self.sigma) + self.yshift
+
+        elif self.lateral_distance_mode == "trapez":
+            raise NotImplementedError("Not implemented.")
+
+        else:
+            raise ValueError(f"No Such Errorfunction '{self.lateral_distance_mode}' available")
+
+        return distance_to_center_reward * self.distance_to_center_weight
 
     def calculate_reward(self, observations, processed_obs : dict[str, any], race_finished, other_terminations : dict[str, bool]):
         ssD : SimStateData = observations[IPCFields.SIMSTATE]
@@ -67,12 +97,7 @@ class NextPointRewards(RewradCalculator):
 
         speed_reward = ssD.display_speed / self.speed_reward_weight #TODO figure out good weight
 
-        distance_to_center_reward = 0
-        if next_refline_index > 0:
-            # only calculate reward to centerline once car is within the firsrt linesgement, 
-            # e.g. if the agent drives backwards out of map immediately he will always get max reward, because this term will always be 1/12 * self.ditsance_to_center_weight
-            distance_to_center_reward = self.distance_to_center_weight * (0.5 - np.clip(self.refline_manager.calculate_lateral_difference(idx = next_refline_index, car_position=ssD.position), 
-                                                    a_min = 0, a_max = self.max_lateral_difference) / self.max_lateral_difference) # inverse the distance, such that reward is bigger once distance gets smaller
+        distance_to_center_reward = self._calculate_lateral_distance_reward(next_refline_index, ssD.position)
             
         #velocity_reward = self.velocity_reward_weight * current_velocity_normed
         race_not_finished_reward = (-1) * self.race_not_finished_weight

@@ -34,6 +34,7 @@ reward_manager:
     distance_to_center_weight : 1
     velocity_change_reward_weight : 30
     speed_reward_weight: 1000
+  lateral_distance_mode : "gauss" #triangle, gauss, trapez
     
 obsmanager:
   observation_list: 
