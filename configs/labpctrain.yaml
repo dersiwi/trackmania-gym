@@ -9,7 +9,7 @@ defaults:
 extractors_out_dim: 64 # every extractor will produce an output with this dimension 
 
 learn_args:
-  total_timesteps: 4000000
+  total_timesteps: 12000000
   log_interval: 1
   reset_num_timesteps: True
   progress_bar: True
@@ -25,8 +25,8 @@ gmi:
   automatic_prevent_sim_finish : True
 
 image:
-  width: 100
-  height: 100
+  width: 128
+  height: 128
 
 wandb:
   use: True

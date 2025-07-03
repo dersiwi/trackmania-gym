@@ -90,12 +90,12 @@ class NextPointRewards(RewradCalculator):
         next_refline_index, d, drel = self.refline_manager.get_distance_to_next_point()
         accum_dist_reward = self._calculate_accum_distance_reward(next_refline_index)
 
-        current_velocity_normed = self._get_normed_velocity(ssD.velocity)
-        velocity_change_reward = 0
-        if not self.last_simstate == None:
-            velocity_change_reward = (current_velocity_normed - self._get_normed_velocity(self.last_simstate.velocity)) * self.velocity_change_reward_weight
+        #current_velocity_normed = self._get_normed_velocity(ssD.velocity)
+        #velocity_change_reward = 0
+        #if not self.last_simstate == None:
+        #    velocity_change_reward = (current_velocity_normed - self._get_normed_velocity(self.last_simstate.velocity)) * self.velocity_change_reward_weight
 
-        speed_reward = ssD.display_speed / self.speed_reward_weight #TODO figure out good weight
+        speed_reward = ssD.display_speed * self.speed_reward_weight / 1000 #TODO figure out good weight
 
         distance_to_center_reward = self._calculate_lateral_distance_reward(next_refline_index, ssD.position)
             
@@ -111,7 +111,7 @@ class NextPointRewards(RewradCalculator):
         other_term_reward = (-1) * ot * self.other_termination_punishment
         backward_punishment = (-1) * np.clip(d, a_min=0, a_max=100) / 100 * self.backward_weight
         
-        reward = accum_dist_reward + race_not_finished_reward + race_finished + other_term_reward + backward_punishment + distance_to_center_reward + speed_reward #+ velocity_change_reward
+        reward = accum_dist_reward + race_not_finished_reward + race_finished + other_term_reward + backward_punishment + distance_to_center_reward + speed_reward 
         self.last_simstate = ssD
         return reward, {"total" : reward, 
                         "accumulated_distance" : accum_dist_reward,
@@ -121,7 +121,6 @@ class NextPointRewards(RewradCalculator):
                         "race_finished" : race_finished,
                         "other_terminations":other_term_reward,
                         "backward_punishment" : backward_punishment,
-                        "velocity_change_reward" : velocity_change_reward,
                         "speed_reward":speed_reward}
 
 

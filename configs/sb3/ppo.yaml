@@ -7,15 +7,15 @@ constructor:
 
 algorithm_params:
 #  learning_rate: 0.00025          # Learning rate or scheduler function
-  n_steps: 100                  # Number of steps to run per environment per update
-  batch_size: 100                 # Minibatch size for each gradient update
+  n_steps: 2048                  # Number of steps to run per environment per update
+  batch_size: 512                 # Minibatch size for each gradient update
   n_epochs: 5                   # Number of epochs per update (how many times each minibatch is reused)
   gamma: 0.99                    # Discount factor for reward
   gae_lambda: 0.95               # Lambda for GAE (Generalized Advantage Estimation)
   clip_range: 0.2                # Clipping range for policy loss (PPO-specific)
   clip_range_vf: null            # Clipping range for value function (useful to stabilize critic updates); null means no clipping
   normalize_advantage: true      # Whether to normalize advantages before updating
-  ent_coef: 0.02                  # Entropy coefficient (exploration bonus)
+  ent_coef: 0.01                  # Entropy coefficient (exploration bonus)
   vf_coef: 1                  # Value function loss coefficient
   max_grad_norm: 0.5             # Maximum gradient norm (gradient clipping)
   use_sde: false                 # Whether to use State-Dependent Exploration (for continuous actions)

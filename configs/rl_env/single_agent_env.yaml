@@ -25,7 +25,7 @@ env:
 
 reward_manager:
   rewardterm_weights:
-    accum_distance_weight : 437.5
+    accum_distance_weight : 90
     race_not_finished_weight : 0.05
     race_finished_reward : 100
     other_termination_punishment : 20
@@ -33,7 +33,7 @@ reward_manager:
     backward_weight : 0
     distance_to_center_weight : 1
     velocity_change_reward_weight : 30
-    speed_reward_weight: 1000
+    speed_reward_weight: 2
   lateral_distance_mode : "gauss" #triangle, gauss, trapez
     
 obsmanager:
