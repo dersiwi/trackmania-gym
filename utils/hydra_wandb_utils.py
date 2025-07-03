@@ -14,6 +14,7 @@ from wandb.wandb_run import Run
 from itertools import chain
 from stable_baselines3 import PPO
 from neuronal_networks.lr_schedulers import LR_Scheduler
+import os
 
 def get_vision_model(cfg : TrainConfig, in_color_channels : int, extractor_out_dim : int) -> nn.Module:
     """Create and return vision model according to configuration"""
@@ -104,3 +105,98 @@ def init_and_login_wandb(cfg : TrainConfig, wandbdir : str = "wandb") -> tuple[R
         return run, run_id
     else:
         return None, run_id
+    
+
+from stable_baselines3.common.callbacks import EvalCallback, CheckpointCallback, CallbackList
+from trackmania_env.rewards.reward_calculation import RewardLogCallback, AccumRewardLogCallback
+import glob
+
+
+class BeforeAndAfterTraining:
+
+    def __init__(self, hydra_run_dir : str, cfg : TrainConfig):
+        self.hydra_run_dir = hydra_run_dir
+        self.cfg = cfg
+
+
+    def before_training(self) -> None:
+        """Create necessary paths and initate wandb-login."""
+        model_dir = os.path.join(self.hydra_run_dir, "models")
+        self.best_model_path = os.path.join(model_dir, "best_model")
+        self.checkpoint_path = os.path.join(model_dir, "checkpoints")
+        os.makedirs(self.best_model_path, exist_ok=True)
+        os.makedirs(self.checkpoint_path, exist_ok=True)
+
+        # Start Weights and Biases login
+        self.run, run_id = init_and_login_wandb(self.cfg, wandbdir=self.hydra_run_dir)
+        self.run_id_in_hydra_log_dir = os.path.join(self.hydra_run_dir, run_id)
+
+
+    def get_tensorboard_login_identifier(self) -> str:
+        """identifier for the run which gets used for tensorboard login"""
+        return self.run_id_in_hydra_log_dir
+
+
+    def get_callbacks_for_training(self, tm_env) -> CallbackList:
+        """Create callbacks for model to create logs"""
+        # Eval Callback – save best model based on reward
+        eval_callback = EvalCallback(
+            tm_env,
+            best_model_save_path=self.best_model_path,
+            log_path=os.path.join(self.hydra_run_dir, "eval_logs"),
+            eval_freq=self.cfg.wandb.eval_freq,
+            deterministic=True,
+            render=False,
+        )
+
+        # Checkpoint Callback – save model every N steps
+        checkpoint_callback = CheckpointCallback(
+            save_freq=self.cfg.wandb.checkpoint_freq,
+            save_path=self.checkpoint_path,
+            name_prefix="checkpoint",
+            save_replay_buffer=False,
+            save_vecnormalize=False,
+        )
+        callbacklist = [eval_callback, checkpoint_callback]
+        #if cfg.wandb.use:
+        #    callbacklist.append(hydra.utils.instantiate(cfg.wandb_callbacks)(model_save_path=RUN_ID_IN_HYDRA_LOG_DIR))
+        #    callbacklist.append(RewardLogCallback())
+            
+        callback : CallbackList= CallbackList(callbacklist)
+        if self.cfg.wandb.use:
+            callback.callbacks.extend([hydra.utils.instantiate(self.cfg.wandb_callbacks)(model_save_path=self.run_id_in_hydra_log_dir), AccumRewardLogCallback()])
+
+        return callback
+    
+
+    def after_training(self, model : BaseAlgorithm):
+        """Finish wandb run, save and upload models"""
+        final_model =  os.path.join(self.hydra_run_dir, "model.zip")
+        best_model = os.path.join(self.best_model_path, "best_model.zip")
+        checkpoint_files = glob.glob(os.path.join(self.checkpoint_path, "*.zip"))
+        hydra_dir = os.path.join(self.hydra_run_dir, ".hydra")
+        # always save final model
+        model.save(os.path.join(self.hydra_run_dir, "model"))
+
+        if self.cfg.wandb.use:
+            # Upload best model
+            if os.path.exists(best_model):
+                best_artifact = wandb.Artifact("best_model", type="model")
+                best_artifact.add_file(best_model)
+                self.run.log_artifact(best_artifact)
+
+            # Upload final model
+            final_artifact = wandb.Artifact("final_model", type="model")
+            final_artifact.add_file(final_model)
+            self.run.log_artifact(final_artifact)
+
+            # Upload checkpoints
+            for ckpt_file in checkpoint_files:
+                ckpt_artifact = wandb.Artifact("checkpoint_model", type="model")
+                ckpt_artifact.add_file(ckpt_file)
+                self.run.log_artifact(ckpt_artifact)
+            # Upload config
+            hydra_artifact = wandb.Artifact("hydra",type="hydra_conf")
+            hydra_artifact.add_dir(hydra_dir)
+            wandb.log_artifact(hydra_artifact)
+            self.run.finish()

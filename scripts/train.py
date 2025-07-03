@@ -42,21 +42,13 @@ _HYDRA_PARAMS = {
     "config_name": "train.yaml",
 }
 
-from utils.hydra_wandb_utils import get_models, init_and_login_wandb
+from utils.hydra_wandb_utils import get_models, init_and_login_wandb, BeforeAndAfterTraining
 
 @hydra.main(**_HYDRA_PARAMS)
 def main(cfg : TrainConfig):
 
-    HYDRA_RUN_DIR = HydraConfig.get().run.dir
-    model_dir = os.path.join(HYDRA_RUN_DIR, "models")
-    best_model_path = os.path.join(model_dir, "best_model")
-    checkpoint_path = os.path.join(model_dir, "checkpoints")
-    os.makedirs(best_model_path, exist_ok=True)
-    os.makedirs(checkpoint_path, exist_ok=True)
-
-    # Start Weights and Biases login
-    run, run_id = init_and_login_wandb(cfg, wandbdir=HYDRA_RUN_DIR)
-    RUN_ID_IN_HYDRA_LOG_DIR = os.path.join(HYDRA_RUN_DIR, run_id)
+    baaf = BeforeAndAfterTraining(hydra_run_dir=HydraConfig.get().run.dir, cfg = cfg)
+    baaf.before_training()
 
     # Instanciate GMI, TMNF-Environment and start TMi-Interaction process.
     tmi_process, control_queue, response_queue = start_process_and_wait_for_startsignal(cfg.platforms, cfg.gmi, cfg.image.width, cfg.image.height)
@@ -84,67 +76,11 @@ def main(cfg : TrainConfig):
             tm_env = wrapper(env=tm_env)
         
         # get algorithm and start learning process
-        vision_model, model = get_models(cfg, tm_env, print_params = True,run_id=RUN_ID_IN_HYDRA_LOG_DIR)
+        vision_model, model = get_models(cfg, tm_env, print_params = True, run_id=baaf.get_tensorboard_login_identifier())
 
+        model.learn(**cfg.learn_args, callback=baaf.get_callbacks_for_training(tm_env))
 
-        # Eval Callback – save best model based on reward
-        eval_callback = EvalCallback(
-            tm_env,
-            best_model_save_path=best_model_path,
-            log_path=os.path.join(HYDRA_RUN_DIR, "eval_logs"),
-            eval_freq=cfg.wandb.eval_freq,
-            deterministic=True,
-            render=False,
-        )
-
-        # Checkpoint Callback – save model every N steps
-        checkpoint_callback = CheckpointCallback(
-            save_freq=cfg.wandb.checkpoint_freq,
-            save_path=checkpoint_path,
-            name_prefix="checkpoint",
-            save_replay_buffer=False,
-            save_vecnormalize=False,
-        )
-        callbacklist = [eval_callback, checkpoint_callback]
-        #if cfg.wandb.use:
-        #    callbacklist.append(hydra.utils.instantiate(cfg.wandb_callbacks)(model_save_path=RUN_ID_IN_HYDRA_LOG_DIR))
-        #    callbacklist.append(RewardLogCallback())
-            
-        callback : CallbackList= CallbackList(callbacklist)
-        if cfg.wandb.use:
-            callback.callbacks.extend([hydra.utils.instantiate(cfg.wandb_callbacks)(model_save_path=RUN_ID_IN_HYDRA_LOG_DIR), AccumRewardLogCallback()])
-
-        model.learn(**cfg.learn_args, callback=callback)
-
-        final_model =  os.path.join(HYDRA_RUN_DIR, "model.zip")
-        best_model = os.path.join(best_model_path, "best_model.zip")
-        checkpoint_files = glob.glob(os.path.join(checkpoint_path, "*.zip"))
-        hydra_dir = os.path.join(HYDRA_RUN_DIR, ".hydra")
-        # always save final model
-        model.save(os.path.join(HydraConfig.get().run.dir, "model"))
-
-        if cfg.wandb.use:
-            # Upload best model
-            if os.path.exists(best_model):
-                best_artifact = wandb.Artifact("best_model", type="model")
-                best_artifact.add_file(best_model)
-                run.log_artifact(best_artifact)
-
-            # Upload final model
-            final_artifact = wandb.Artifact("final_model", type="model")
-            final_artifact.add_file(final_model)
-            run.log_artifact(final_artifact)
-
-            # Upload checkpoints
-            for ckpt_file in checkpoint_files:
-                ckpt_artifact = wandb.Artifact("checkpoint_model", type="model")
-                ckpt_artifact.add_file(ckpt_file)
-                run.log_artifact(ckpt_artifact)
-            # Upload config
-            hydra_artifact = wandb.Artifact("hydra",type="hydra_conf")
-            hydra_artifact.add_dir(hydra_dir)
-            wandb.log_artifact(hydra_artifact)
-            run.finish()
+        baaf.after_training(model)
         
     except Exception as e:
         traceback.print_exc()
