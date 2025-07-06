@@ -1,0 +1,28 @@
+constructor:
+  _partial_: true
+  _target_: sb3_contrib.qrdqn.QRDQN
+  policy: "MultiInputPolicy"
+  verbose: 1
+
+algorithm_params:
+  learning_rate: 0.00005             # The learning rate, can be a function of progress remaining (from 1 to 0)
+  buffer_size: 500000              # Size of the replay buffer
+  learning_starts: 100               # Steps before learning starts (collecting transitions)
+  batch_size: 32                     # Minibatch size for each gradient update
+  tau: 1.0                           # Soft update coefficient ("Polyak update", 1.0 = hard update)
+  gamma: 0.99                        # Discount factor
+  train_freq: 4                      # Frequency to train the model, can be (int) or (int, "step"/"episode")
+  gradient_steps: 1                  # Number of gradient steps after each rollout (-1 = match env steps)
+  replay_buffer_class: null         # Replay buffer class to use (e.g. HerReplayBuffer), null for default
+  replay_buffer_kwargs: null         # Extra arguments for the replay buffer
+  optimize_memory_usage: false       # Use memory-efficient replay buffer (adds complexity)
+#  n_steps: 100                        # Use n-step return when > 1 (with NStepReplayBuffer)
+  target_update_interval: 10000      # Update the target network every N environment steps
+  exploration_fraction: 0.005        # Fraction of training to anneal epsilon
+  exploration_initial_eps: 1.0       # Initial epsilon for random actions
+  exploration_final_eps: 0.01        # Final epsilon for random actions
+  max_grad_norm: null                # Max gradient norm for clipping (null = no clipping)
+  stats_window_size: 100             # Window size for averaging episode stats in logs
+  seed: null                         # Random seed
+#  device: auto                       # Device to run on (cpu, cuda, auto)
+  _init_setup_model: true            # Whether to build the model on instantiation
