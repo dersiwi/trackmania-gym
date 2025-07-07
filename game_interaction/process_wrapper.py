@@ -135,7 +135,7 @@ class TMIProcessWrapper:
 
 
         self._req_in_progress = False
-        self.logger.warning(f"Image was requested in stepcount {self.__img_req_step_count} and was received in {self.sim_step_count}")
+        #self.logger.warning(f"Image was requested in stepcount {self.__img_req_step_count} and was received in {self.sim_step_count}") TODO figure out if this causes huge log-files
 
         #if self.__continuous_image_request is True, self._req_img just stays True, if its false, its reset to false and self.request_image() has to be called again.
         self._req_img = self.__continuous_image_request
@@ -164,11 +164,9 @@ class TMIProcessWrapper:
         return self._anticipated_simulation_step_of_execution
     
     def __send_action(self) -> None:
-        self.logger.debug(f"Sending Action {self.action}")
-
         left, right, acc, brake = self.action
-        if not self._anticipated_simulation_step_of_execution == self.sim_step_count:
-            self.logger.warning(f"Anticipated to execute action on simulation step {self._anticipated_simulation_step_of_execution}, but actual simulation step was {self.sim_step_count}")
+        #if not self._anticipated_simulation_step_of_execution == self.sim_step_count:  #TODO figure out if this causes huge log-files
+        #    self.logger.warning(f"Anticipated to execute action on simulation step {self._anticipated_simulation_step_of_execution}, but actual simulation step was {self.sim_step_count}")
         self.iface.set_input_state(left, right, acc, brake)
         self._send_action = False
 
@@ -204,7 +202,7 @@ class TMIProcessWrapper:
         
         # now handle command
         cmd_id : int = cmd[IPCFields.CMD_ID]
-        self.logger.debug(f"Got command with command-id {cmd_id} of type {cmd['cmd']}")
+        #self.logger.debug(f"Got command with command-id {cmd_id} of type {cmd['cmd']}") - TODO figure out if this causes huge log-files
         assert not cmd_id == -1, "Command id cannot be -1 as this is used as an internal error-code."
         command = cmd[IPCFields.CMD]
         if command == TMIProcessWrapper.IPCCommands.ACT:
@@ -235,8 +233,8 @@ class TMIProcessWrapper:
         simstep_since_last_act = self.sim_step_count
         time_since_last_act = time.time()
         while self.__run_sync_loop:
-            if self.sim_step_count % 500 == 0:
-                self.logger.debug(f"Sim-Step-Count at {self.sim_step_count}")
+            #if self.sim_step_count % 500 == 0:                                 #TODO figure out if this causes huge log-files
+            #    self.logger.debug(f"Sim-Step-Count at {self.sim_step_count}")
 
             msgtype = self.iface._read_int32()
             

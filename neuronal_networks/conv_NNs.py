@@ -41,6 +41,49 @@ class VisionModelSix(nn.Module): #seal team 6 very cool
         x = self.output_layer(x)
         return x
 
+class VisionModelEight(nn.Module):
+    def __init__(self, in_color_channels : int, out_dim=256):
+        super().__init__()
+
+        def conv_block(in_c, out_c):
+            return nn.Sequential(
+                nn.Conv2d(in_c, out_c, kernel_size=3, stride=1, padding=1),
+                nn.ReLU(inplace=True)
+            )
+
+        self.encoder = nn.Sequential(
+            conv_block(in_color_channels, 32),
+            conv_block(32, 32),
+            nn.MaxPool2d(2),  # Down H,W -> H/2, W/2
+
+            conv_block(32, 64),
+            conv_block(64, 64),
+            nn.MaxPool2d(2),  # H/4, W/4
+
+            conv_block(64, 128),
+            conv_block(128, 128),
+        )
+
+
+        with torch.no_grad():
+            dummy_input = torch.zeros(1, in_color_channels, *(128, 128)) #TODO terrible to hardcode images size here.
+            dummy_out = self.encoder(dummy_input)
+            self.flatten_dim = dummy_out.view(1, -1).shape[1]
+
+        self.feature_projector = nn.Sequential(
+            nn.Flatten(),
+            nn.Linear(self.flatten_dim, 512),
+            nn.ReLU(inplace=True),
+            nn.Linear(512, out_dim),
+            nn.ReLU(inplace=True)
+        )
+
+    def forward(self, x):
+        x = self.encoder(x)
+        x = self.feature_projector(x)
+        return x 
+
+
 
 
 class BaseCNN(nn.Module):

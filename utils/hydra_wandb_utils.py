@@ -59,11 +59,6 @@ def get_models(cfg : TrainConfig, tm_env : TMNF_Single_Agent_Env, print_params :
         # TODO remove the PPO and make this modular so it can be used with different algos
         model = PPO(policy = "MultiInputPolicy",env= tm_env, policy_kwargs=policy_kwargs,tensorboard_log= run_id,device=device ,**algorithm_params)
         model.set_parameters(load_model_path)
-        """ TODO : this didnt work on windows but apparently on linux???
-        model = PPO.load(path = load_model_path,env=tm_env,custom_objects={
-            "features_extractor_class": TMN_Extractor,
-            "features_extractor_kwargs": policy_kwargs["features_extractor_kwargs"]
-        })"""
     else:
         lr : LR_Scheduler = hydra.utils.instantiate(cfg.lr_scheduler)
         model_constructor = hydra.utils.instantiate(cfg.sb3.constructor)
