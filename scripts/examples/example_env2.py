@@ -52,7 +52,7 @@ def main(cfg : TrainConfig):
     #tm_env.add_env_test_calback(testcases.Test_Lateral_Dist_Next_Point_Manager(tm_env.reference_line))
     #tm_env.add_env_test_calback(testcases.Test_Reward_Next_Point_Manager())
     #tm_env.add_env_test_calback(testcases.Test_3D_Next_Point_Manager(key_to_plot="velocity_delta",y_lim=(-50,50)))
-    tm_env.add_env_test_calback(testcases.PretrainingDataCollection(reference_line_manager=tm_env.reference_line, logging_directory=r"C:\Users\siwis\Documents\dataset"))
+    tm_env.add_env_test_calback(testcases.PretrainingDataCollection(reference_line_manager=tm_env.reference_line, logging_directory=r"C:\Users\siwis\Documents\dataset", continuation_idx=1721))
     tm_env.step_with_manual_input()
     
     control_queue.put(TMIProcessWrapper.IPCCommands.get_end_syncloop_command(1000)) #1000 doesnt matter.
