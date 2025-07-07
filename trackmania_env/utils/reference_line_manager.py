@@ -41,6 +41,9 @@ class ReferenceLineManager:
         self.recursive_lookahead_increase_factor = recursive_lookahead_increase_factor
         self.max_recursion_depth : int = max_recursion_depth
 
+        self.__last_lateral_distance_calculated : tuple[int, float] = (-1, -1.0)
+        """Is the last lateral distance that was calculated and the corresponding refline-point idx. If -1.0 no distance was calculated yet."""
+
 
     def get_reference_line_points(self, begin_idx : int, end_idx : int, extrapolate : bool = False, stride : int = 1) -> np.ndarray:
         """Getter for reference-line points. Basically slices refline[begin_idx : end_idx].
@@ -170,8 +173,12 @@ class ReferenceLineManager:
 
         # pythagoras to get length of normal vector w of s, such that position of car p - w = a * s for some scalar a.
         lateral_distance = np.sqrt(distance_last_point ** 2 - sp ** 2)
-
+        self.__last_lateral_distance_calculated = (idx, lateral_distance)
         return lateral_distance
+    
+    def get_last_calculated_lateral_distance(self) -> tuple[int, float]:
+        """Returns a tuple of refline-idx and last-lateral distance that was calculated."""
+        return self.__last_lateral_distance_calculated
     
     def get_discrete_distance(self, refline_idx : int) -> float:
         """Say d(i) is the accumulated distance for all line-segments until i, then this method returns;
@@ -183,6 +190,7 @@ class ReferenceLineManager:
     def reset(self):
         """Resets the current point-index to 0."""
         self.next_point_idx = 0
+        self.__last_lateral_distance_calculated = (-1, -1.0)
         self.calculate_and_step_nextpoint_return = None
 
 

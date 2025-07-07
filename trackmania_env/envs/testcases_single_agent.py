@@ -17,11 +17,14 @@ Implemented TestCases;
     - Test_3D_Next_Point_Manager        : Visualizes several info-values given in each environment step in real time, TODO : which ones?
     - Test_Lateral_Dist_Next_Point_Manager : Tetss and prints lateral distance
     - Test_Reward_Next_Point_Manager    : Prints specific, or all rewards in realtime
+    - PretrainingDataCollection         : Used to collect images as well as lateral distances to create training set for pretraining Vision Encoder.
 """
 import numpy as np
+import os
 from scipy.stats import norm
 from matplotlib import pyplot as plt
 from trackmania_env.envs.testenv_single_agent import TestEnvironmentCallback, Live3dPlotEnvironmentCallback
+from trackmania_env.utils.reference_line_manager import ReferenceLineManager
 
 class PrintRewardsToConsole(TestEnvironmentCallback):
 
@@ -457,3 +460,37 @@ class Test_Reward_Next_Point_Manager(TestEnvironmentCallback):
             self.ax.set_ylabel("Reward Values per env step")
         self.ax.set_xlabel("Step")
         #self.ax.set_ylim(*self.y_lim)  # fixed Y-axis limits
+
+
+class PretrainingDataCollection(TestEnvironmentCallback):
+    def __init__(self, reference_line_manager : ReferenceLineManager, logging_directory : str):
+        super().__init__()
+        self.ref_line_manager = reference_line_manager
+        self.logging_directory = logging_directory
+        self.img_directory = os.path.join(self.logging_directory, "images")
+        os.makedirs(self.img_directory, exist_ok = True)
+        self.labels = os.path.join(self.logging_directory, "labels.csv")
+        
+        if not os.path.exists(self.labels):
+            with open(self.labels, "w") as file:
+                file.write("filename,lateral_distance\n")
+
+
+    def _call_after_step(self, processed_obs, reward, terminated, truncated, info):
+
+        i, d, drel = self.ref_line_manager.get_distance_to_next_point()
+        if i == 0:
+            self.n_step += 1
+            return
+        
+        idx, lateral_dist = self.ref_line_manager.get_last_calculated_lateral_distance()
+        assert i == idx, f"Expected indexes to be the same but got current refline idx {i} and index to which lateral distance was calculated at {idx}"
+        with open(self.labels, "a") as file:
+            file.write(f"img_{self.n_step}.npy,{lateral_dist}\n")
+
+        img : np.ndarray = processed_obs["image"]
+        np.save(os.path.join(self.img_directory, f"img_{self.n_step}.npy"), img)
+
+        
+        
+        self.n_step += 1
