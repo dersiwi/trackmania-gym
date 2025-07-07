@@ -44,6 +44,10 @@ class ReferenceLineManager:
         self.__last_lateral_distance_calculated : tuple[int, float] = (-1, -1.0)
         """Is the last lateral distance that was calculated and the corresponding refline-point idx. If -1.0 no distance was calculated yet."""
 
+    def locate_along_refline(self, position : np.ndarray) -> int:
+        """Perofrms global search and finds nearest reference line point p to postoins. returns index of p."""
+        distances = np.linalg.norm(self.reference_line - position, axis=1, keepdims = True) 
+        return np.argmin(distances)
 
     def get_reference_line_points(self, begin_idx : int, end_idx : int, extrapolate : bool = False, stride : int = 1) -> np.ndarray:
         """Getter for reference-line points. Basically slices refline[begin_idx : end_idx].
@@ -227,6 +231,13 @@ def run_tests():
     assert idx == 2, f"Expected index 2, got {idx}"
 
     # Test 4: No backward motion
+    tracker.next_point_idx = 2
+    car = np.array([5, 0, 0])
+    idx, dist, reldist  = tracker.get_distance_to_next_point(car)
+    print(reldist)
+    assert idx == 2, f"Expected index to remain at 2, got {idx}"
+
+    # Test 4.5: global search
     tracker.next_point_idx = 2
     car = np.array([5, 0, 0])
     idx, dist, reldist  = tracker.get_distance_to_next_point(car)

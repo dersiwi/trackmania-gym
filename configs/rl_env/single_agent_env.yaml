@@ -3,7 +3,7 @@ env:
   _target_: trackmania_env.envs.single_agent_env2.TMNF_Single_Agent_Env
   position_buffer_size : 20
   position_moved_threshold : 0.8
-  reset_mode : "respawn"
+  reset_mode : "random_no_orientation"
   reward_calculator : "nextpoint"
   obs_manager : "nextpointobs" ##use basic for other
   termination_manager : "no_progress"
@@ -13,7 +13,7 @@ env:
   n_previous_actions : 10
 
   # these ones are important for termination manager
-  max_steps_until_reset : 1024  ##aka timeout
+  max_steps_until_reset : 2049  ##aka timeout
   ignore_stuck_for_n_steps_after_reset : 80 
   increase_timeout_intervals : ## total environment steps after which an increase of timeout happens
     - 124000
@@ -21,7 +21,7 @@ env:
   new_timeouts : ## specifies new values for increase of timeout (initial value is max_steps_until_reset)
     - 512
     - 1024
-  terminate_after_steps_without_progress : 64
+  terminate_after_steps_without_progress : 128
 
 reward_manager:
   rewardterm_weights:

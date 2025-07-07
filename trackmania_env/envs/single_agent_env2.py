@@ -26,7 +26,8 @@ from trackmania_env.utils.reference_line_manager import ReferenceLineManager
 from trackmania_env.utils.random_respawn_manager import RandomRespawnManager
 
 from configs.config import EnvConfig
-
+from trackmania_env.utils.orientationless_random_respawn_manager import OrientationlessRespawnManager
+import time
 
 
 class TMNF_Single_Agent_Env(gym.Env):
@@ -98,7 +99,8 @@ class TMNF_Single_Agent_Env(gym.Env):
         self.termination_manager = termination_manger
         self.termination_manager.set_env(self)
 
-        self.respawn_manager = RandomRespawnManager(self.reference_line.reference_line)
+        self.random_respawn_manager = RandomRespawnManager(self.reference_line.reference_line)
+        self.orientationless_respawn_manager : OrientationlessRespawnManager = None
 
         self.n_steps : int = 0
         self.total_steps : int = 0
@@ -117,6 +119,9 @@ class TMNF_Single_Agent_Env(gym.Env):
         # this is the defautl simstateData when the car first gets spawned. We will use this for the random reset
         self.default_ssD = None
         self.default_set = False
+
+    def set_respawn_manager(self, respawn_manager : OrientationlessRespawnManager):
+        self.orientationless_respawn_manager = respawn_manager
 
     def _get_info(self,ssD) -> Dict[str,Any]:
         """Helper function for computing additional information (e.g. for debugging or logging)"""
@@ -247,14 +252,16 @@ class TMNF_Single_Agent_Env(gym.Env):
         
 
 
-        self.reset_car(None)    # TODO : Think about reasonable position to pass, or pass none at all
         self.position_buffer.reset()
         self.rew_calculator.reset()
         self.reference_line.reset()
         self.termination_manager.reset()
         self.n_steps = 0
 
+        # reset_car hsa to be done before! raw_obs is queried. 
+        self.reset_car(None)    
         raw_obs = self._get_raw_obs()
+
         self.reference_line.calculate_and_step_next_point(raw_obs[IPCFields.SIMSTATE].position)
         observation,obs_info = self.obs_manager.get_observation(raw_obs)
         info = self._get_info(ssD=raw_obs[IPCFields.SIMSTATE])
@@ -268,16 +275,27 @@ class TMNF_Single_Agent_Env(gym.Env):
     def reset_car(self, position : np.ndarray | list[float]):
         """Resets car depending on specified mode.
         Position : The position of the car in the current observation."""
-        if self.reset_mode == "respawn":
+        if self.reset_mode == "respawn"or self.reset_mode == "random_no_orientation":
             self.__respawn_car()
-        elif self.reset_mode == "position":
+        elif self.reset_mode == "position" :
             if not self.__start_position_set:
                 self.start_position = position
                 self.__start_position_set = True
             self.__reset_car_position()
         else:
             raise ValueError(f"Mode '{self.reset_mode}' for car-resetting unknown.")
-    
+        
+        if self.reset_mode == "random_no_orientation":
+            # after car has been resettet to its starting position
+            random_starting_pos, teleport = self.orientationless_respawn_manager.get_respawn_coordinates()
+            if teleport:
+                self.__send_command_to_process_wrapper(TMIProcessWrapper.IPCCommands.get_cmd_command(self.__ipc_cmd_id, 
+                                                                                                    TMInterfaceCommands.teleport(random_starting_pos)))
+                assert self.reference_line.next_point_idx == 0, f"Expected reference line to be resetted, but next_point_idx == {self.reference_line.next_point_idx}"
+                nearest_idx = self.reference_line.locate_along_refline(random_starting_pos)
+                self.reference_line.next_point_idx = max(nearest_idx - 3, 0) #put it a little behind, since calculation is performed again.
+                self.logger.info(f"Set self.reference_line.next_point_idx = {self.reference_line.next_point_idx} after reset for position {random_starting_pos}.")
+        
     def __respawn_car(self):
         """Respawns car by 'clicking' enter - uses internal game mechanic; also respawns in correct orientation"""
         self.__send_command_to_process_wrapper(TMIProcessWrapper.IPCCommands.get_cmd_command(self.__ipc_cmd_id, 
@@ -314,5 +332,5 @@ class TMNF_Single_Agent_Env(gym.Env):
         if not self.default_set: self.reset()       
         raw_obs = self._get_raw_obs()
         ssD = raw_obs[IPCFields.SIMSTATE] 
-        reset_state = (self.respawn_manager.make_ssD_from_ref_point(ssD=self.default_ssD))
+        reset_state = (self.random_respawn_manager.make_ssD_from_ref_point(ssD=self.default_ssD))
         self.__send_command_to_process_wrapper(TMIProcessWrapper.IPCCommands.rewind_state(self.__ipc_cmd_id, reset_state))

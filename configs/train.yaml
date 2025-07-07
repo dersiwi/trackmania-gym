@@ -20,8 +20,8 @@ gmi:
   tm_loader_profile_name: "default"
   headless: False
   port: 8775
-  track : simple1_validated.Challenge.Gbx
-  reference_line: tracks/reference_line/simple1_validated.npy
+  track : very_long_checkpoints.Challenge.Gbx
+  reference_line: tracks/reference_line/very_long_checkpoints.npy
   automatic_prevent_sim_finish : True
 
 image:

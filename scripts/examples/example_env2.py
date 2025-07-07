@@ -16,6 +16,7 @@ import trackmania_env.envs.testcases_single_agent as testcases
 
 from trackmania_env.utils.actionmap import get_reverse_action_map
 from trackmania_env.utils.reference_line_manager import ReferenceLineManager
+from trackmania_env.utils.orientationless_random_respawn_manager import OrientationlessRespawnManager
 
 import hydra
 from configs.config import TrainConfig
@@ -40,11 +41,11 @@ def main(cfg : TrainConfig):
         reference_line=ReferenceLineManager(cfg.gmi.reference_line),
         env_cfg=cfg.rl_env.env,
         platform=cfg.platforms.os)
-    
+    tm_env.orientationless_respawn_manager = OrientationlessRespawnManager(respawn_coordinates=OrientationlessRespawnManager.get_respawns_for_very_long_checkpoints())
+
     
     #tm_env.add_env_test_calback(testcases.PrintRewardsToConsole())
-    #tm_env.add_env_test_calback(testcases.Test_RefLine_Next_Point_Manager(tm_env.reference_line.reference_line))
-    #tm_env.add_env_test_calback(testcases.Test_RefLine_Next_Point_Manager())
+    tm_env.add_env_test_calback(testcases.Test_RefLine_Next_Point_Manager(tm_env.reference_line.reference_line))
 
     #tm_env.add_env_test_calback(testcases.Test_1D_Next_Point_Manager(key_to_plot="refline_idx",y_lim=(0,3540)))
     #tm_env.add_env_test_calback(testcases.PrintVector2DToNextReferencePoint())

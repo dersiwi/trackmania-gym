@@ -31,7 +31,7 @@ from trackmania_env.observations.observations import get_observation_manager
 from trackmania_env.rewards.getrewards import get_reward_calculator
 from trackmania_env.terminations.get_termination_manager import get_termination_manager
 from trackmania_env.rewards.reward_calculation import RewardLogCallback, AccumRewardLogCallback
-
+from trackmania_env.utils.orientationless_random_respawn_manager import OrientationlessRespawnManager
 from configs.config import TrainConfig
 
 import glob
@@ -68,6 +68,7 @@ def main(cfg : TrainConfig):
                                         termination_manger=get_termination_manager(cfg),
                                         reference_line = ReferenceLineManager(cfg.gmi.reference_line),
                                         env_cfg=cfg.rl_env.env)
+        tm_env.orientationless_respawn_manager = OrientationlessRespawnManager(respawn_coordinates=OrientationlessRespawnManager.get_respawns_for_very_long_checkpoints())
              
         # apply (Observation)-wrappers to the environment
         for _, wrapper_conf in cfg.rl_env.wrappers.items():

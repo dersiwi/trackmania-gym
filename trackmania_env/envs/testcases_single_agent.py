@@ -12,7 +12,6 @@ Implemented TestCases;
     - PrintRotation         : Prints global coordinate system as well as car-coordinate system to visualize current rotation of the car (3d)
     - PrintVectorToNextReferencePoint   : 3d Visualization of vector of car to next-reference-line-point
     - PrintVector2DToNextReferencePoint : 2d Visualization of vector of car to next-reference-line-point (xz-plane)
-    - Test_RefLine_Next_Point_Manager   : Visualizes track + points given by reflinemanager
     - Test_1D_Next_Point_Manager        : Visualizes several info-values given in each environment step in real time, TODO : which ones?
     - Test_3D_Next_Point_Manager        : Visualizes several info-values given in each environment step in real time, TODO : which ones?
     - Test_Lateral_Dist_Next_Point_Manager : Tetss and prints lateral distance
@@ -22,6 +21,8 @@ Implemented TestCases;
 import numpy as np
 import os
 from scipy.stats import norm
+import matplotlib
+matplotlib.use("TkAgg")
 from matplotlib import pyplot as plt
 from trackmania_env.envs.testenv_single_agent import TestEnvironmentCallback, Live3dPlotEnvironmentCallback
 from trackmania_env.utils.reference_line_manager import ReferenceLineManager
