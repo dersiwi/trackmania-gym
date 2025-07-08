@@ -119,6 +119,7 @@ class TMNF_Single_Agent_Env(gym.Env):
         # this is the defautl simstateData when the car first gets spawned. We will use this for the random reset
         self.default_ssD = None
         self.default_set = False
+        self.first_reset = False
 
     def set_respawn_manager(self, respawn_manager : OrientationlessRespawnManager):
         self.orientationless_respawn_manager = respawn_manager
@@ -155,7 +156,8 @@ class TMNF_Single_Agent_Env(gym.Env):
         return imgs_and_simstate
     
     def _send_action(self, action : tuple[bool, bool, bool, bool]):
-        self.__send_command_to_process_wrapper(TMIProcessWrapper.IPCCommands.get_act_command(self.__ipc_cmd_id, action))
+        self.__send_command_to_process_wrapper(TMIProcessWrapper.IPCCommands.waitforstep(self.__ipc_cmd_id, 1.5 / 1000))
+
 
     def __log_reset_reason(self, terminated_info : dict[str, bool]):
         for key in terminated_info:
@@ -189,12 +191,9 @@ class TMNF_Single_Agent_Env(gym.Env):
         #store action internally and send via TMInterface
         action = ACTION_MAP[action]
         self.actions.append(action)
-        self._send_action(action)
-
+        raw_obs = self.__send_command_to_process_wrapper(TMIProcessWrapper.IPCCommands.step(self.__ipc_cmd_id, action))
         
 
-
-        raw_obs = self._get_raw_obs()
         ssD : SimStateData = raw_obs[IPCFields.SIMSTATE]
         self.position_buffer.add(ssD.position)
         race_finished = ssD.player_info.race_finished
@@ -251,7 +250,6 @@ class TMNF_Single_Agent_Env(gym.Env):
         self.actions = deque([(False,False,False,False)] * self.n_prev_actions, maxlen=self.n_prev_actions)
         
 
-
         self.position_buffer.reset()
         self.rew_calculator.reset()
         self.reference_line.reset()
@@ -269,6 +267,10 @@ class TMNF_Single_Agent_Env(gym.Env):
         if not self.default_set:
             self.default_set = True
             self.default_ssD = raw_obs[IPCFields.SIMSTATE]
+
+        if not self.first_reset:
+            self.__send_command_to_process_wrapper(TMIProcessWrapper.IPCCommands.waitforstep(self.__ipc_cmd_id, 1.5))
+            self.first_reset = True
 
         return observation, info
     
