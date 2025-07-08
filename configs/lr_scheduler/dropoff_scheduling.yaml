@@ -1,0 +1,2 @@
+_target_: neuronal_networks.lr_schedulers.DropoffScheduler
+initial_value: 2.5e-4 

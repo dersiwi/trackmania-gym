@@ -3,13 +3,13 @@ defaults:
   - rl_env: single_agent_env.yaml
   - sb3: ppo.yaml
   - wandb_callbacks : sb3_callback.yaml
-  - models: visionmodelsix.yaml
-  - lr_scheduler: exp_scheduler.yaml
+  - models: visionmodeleight.yaml
+  - lr_scheduler: no_scheduling.yaml
 
 extractors_out_dim: 64 # every extractor will produce an output with this dimension 
 
 learn_args:
-  total_timesteps: 1000
+  total_timesteps: 3000000
   log_interval: 1
   reset_num_timesteps: True
   progress_bar: True
@@ -32,6 +32,6 @@ wandb:
   use: False
   entity : tmnf-practical-ss25
   project : tmnf_ppo
-  checkpoint_freq : 500 # after how many steps should the model be saved automatically
+  checkpoint_freq : 500000 # after how many steps should the model be saved automatically
   eval_freq : 400000 # after how many steps should we check if there is a new better model
 

@@ -7,6 +7,20 @@ class LR_Scheduler:
 
     def get_scheduler(self) -> Callable[[float], float]:
         raise NotImplementedError("Must override get_scheduler()")
+    
+
+class NoScheduler(LR_Scheduler):
+
+    def __init__(self, initial_value):
+        super().__init__(initial_value)
+
+    def get_scheduler(self) -> Callable[[float], float]:
+        """No Scheduling"""
+        def schedule(progress_remaining: float) -> float:
+            """:return: current learning rate"""
+            return self.initial_value
+
+        return schedule
 
 class LinearScheduler(LR_Scheduler):
 
