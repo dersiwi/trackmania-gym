@@ -4,7 +4,7 @@ env:
   position_buffer_size : 20
   position_moved_threshold : 0.8
   reset_mode : "random_no_orientation"
-  reward_calculator : "nextpoint"
+  reward_calculator : "nextpoint2"
   obs_manager : "nextpointobs" ##use basic for other
   termination_manager : "no_progress"
   game_speed : 1
@@ -25,7 +25,7 @@ env:
 
 reward_manager:
   rewardterm_weights:
-    accum_distance_weight : 90
+    accum_distance_weight : 1200
     race_not_finished_weight : 0.05
     race_finished_reward : 100
     other_termination_punishment : 20
@@ -33,7 +33,7 @@ reward_manager:
     backward_weight : 0
     distance_to_center_weight : 1
     velocity_change_reward_weight : 30
-    speed_reward_weight: 2
+    speed_reward_weight: 1
   lateral_distance_mode : "gauss" #triangle, gauss, trapez
     
 obsmanager:

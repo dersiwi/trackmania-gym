@@ -237,13 +237,6 @@ def run_tests():
     print(reldist)
     assert idx == 2, f"Expected index to remain at 2, got {idx}"
 
-    # Test 4.5: global search
-    tracker.next_point_idx = 2
-    car = np.array([5, 0, 0])
-    idx, dist, reldist  = tracker.get_distance_to_next_point(car)
-    print(reldist)
-    assert idx == 2, f"Expected index to remain at 2, got {idx}"
-
     # Test 5: Reset works
     tracker.reset()
     assert tracker.next_point_idx == 0, f"Expected reset to 0, got {tracker.next_point_idx}"

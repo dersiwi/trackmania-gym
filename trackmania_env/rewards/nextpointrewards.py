@@ -10,6 +10,7 @@ from trackmania_env.utils.reference_line_manager import ReferenceLineManager
 from scipy.stats import norm
 import logging
 from configs.config import RewardManagerCfg
+import math
 
 class NextPointRewards(RewradCalculator):
 
@@ -51,11 +52,11 @@ class NextPointRewards(RewradCalculator):
         if self.current_refline_idx < next_refline_index: #only give reward if progress in regards to last one was made
 
             for i in range(next_refline_index - self.current_refline_idx):
-                accum_dist_reward += self.refline_manager.get_discrete_distance(self.current_refline_idx + i) * self.accum_distance_weight
+                accum_dist_reward += self.refline_manager.get_discrete_distance(self.current_refline_idx + i)
 
             self.current_refline_idx = next_refline_index
 
-        return accum_dist_reward
+        return accum_dist_reward * self.accum_distance_weight
     
     def _calculate_lateral_distance_reward(self, next_refline_idx : int, car_position : np.ndarray) -> float:
 
@@ -83,6 +84,16 @@ class NextPointRewards(RewradCalculator):
 
         return distance_to_center_reward * self.distance_to_center_weight
 
+    def _calculate_termination_rewards(self, other_terminations) -> float:
+        ot = False
+        if "stuck" in other_terminations:
+            ot = other_terminations["stuck"]
+        if "no_progress" in other_terminations:
+            ot = ot or other_terminations["no_progress"]
+
+        other_term_reward = (-1) * ot * self.other_termination_punishment
+        return other_term_reward
+        
     def calculate_reward(self, observations, processed_obs : dict[str, any], race_finished, other_terminations : dict[str, bool]):
         ssD : SimStateData = observations[IPCFields.SIMSTATE]
         reward = 0
@@ -102,16 +113,10 @@ class NextPointRewards(RewradCalculator):
         #velocity_reward = self.velocity_reward_weight * current_velocity_normed
         race_not_finished_reward = (-1) * self.race_not_finished_weight
         race_finished = race_finished * self.race_finished_reward
-        ot = False
-        if "stuck" in other_terminations:
-            ot = other_terminations["stuck"]
-        if "no_progress" in other_terminations:
-            ot = ot or other_terminations["no_progress"]
-
-        other_term_reward = (-1) * ot * self.other_termination_punishment
-        backward_punishment = (-1) * np.clip(d, a_min=0, a_max=100) / 100 * self.backward_weight
+        other_term_reward = self._calculate_termination_rewards(other_terminations)
+        #backward_punishment = (-1) * np.clip(d, a_min=0, a_max=100) / 100 * self.backward_weight
         
-        reward = accum_dist_reward + race_not_finished_reward + race_finished + other_term_reward + backward_punishment + distance_to_center_reward + speed_reward 
+        reward = accum_dist_reward + race_not_finished_reward + race_finished + other_term_reward + distance_to_center_reward + speed_reward 
         self.last_simstate = ssD
         return reward, {"total" : reward, 
                         "accumulated_distance" : accum_dist_reward,
@@ -120,7 +125,6 @@ class NextPointRewards(RewradCalculator):
                         "race_not_finished":race_not_finished_reward,
                         "race_finished" : race_finished,
                         "other_terminations":other_term_reward,
-                        "backward_punishment" : backward_punishment,
                         "speed_reward":speed_reward}
 
 
@@ -129,3 +133,38 @@ class NextPointRewards(RewradCalculator):
     def reset(self):
         self.current_refline_idx = 0
         return super().reset()
+    
+
+class NextPointRewards2(NextPointRewards):
+    """Similar to NextPointRewards, but it scales the distance to center in relation to the accumulated distance."""
+    def __init__(self, reward_cfg : RewardManagerCfg):
+        super().__init__(reward_cfg)
+        self.sf1 = 0.4
+        """Scale factor of how large distance-to-center reward can be in relation to accum distance reward.""" 
+        self.sf2 = 1.0
+        """Scale factor of how large distance-to-center reward can be in relation to accum distance reward.""" 
+
+    def calculate_reward(self, observations, processed_obs, race_finished, other_terminations):
+        ssD : SimStateData = observations[IPCFields.SIMSTATE]
+        reward = 0
+        
+        next_refline_index, d, drel = self.refline_manager.get_distance_to_next_point()
+        accum_dist_reward = self._calculate_accum_distance_reward(next_refline_index)
+        distance_to_center_reward = self._calculate_lateral_distance_reward(next_refline_index, ssD.position)
+        if not distance_to_center_reward == 0:
+            distance_to_center_reward_sign = distance_to_center_reward / abs(distance_to_center_reward)
+            distance_to_center_reward_abs = min(abs(distance_to_center_reward), self.sf1 * accum_dist_reward)
+            distance_to_center_reward = distance_to_center_reward_abs * distance_to_center_reward_sign
+        
+        other_term_reward = self._calculate_termination_rewards(other_terminations)
+
+        speed_reward = ssD.display_speed * self.speed_reward_weight / 1000
+        speed_reward = min(speed_reward, self.sf2 * accum_dist_reward)
+        
+
+        reward = speed_reward + accum_dist_reward + distance_to_center_reward + other_term_reward
+
+        return reward, {"speed_reward" : speed_reward,
+                        "accum_dist_reward" : accum_dist_reward,
+                        "distance_to_center_reward" : distance_to_center_reward,
+                        "other_terminations" : other_term_reward}
