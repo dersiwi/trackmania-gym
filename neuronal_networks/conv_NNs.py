@@ -20,13 +20,13 @@ class VisionModelSix(nn.Module): #seal team 6 very cool
 
             nn.Conv2d(128, 128, kernel_size=3, stride=1, padding=1),
             nn.ReLU(inplace=True),
-            nn.AdaptiveAvgPool2d((4, 4)),  # output fixed spatial size: (128, 4, 4)
+          #  nn.AdaptiveAvgPool2d((4, 4)),  # output fixed spatial size: (128, 4, 4)
         )
 
 
         self.flatten = nn.Flatten()
         self.output_layer = nn.Sequential(
-            nn.Linear(128 * 4 * 4, out_dim),
+            nn.Linear(128 * 16 * 16, out_dim), #TODO this is hard coded, think of a way to change this 
             nn.ReLU(inplace=True),
             nn.Dropout(0.2)
         )

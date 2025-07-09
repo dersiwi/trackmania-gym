@@ -60,9 +60,9 @@ def get_models(cfg : TrainConfig, tm_env : TMNF_Single_Agent_Env, print_params :
         model = PPO(policy = "MultiInputPolicy",env= tm_env, policy_kwargs=policy_kwargs,tensorboard_log= run_id,device=device ,**algorithm_params)
         model.set_parameters(load_model_path)
     else:
-        lr : LR_Scheduler = hydra.utils.instantiate(cfg.lr_scheduler)
+        #lr : LR_Scheduler = hydra.utils.instantiate(cfg.lr_scheduler)
         model_constructor = hydra.utils.instantiate(cfg.sb3.constructor)
-        model : BaseAlgorithm | PPO | SAC | DQN = model_constructor(env= tm_env,learning_rate = lr.get_scheduler(), policy_kwargs=policy_kwargs,tensorboard_log= run_id,device=device ,**algorithm_params)
+        model : BaseAlgorithm | PPO | SAC | DQN = model_constructor(env= tm_env, policy_kwargs=policy_kwargs,tensorboard_log= run_id,device=device ,**algorithm_params)
     
     if print_params:
         print("\nExtractor, Policy and Critic architecturs:\n" + "-"*30)

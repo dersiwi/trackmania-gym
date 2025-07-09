@@ -5,7 +5,7 @@ constructor:
   verbose: 1
 
 algorithm_params:
-  learning_rate: 0.00005             # The learning rate, can be a function of progress remaining (from 1 to 0)
+  learning_rate: 0.00025             # The learning rate, can be a function of progress remaining (from 1 to 0)
   buffer_size: 500000              # Size of the replay buffer
   learning_starts: 100               # Steps before learning starts (collecting transitions)
   batch_size: 32                     # Minibatch size for each gradient update

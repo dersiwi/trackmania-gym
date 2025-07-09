@@ -1,7 +1,7 @@
 defaults:
   - platforms: labpc.yaml  # or platforms/windows
   - rl_env: single_agent_env.yaml
-  - sb3: ppo.yaml
+  - sb3: qr_dqn.yaml
   - wandb_callbacks : sb3_callback.yaml
   - models: visionmodelsix.yaml
   - lr_scheduler: exp_scheduler.yaml
@@ -13,7 +13,7 @@ learn_args:
   log_interval: 1
   reset_num_timesteps: True
   progress_bar: True
-  tb_log_name: "PPO"
+  tb_log_name: "QR_DQN"
 
 gmi:
   launch: True
@@ -32,7 +32,7 @@ image:
 wandb:
   use: True
   entity : tmnf-practical-ss25
-  project : tmnf_ppo
-  checkpoint_freq : 200000 # after how many steps should the model be saved automatically
-  eval_freq : 400000 # after how many steps should we check if there is a new better model
+  project : tmnf_dqn
+  checkpoint_freq : 500000 # after how many steps should the model be saved automatically
+  eval_freq : 900000 # after how many steps should we check if there is a new better model
 

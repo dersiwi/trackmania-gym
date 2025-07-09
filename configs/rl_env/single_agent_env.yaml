@@ -3,11 +3,11 @@ env:
   _target_: trackmania_env.envs.single_agent_env2.TMNF_Single_Agent_Env
   position_buffer_size : 20
   position_moved_threshold : 0.8
-  reset_mode : "random_no_orientation"
-  reward_calculator : "nextpoint2"
+  reset_mode : "respawn"
+  reward_calculator : "nextpoint"
   obs_manager : "nextpointobs" ##use basic for other
   termination_manager : "no_progress"
-  game_speed : 1
+  game_speed : 30
   countdown_speed : 50
   test : False
   n_previous_actions : 10
