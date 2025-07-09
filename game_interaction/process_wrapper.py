@@ -130,6 +130,12 @@ class TMIProcessWrapper:
         self.max_waiting_duration : float = 1
 
 
+        self.n_steps = 0
+        """Tracks number of steps to track step-frequency"""
+        self.step_time = time.time()
+        """Tracks time to track step-frequency"""
+
+
 
         
     def __receive_frame(self):
@@ -227,6 +233,7 @@ class TMIProcessWrapper:
                 
             return cmd   
         elif command == TMIProcessWrapper.IPCCommands.WAITFORSTEP:
+            self.step_time = time.time()
             self.waitforstep = True
             self.waitforstepmode_on = True #<-- Two variables because waitforstep can disable itself.
             self.max_waiting_duration = cmd[IPCFields.ARGS]
@@ -243,6 +250,15 @@ class TMIProcessWrapper:
         self.waitforstep_req_img_next_syncstep = True
         self.waitforstep_continue_sucessfully = True
         self.waitforstep_answer_expected = True
+        self.ingame_time_passed = 0
+        self.n_steps += 1
+        if self.n_steps % 100 == 0 and self.n_steps > 0 :
+            gt= time.time() - self.step_time
+            self.logger.info(f"Executed {self.n_steps} in {gt}s. Actions per second : {self.n_steps / gt}s. And actions per ingame seconds game_seconds : {self.n_steps / (self.ingame_time_tracking / 1000)}")
+            self.step_time = time.time()
+            self.n_steps = 0
+            self.ingame_time_tracking = 0
+
 
     def syncloop(self, logfile = "tmi_process.log"):
         self._reconfigure_logger(logfile)
@@ -254,14 +270,22 @@ class TMIProcessWrapper:
         self.waitforstep_step_cmd_id = -1
         self.waitforstep_answer_expected = False
         self.waitforstep_continue_sucessfully = False
+
+
         aps = 20 # actions per second.
+        gametime_between_actions = 1 / aps * 1000 # convert actions per second into gametime 
+        
+        self.ingame_time_passed = 0
+        global_ingame_time = 0
+        self.ingame_time_tracking = 0
 
         total_msgs = 0
         unsucessful_waitings_for_step = 0
         disable_waitforstep_after_n_consecutive_timeouts = 10
         consecutive_timeouts = 0
-        while self.__run_sync_loop:
 
+        while self.__run_sync_loop:
+            
             if self.waitforstep_req_img_next_syncstep:
                 self.request_image()
                 self.waitforstep_req_img_next_syncstep = False
@@ -275,38 +299,42 @@ class TMIProcessWrapper:
                 self.waitforstep_continue_sucessfully = False #only after waitforstep is officially done, this shoul be tracking again.
 
             broke_becauseof_req_img = False
-            waiting_duration = time.time()
-            while self.waitforstep and time.time() - waiting_duration < self.max_waiting_duration and not self._req_in_progress \
-                  and not self.waitforstep_req_img_next_syncstep and not self.waitforstep_answer_expected:
-                command = self.check_command_queue()
-                if not command == None and command[IPCFields.CMD] == TMIProcessWrapper.IPCCommands.STEP:
-                    self.waitforstep_execution(command[IPCFields.ARGS], command[IPCFields.CMD_ID])
-                    break
-                    #if waiting_duration - time.time() < 1 / aps:
-                    #    time.sleep(1 / aps - (waiting_duration - time.time()) - 0.00001)
-                if not command == None and command[IPCFields.CMD] == TMIProcessWrapper.IPCCommands.REQ_IMG:
-                    broke_becauseof_req_img = True
-                    break
-                time.sleep(0.0000001)
 
-            if self.waitforstep and not broke_becauseof_req_img:
-                # self-disable mechanism for waitforstep
-                if self.waitforstep_continue_sucessfully:
-                    consecutive_timeouts = 0
-                else:
-                    consecutive_timeouts += 1
-                if consecutive_timeouts >= disable_waitforstep_after_n_consecutive_timeouts:
-                    consecutive_timeouts = 0
-                    self.waitforstep = False
-                    self.logger.warning(f"Disabling waitforstep method after {disable_waitforstep_after_n_consecutive_timeouts} consecutive timeouts.")
-                    self.send_action((False, False, False, False))
+            if self.waitforstep and not self._req_in_progress and not self.waitforstep_req_img_next_syncstep and not self.waitforstep_answer_expected and self.ingame_time_passed >= gametime_between_actions:
 
-            unsucessful_waitings_for_step += (not self.waitforstep_continue_sucessfully and self.waitforstep)
+                waiting_duration = time.time()
+                while  time.time() - waiting_duration < self.max_waiting_duration:
+                    command = self.check_command_queue()
+                    if not command == None and command[IPCFields.CMD] == TMIProcessWrapper.IPCCommands.STEP:
+                        self.waitforstep_execution(command[IPCFields.ARGS], command[IPCFields.CMD_ID])
+                        break
+                        #if waiting_duration - time.time() < 1 / aps:
+                        #    time.sleep(1 / aps - (waiting_duration - time.time()) - 0.00001)
+                    if not command == None and command[IPCFields.CMD] == TMIProcessWrapper.IPCCommands.REQ_IMG:
+                        broke_becauseof_req_img = True
+                        break
+                    time.sleep(0.0000001)
+                
 
-            if total_msgs % 10000 == 0:
-                self.logger.info(f"Could not continue successfully. Timeout; This happend in {unsucessful_waitings_for_step}/{total_msgs} loop-iterations.")
-                total_msgs = 0 #<-- there is no need to set this to zero here but i am anxious it will overflow.
-                unsucessful_waitings_for_step = 0
+
+                if self.waitforstep and not broke_becauseof_req_img:
+                    # self-disable mechanism for waitforstep
+                    if self.waitforstep_continue_sucessfully:
+                        consecutive_timeouts = 0
+                    else:
+                        consecutive_timeouts += 1
+                    if consecutive_timeouts >= disable_waitforstep_after_n_consecutive_timeouts:
+                        consecutive_timeouts = 0
+                        self.waitforstep = False
+                        self.logger.warning(f"Disabling waitforstep method after {disable_waitforstep_after_n_consecutive_timeouts} consecutive timeouts.")
+                        self.send_action((False, False, False, False))
+
+                unsucessful_waitings_for_step += (not self.waitforstep_continue_sucessfully and self.waitforstep)
+
+                if total_msgs % 10000 == 0:
+                    self.logger.info(f"Could not continue successfully. Timeout; This happend in {unsucessful_waitings_for_step}/{total_msgs} loop-iterations.")
+                    total_msgs = 0 #<-- there is no need to set this to zero here but i am anxious it will overflow.
+                    unsucessful_waitings_for_step = 0
 
             msgtype = self.iface._read_int32()
             total_msgs += 1
@@ -316,6 +344,18 @@ class TMIProcessWrapper:
             if msgtype == int(MessageType.SC_RUN_STEP_SYNC): # simulation step is complete
 
                 _time = self.iface._read_int32() # _time in this case is the total simulation time (i think)
+
+                if _time > 0:
+                    increment = _time - global_ingame_time
+                    self.ingame_time_tracking += increment
+                    self.ingame_time_passed += increment
+                    global_ingame_time = _time
+
+                else:
+                    global_ingame_time = 0
+                    self.ingame_time_passed = 0
+                    self.ingame_time_tracking = 0
+
                 self.sim_step_count += 1
 
                 # ============================ BEGIN ON RUN STEP ============================

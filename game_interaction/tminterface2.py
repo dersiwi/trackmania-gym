@@ -38,6 +38,7 @@ class MessageType(IntEnum):
 
 
 class TMInterface:
+    """https://tminterface.readthedocs.io/en/latest/source/tminterface.html#tminterface.interface.MessageType.S_ON_RUN_STEP"""
     registered = False
 
     def __init__(self, port: int):
