@@ -11,6 +11,7 @@ class GMIConfig:
     track : str
     automatic_prevent_sim_finish : bool
     reference_line : str
+    camera: int
 
 
 @dataclass

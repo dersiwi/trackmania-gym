@@ -1,5 +1,5 @@
 defaults:
-  - platforms: windows.yaml  # or platforms/windows
+  - platforms: linux.yaml  # or platforms/windows
   - rl_env: single_agent_env.yaml
   - sb3: ppo.yaml
   - wandb_callbacks : sb3_callback.yaml
@@ -23,6 +23,7 @@ gmi:
   track : very_long_checkpoints.Challenge.Gbx
   reference_line: tracks/reference_line/very_long_checkpoints.npy
   automatic_prevent_sim_finish : True
+  camera: 3
 
 image:
   width: 128

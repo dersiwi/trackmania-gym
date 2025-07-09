@@ -23,6 +23,7 @@ gmi:
   track : simple1_validated.Challenge.Gbx
   reference_line: tracks/reference_line/simple1_validated.npy
   automatic_prevent_sim_finish : True
+  camera: 2
 
 image:
   width: 128

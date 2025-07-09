@@ -69,7 +69,8 @@ class TMIProcessWrapper:
                  command_queue : Queue, response_queue : Queue, 
                  track : str, 
                  img_width : int, img_height : int,
-                 automatic_prevent_sim_finish : bool = True):
+                 automatic_prevent_sim_finish : bool = True,
+                 camera:int=2):
         """
         Parameters
         ---------
@@ -117,6 +118,9 @@ class TMIProcessWrapper:
         self.automatic_prevent_sim_finish = automatic_prevent_sim_finish
         self.map = track
         self.logdir = "logs"
+
+        self.camera = camera
+        self.ui_disabled = False
 
     def request_image(self, continuously : bool = False, cmd_id : int = -1):
         """Request an image with the specified image and width (specified in class initialization)
@@ -247,6 +251,12 @@ class TMIProcessWrapper:
                 self.sim_step_count += 1
 
                 # ============================ BEGIN ON RUN STEP ============================
+
+                self.iface.execute_command(f"cam {self.camera}")
+
+                if not self.ui_disabled:
+                    self.iface.toggle_interface(False)
+                    self.ui_disabled= True
 
                 if not self.__start_cmd_id == -1:
                     self.response_queue.put_nowait({IPCFields.CMD_ID : self.__start_cmd_id, IPCFields.STATUS : IPCFields.STATUS_OK})

@@ -506,3 +506,31 @@ class PretrainingDataCollection(TestEnvironmentCallback):
 
         
         self.n_step += 1
+
+
+class Plot_Obs_Images(TestEnvironmentCallback):
+    def __init__(self):
+        super().__init__()
+
+        # Setup a single figure and axis for the image
+        self.fig, self.ax = plt.subplots(figsize=(8, 8))
+        self.image_handle = None  # Will hold the imshow image object
+
+        plt.ion()
+        plt.show()
+
+    def _call_after_step(self, processed_obs, reward, terminated, truncated, info):
+        # Get the image from observation (shape: (1, 1, H, W))
+        img_tensor = processed_obs["image"]  # assumed torch.Tensor
+        img_np = img_tensor.squeeze().cpu().numpy()  # shape: (H, W)
+
+        if self.image_handle is None:
+            # First time: create the imshow object
+            self.image_handle = self.ax.imshow(img_np, cmap='gray')
+            self.ax.axis('off')
+        else:
+            # Update image data
+            self.image_handle.set_data(img_np)
+
+        self.fig.canvas.draw()
+        plt.pause(0.001)  # Small pause to allow GUI update

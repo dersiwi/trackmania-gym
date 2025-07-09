@@ -152,6 +152,7 @@ class TMInterface:
     
     def on_connect_event(self, user_profile : int = 1, map_to_load : str = "ESL-Hockolicious.Challenge.Gbx") -> None:
         """Executes command for game-initialization. Basically prompts the game to directly enter into the loaded map."""
+        self.execute_command("toggle_console")
         self.execute_command(f"set autologin {user_profile}")
         self.execute_command("set unfocused_fps_limit false")
         self.execute_command("set disable_forced_camera true")
