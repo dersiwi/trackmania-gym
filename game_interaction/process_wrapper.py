@@ -154,6 +154,7 @@ class TMIProcessWrapper:
 
     def __request_frame(self):
         self.logger.debug("Requesting frame from game instance.")
+        self.iface.rewind_to_current_state()
         self.iface.request_frame(self.img_width, self.img_height)
         self._req_in_progress = True
 
