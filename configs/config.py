@@ -135,6 +135,7 @@ class EnvConfig:
     game_speed : float
     countdown_speed : float
     test : bool
+    wrap_obs_in_test : bool
     n_previous_actions : int
     ignore_stuck_for_n_steps_after_reset : int
     increase_timeout_intervals : list[int]
@@ -145,6 +146,7 @@ class EnvConfig:
     automatic_prevent_sim_finish : bool
     disable_waitforstep_after_n_consecutive_timeouts : int
     waitforstep_timeout_in_s : float
+    use_rewind : bool
 
 
 @dataclass

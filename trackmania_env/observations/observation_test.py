@@ -7,17 +7,26 @@ import torch
 from game_interaction.ipc_fields import IPCFields
 import os
 from PIL import Image
-from torchvision.transforms.functional import to_pil_image
 
 
 class ObservationTest(ObservationManager):
 
-    def __init__(self, observation_list, colorspace, convert_torch, img_width, img_height, log_directory : str, log_frequency : int = 10, log_images : bool = True):
+    def __init__(self, obs_mangager : ObservationManager, observation_list, colorspace, convert_torch, img_width, img_height, log_directory : str, log_frequency : int = 10, log_images : bool = True, max_logs = 50):
         super().__init__(observation_list, colorspace, convert_torch, img_width, img_height)
         self.log_directory = log_directory
         self.log_frequency = log_frequency
         self.step = 0
         self.log_images = True
+        self.obs_manager = obs_mangager
+        self.max_logs = max_logs
+        os.makedirs(self.log_directory, exist_ok=True)
+
+    def set_env(self, environment):
+        self.obs_manager.set_env(environment)
+        return super().set_env(environment)
+    
+    def get_observation_dict(self):
+        return self.obs_manager.get_observation_dict()
 
 
     def get_observation(self, raw_observation : dict[str, np.ndarray | SimStateData]) -> np.ndarray | dict[str, np.ndarray] | torch.Tensor | dict[str, torch.Tensor]:
@@ -26,9 +35,9 @@ class ObservationTest(ObservationManager):
         """
         self.step += 1
 
-        processed_obs, info = super().get_observation(raw_observation)
+        processed_obs, info = self.obs_manager.get_observation(raw_observation)
 
-        if self.step % self.log_frequency == 0 and self.log_images:
+        if self.step % self.log_frequency == 0 and self.log_images and self.step < self.max_logs:
             assert raw_observation[IPCFields.IMG].shape == (self.img_width, self.img_height, 4), f"Got unexpected shape {raw_observation[IPCFields.IMG].shape}"
             
             np.save(os.path.join(self.log_directory, f"raw_image_{self.step}.npy"), raw_observation[IPCFields.IMG])
@@ -40,11 +49,9 @@ class ObservationTest(ObservationManager):
                 np.save( os.path.join(self.log_directory,f"processed_image_{self.step}.npy"), processed_img)
             if self.colorspace == ObservationManager.Colorspace.GRAYSCALE:
                 processed_img = processed_img.squeeze()
-                assert processed_img.shape == (100, 100), f"Got unexpected shape {processed_img.shape}"
-                mode = "L"
-            else:
-                mode = "RGB"
-            pimg = Image.fromarray(processed_img, mode=mode)
+                assert processed_img.shape == (self.img_height, self.img_width), f"Got unexpected shape {processed_img.shape}"
+
+            pimg = Image.fromarray((processed_img * 255).astype('uint8'))
             pimg.save(os.path.join(self.log_directory, f"processed_image_{self.step}.png"))
 
             # print position of and veloctiy of car.

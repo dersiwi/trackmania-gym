@@ -7,9 +7,10 @@ env:
   reward_calculator : "nextpoint2"
   obs_manager : "nextpointobs" ##use basic for other
   termination_manager : "no_progress"
-  game_speed : 1
+  game_speed : 30
   countdown_speed : 50
   test : False
+  wrap_obs_in_test : false    # Applies an test-wrapper to the observations.
   n_previous_actions : 10
 
   # these ones are important for termination manager
@@ -27,6 +28,7 @@ env:
   disable_waitforstep_after_n_consecutive_timeouts : 5
   actions_per_second : 20
   waitforstep_timeout_in_s : 1.2 # this HAS to be smaller than the timeout of TMInterface
+  use_rewind : true
 
 reward_manager:
   rewardterm_weights:

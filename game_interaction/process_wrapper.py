@@ -141,6 +141,7 @@ class TMIProcessWrapper:
         self.aps = config.actions_per_second
         self.gametime_between_actions = 1 / self.aps * 1000 # in-game-seconds between each action
         self.disable_waitforstep_after_n_consecutive_timeouts = config.disable_waitforstep_after_n_consecutive_timeouts
+        self.use_rewind  = config.use_rewind
 
 
         
@@ -187,7 +188,8 @@ class TMIProcessWrapper:
     def request_image(self):
         """Request an image with the specified image and width (specified in class initialization)        
         cmd_id : command-id for IPC; used internally only."""
-        self.iface.rewind_to_current_state()
+        if self.use_rewind:
+            self.iface.rewind_to_current_state()
         self.iface.request_frame(self.img_width, self.img_height)
         self._req_in_progress = True
         
@@ -250,7 +252,8 @@ class TMIProcessWrapper:
         return cmd
 
     def waitforstep_execution(self, action, cmd_id : int):
-        self.iface.rewind_to_current_state()
+        if self.use_rewind:
+            self.iface.rewind_to_current_state()
         self.waitforstep_step_cmd_id = cmd_id
         self.send_action(action)
         self.waitforstep_req_img_next_syncstep = True
