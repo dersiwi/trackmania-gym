@@ -141,6 +141,11 @@ class EnvConfig:
     new_timeouts : list[int]
     terminate_after_steps_without_progress : int
 
+    actions_per_second : int
+    automatic_prevent_sim_finish : bool
+    disable_waitforstep_after_n_consecutive_timeouts : int
+    waitforstep_timeout_in_s : float
+
 
 @dataclass
 class RewardManagerCfg:

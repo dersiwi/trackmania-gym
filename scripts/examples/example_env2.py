@@ -30,7 +30,7 @@ _HYDRA_PARAMS = {
 @hydra.main(**_HYDRA_PARAMS)
 def main(cfg : TrainConfig):
 
-    tmi_process, control_queue, response_queue = start_process_and_wait_for_startsignal(cfg.platforms, cfg.gmi, cfg.image.width, cfg.image.height)
+    tmi_process, control_queue, response_queue = start_process_and_wait_for_startsignal(cfg, cfg.image.width, cfg.image.height)
 
     tm_env = TestEnvironment(
         command_queue=control_queue,

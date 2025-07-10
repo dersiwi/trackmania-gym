@@ -8,6 +8,7 @@ import logging, os
 from multiprocessing import Queue
 from queue import Empty
 from tminterface.structs import CheckpointData, SimStateData
+from configs.config import EnvConfig
 
 class TMIProcessWrapper:
 
@@ -80,7 +81,7 @@ class TMIProcessWrapper:
                  command_queue : Queue, response_queue : Queue, 
                  track : str, 
                  img_width : int, img_height : int,
-                 automatic_prevent_sim_finish : bool = True):
+                 config : EnvConfig):
         """
         Parameters
         ---------
@@ -91,7 +92,7 @@ class TMIProcessWrapper:
         - track             : Specifies which track to load once instance is connected to game
         - img_width         : Image width of images queried from game
         - img_height        : Image height of images queried from game
-        - automatic_prevent_sim_finish : If True, iface.prevent_sim_finish() is called automatically, once the current and target checkpoint are the same.
+        - config : Environment config; contains more configuration
         """
         self.launch_game : bool = launch_game
         self.gim = gim
@@ -121,7 +122,9 @@ class TMIProcessWrapper:
         self.__run_sync_loop = True
         self.__start_cmd_id = -1
 
-        self.automatic_prevent_sim_finish = automatic_prevent_sim_finish
+        self.automatic_prevent_sim_finish = config.automatic_prevent_sim_finish
+        """If True, iface.prevent_sim_finish() is called automatically, once the current and target checkpoint are the same."""
+
         self.map = track
         self.logdir = "logs"
 
@@ -135,6 +138,9 @@ class TMIProcessWrapper:
         self.step_time = time.time()
         """Tracks time to track step-frequency"""
 
+        self.aps = config.actions_per_second
+        self.gametime_between_actions = 1 / self.aps * 1000 # in-game-seconds between each action
+        self.disable_waitforstep_after_n_consecutive_timeouts = config.disable_waitforstep_after_n_consecutive_timeouts
 
 
         
@@ -145,7 +151,7 @@ class TMIProcessWrapper:
 
         self._req_in_progress = False
         
-        response = {IPCFields.CMD_ID : self._req_img_cmd_id, IPCFields.STATUS : IPCFields.STATUS_OK, IPCFields.IMG : frame,IPCFields.SIMSTATE : simstate, IPCFields.SIMSTEP : self.sim_step_count}
+        response = {IPCFields.CMD_ID : self._req_img_cmd_id, IPCFields.STATUS : IPCFields.STATUS_OK, IPCFields.IMG : frame, IPCFields.SIMSTATE : simstate, IPCFields.SIMSTEP : self.sim_step_count}
 
         if not self._req_img_cmd_id == -1:
             self.response_queue.put_nowait(response)
@@ -155,7 +161,7 @@ class TMIProcessWrapper:
 
 
 
-    def send_action(self, action) -> dict:
+    def send_action(self, action : tuple[bool, bool, bool, bool]) -> dict:
         left, right, acc, brake = action
         self.iface.set_input_state(left, right, acc, brake)
 
@@ -272,19 +278,18 @@ class TMIProcessWrapper:
         self.waitforstep_continue_sucessfully = False
 
 
-        aps = 15 # actions per second.
-        gametime_between_actions = 1 / aps * 1000 # convert actions per second into gametime 
-        
         self.ingame_time_passed = 0
         global_ingame_time = 0
         self.ingame_time_tracking = 0
 
         total_msgs = 0
         unsucessful_waitings_for_step = 0
-        disable_waitforstep_after_n_consecutive_timeouts = 10
+        
         consecutive_timeouts = 0
 
         while self.__run_sync_loop:
+            
+            # -------- methods for waitforstep
             
             if self.waitforstep_req_img_next_syncstep:
                 self.request_image()
@@ -300,7 +305,7 @@ class TMIProcessWrapper:
 
             broke_becauseof_req_img = False
 
-            if self.waitforstep and not self._req_in_progress and not self.waitforstep_req_img_next_syncstep and not self.waitforstep_answer_expected and self.ingame_time_passed >= gametime_between_actions:
+            if self.waitforstep and not self._req_in_progress and not self.waitforstep_req_img_next_syncstep and not self.waitforstep_answer_expected and self.ingame_time_passed >= self.gametime_between_actions:
 
                 waiting_duration = time.time()
                 while  time.time() - waiting_duration < self.max_waiting_duration:
@@ -308,8 +313,7 @@ class TMIProcessWrapper:
                     if not command == None and command[IPCFields.CMD] == TMIProcessWrapper.IPCCommands.STEP:
                         self.waitforstep_execution(command[IPCFields.ARGS], command[IPCFields.CMD_ID])
                         break
-                        #if waiting_duration - time.time() < 1 / aps:
-                        #    time.sleep(1 / aps - (waiting_duration - time.time()) - 0.00001)
+
                     if not command == None and command[IPCFields.CMD] == TMIProcessWrapper.IPCCommands.REQ_IMG:
                         broke_becauseof_req_img = True
                         break
@@ -323,10 +327,12 @@ class TMIProcessWrapper:
                         consecutive_timeouts = 0
                     else:
                         consecutive_timeouts += 1
-                    if consecutive_timeouts >= disable_waitforstep_after_n_consecutive_timeouts:
+                    if consecutive_timeouts >= self.disable_waitforstep_after_n_consecutive_timeouts:
                         consecutive_timeouts = 0
                         self.waitforstep = False
-                        self.logger.warning(f"Disabling waitforstep method after {disable_waitforstep_after_n_consecutive_timeouts} consecutive timeouts.")
+                        self.ingame_time_passed = 0
+                        self.n_steps = 0
+                        self.logger.warning(f"Disabling waitforstep method after {self.disable_waitforstep_after_n_consecutive_timeouts} consecutive timeouts.")
                         self.send_action((False, False, False, False))
 
                 unsucessful_waitings_for_step += (not self.waitforstep_continue_sucessfully and self.waitforstep)
@@ -335,6 +341,8 @@ class TMIProcessWrapper:
                     self.logger.info(f"Could not continue successfully. Timeout; This happend in {unsucessful_waitings_for_step}/{total_msgs} loop-iterations.")
                     total_msgs = 0 #<-- there is no need to set this to zero here but i am anxious it will overflow.
                     unsucessful_waitings_for_step = 0
+
+            #--------- end mehtods waitforstep
 
             msgtype = self.iface._read_int32()
             total_msgs += 1
@@ -404,9 +412,3 @@ class TMIProcessWrapper:
 
         if self.launch_game:
             self.gim.close_game()
-        
-
-        
-
-
-    

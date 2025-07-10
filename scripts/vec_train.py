@@ -65,8 +65,7 @@ def main(cfg : TrainConfig):
     # Instanciate num_envs GMI, TMNF-Environment and start TMi-Interaction processes via threadpool.
     with ThreadPoolExecutor(max_workers=len(ports)) as executor:
         func = partial(start_process_and_wait_for_startsignal,
-                   platform=cfg.platforms,
-                   gmi_cfg=cfg.gmi,
+                   cfg,
                    image_width=cfg.image.width,
                    image_height=cfg.image.height)
         queues_procs = list(executor.map(func, ports))

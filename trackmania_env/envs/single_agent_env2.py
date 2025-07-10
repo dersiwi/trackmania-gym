@@ -120,6 +120,8 @@ class TMNF_Single_Agent_Env(gym.Env):
         self.default_ssD = None
         self.default_set = False
         self.first_reset = False
+        
+        self.waitforstep_timeout = env_cfg.waitforstep_timeout_in_s
 
     def set_respawn_manager(self, respawn_manager : OrientationlessRespawnManager):
         self.orientationless_respawn_manager = respawn_manager
@@ -144,7 +146,11 @@ class TMNF_Single_Agent_Env(gym.Env):
             self.logger.error(f"Got error when executing command {command[IPCFields.CMD]}, with message : {response[IPCFields.ERROR]}")
         return response
     
-    def _get_raw_obs(self) -> Dict:
+    def __send_action(self, action : tuple[bool, bool, bool, bool]):
+        self.__send_command_to_process_wrapper(TMIProcessWrapper.IPCCommands.get_act_command(self.__ipc_cmd_id, action))
+
+    
+    def __get_raw_obs(self) -> Dict:
         """Helper function to translate the the environment's state into an observation"""
 
         try:
@@ -155,8 +161,6 @@ class TMNF_Single_Agent_Env(gym.Env):
 
         return imgs_and_simstate
     
-    def _send_action(self, action : tuple[bool, bool, bool, bool]):
-        self.__send_command_to_process_wrapper(TMIProcessWrapper.IPCCommands.waitforstep(self.__ipc_cmd_id, 1.5 / 1000))
 
 
     def __log_reset_reason(self, terminated_info : dict[str, bool]):
@@ -258,7 +262,7 @@ class TMNF_Single_Agent_Env(gym.Env):
 
         # reset_car hsa to be done before! raw_obs is queried. 
         self.reset_car(None)    
-        raw_obs = self._get_raw_obs()
+        raw_obs = self.__get_raw_obs()
 
         self.reference_line.calculate_and_step_next_point(raw_obs[IPCFields.SIMSTATE].position)
         observation,obs_info = self.obs_manager.get_observation(raw_obs)
@@ -269,7 +273,7 @@ class TMNF_Single_Agent_Env(gym.Env):
             self.default_ssD = raw_obs[IPCFields.SIMSTATE]
 
         if not self.first_reset:
-            self.__send_command_to_process_wrapper(TMIProcessWrapper.IPCCommands.waitforstep(self.__ipc_cmd_id, 1.5))
+            self.__send_command_to_process_wrapper(TMIProcessWrapper.IPCCommands.waitforstep(self.__ipc_cmd_id, self.waitforstep_timeout))
             self.first_reset = True
 
         return observation, info
@@ -332,7 +336,7 @@ class TMNF_Single_Agent_Env(gym.Env):
     def random_reset(self,seed = None, options = None):
         super().reset(seed=seed, options=options) 
         if not self.default_set: self.reset()       
-        raw_obs = self._get_raw_obs()
+        raw_obs = self.__get_raw_obs()
         ssD = raw_obs[IPCFields.SIMSTATE] 
         reset_state = (self.random_respawn_manager.make_ssD_from_ref_point(ssD=self.default_ssD))
         self.__send_command_to_process_wrapper(TMIProcessWrapper.IPCCommands.rewind_state(self.__ipc_cmd_id, reset_state))

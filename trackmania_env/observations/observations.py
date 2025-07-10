@@ -2,8 +2,8 @@ from trackmania_env.observations.observation_manager import ObservationManager
 from trackmania_env.observations.observation_test import ObservationTest
  
 from configs.config import TrainConfig
-from trackmania_env.utils.init_linesight_obs import get_linesight_obs_instance
 
+from trackmania_env.observations.linesight_obs_wrapper import get_linesight_obs_instance
 from trackmania_env.observations.nextpoint_obs import NextPointObsManager
 
 def get_observation_manager(cfg : TrainConfig) -> ObservationManager:
