@@ -1,6 +1,7 @@
 from game_interaction.tminterface2 import MessageType, TMInterface
 from game_interaction.game_instance_manager2 import GameInstanceManager
 from game_interaction.ipc_fields import IPCFields
+from game_interaction.tminterface_commands import TMInterfaceCommands
 import numpy as np
 import time
 import logging, os
@@ -143,6 +144,7 @@ class TMIProcessWrapper:
         self.gametime_between_actions = 1 / self.aps * 1000 # in-game-seconds between each action
         self.disable_waitforstep_after_n_consecutive_timeouts = config.disable_waitforstep_after_n_consecutive_timeouts
         self.use_rewind  = config.use_rewind
+        self.camera_id = config.camera_id
 
 
         
@@ -372,7 +374,7 @@ class TMIProcessWrapper:
 
                 # ============================ BEGIN ON RUN STEP ============================
 
-                #self.iface.execute_command(f"cam {self.camera}")
+                self.iface.execute_command(TMInterfaceCommands.set_camera(self.camera_id)) # TODO : is this necessary on every step?
 
                 if not self.ui_disabled:
                     self.iface.toggle_interface(False)

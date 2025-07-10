@@ -12,7 +12,7 @@ env:
   test : False
   wrap_obs_in_test : false    # Applies an test-wrapper to the observations.
   n_previous_actions : 10
-
+  camera_id : 0
   # these ones are important for termination manager
   max_steps_until_reset : 2049  ##aka timeout
   ignore_stuck_for_n_steps_after_reset : 80 

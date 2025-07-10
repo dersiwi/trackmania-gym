@@ -138,6 +138,8 @@ class EnvConfig:
     test : bool
     wrap_obs_in_test : bool
     n_previous_actions : int
+    camera_id : int
+
     ignore_stuck_for_n_steps_after_reset : int
     increase_timeout_intervals : list[int]
     new_timeouts : list[int]

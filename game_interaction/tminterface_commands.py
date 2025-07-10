@@ -45,3 +45,8 @@ class TMInterfaceCommands:
     def set_variable(variable : str, value : any) -> str:
         """Sets a variable. Available variables and value-ranges defined here : https://donadigo.com/tminterface/variables"""
         return f"set {variable} {value}"
+    
+    @staticmethod
+    def set_camera(camera : int) -> str:
+        """Sets the camera to the given camera index"""
+        return f"cam {camera}"
