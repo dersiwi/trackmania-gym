@@ -18,7 +18,7 @@ more specifically; since this builds upon the [linesight repository](https://git
 
 For now, this class is responsible for launching and closing the game via PowerShell commands. (It launches the TMLoader).
 
-#### Running Headless on Linux.
+#### Running Headless on Linux (Untested)
 
 The idea is to use [Xvfb](https://de.linux-console.net/?p=15533) ([X virtual framebuffer](https://de.wikipedia.org/wiki/Xvfb)) and tell Wine to execute the game on that virtual display that does not need a monitor.
 
@@ -30,13 +30,12 @@ WINEPREFIX=~/.wine_tm wine ~/.wine_tm/drive_c/TMNF/TmForever.exe
 ``` 
 
 
-### Create Python Link
-Now how to run python scripts using this setup?
-From what i undestand TMInterface has to launch a TCP-Socket, to which a python instance can connect. 
-The [file](https://gist.github.com/Agade09/f5b57048895b0a3a64fb0b1ae09cbd7f) `plugin/python_link.as`  has to be placed into the plugin-folder in the TMInterface folder; `C:\Users\[username]\OneDrive\Dokumente\TMInterface\Plugins`.
-I modified the file such that the port is 8775 and not 0; i had to set PORT=8775 in all mentions and remove `PORT = uint16(GetVariableDouble("custom_port"));`, as this did not work for some reason. I also established a connection with a python script, however it timed out every time. 
+### How communication works
+On a high level, the plugin launches a TCP socket, to which a python client can connect and communicate with the game.
+The [file](https://gist.github.com/Agade09/f5b57048895b0a3a64fb0b1ae09cbd7f) `plugin/python_link.as` has to be placed into the plugin-folder in the TMInterface folder; `..\TMInterface\Plugins`.
 
-[IMPORTANT: When launching the linesight respository, it uses `custom_port` inside the angelscript to set the port via the python script. This may be important if multiple instances of the game are running and threrefore need different ports.]
+The communciation from a client-side-perspective is then specified in the documentation written by donadigo [here](https://tminterface.readthedocs.io/en/latest/index.html).
+
 
 #### Where to get this information?
 
@@ -49,6 +48,9 @@ With this, we reproduce a single-thread TMI1. 4.3-like API in Python.
 The file python_link.as must be placed in the TMInterface folder.
 The file example_script.py is a minimal functioning example showing how to open a connection.
 ```
+
+## TMInterfaceProcessWrapper 
+This wrapper is launched as it's own process, so that the 'main' program can just interact with it, without having to care about communication with trackmania. 
 
 ## Communication between game (server) and python (client)
 

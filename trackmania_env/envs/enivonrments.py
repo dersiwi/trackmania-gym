@@ -1,0 +1,56 @@
+
+
+# Hydra related imports
+import hydra
+
+# gymnasium environment wrapper 
+from gymnasium import ObservationWrapper
+from stable_baselines3.common.monitor import Monitor
+
+# extractor imports
+from trackmania_env.envs.single_agent_env2 import TMNF_Single_Agent_Env
+from trackmania_env.envs.testenv_single_agent import TestEnvironment
+
+from trackmania_env.utils.reference_line_manager import ReferenceLineManager
+from trackmania_env.observations.observations import get_observation_manager
+from trackmania_env.rewards.getrewards import get_reward_calculator
+from trackmania_env.terminations.get_termination_manager import get_termination_manager
+
+from trackmania_env.utils.orientationless_random_respawn_manager import OrientationlessRespawnManager
+
+from configs.config import TrainConfig
+from multiprocessing import Queue
+import gymnasium as gym
+
+def get_environment(cfg : TrainConfig, control_queue : Queue, response_queue : Queue) -> gym.Env:
+    """Initializes environment according to given configuration file and applies wrappers, if specified in conifg.
+    Parameters
+    ----------
+        - cfg : Train-Configuration
+        - control_queue : Queue used by environment to send controls to Process-Wrapper
+        - response_queue : Response Queue used by environment to get responses by ProcessWrapper
+    """
+
+    obs_manager = get_observation_manager(cfg)
+        
+    if cfg.rl_env.env.test:
+        TM_ENV_CLASS = TestEnvironment
+    else:
+        TM_ENV_CLASS = TMNF_Single_Agent_Env
+
+    tm_env = TM_ENV_CLASS(command_queue=control_queue,
+                                    response_queue=response_queue, 
+                                    obs_manager=obs_manager,
+                                    reward_calculator=get_reward_calculator(cfg),
+                                    termination_manger=get_termination_manager(cfg),
+                                    reference_line = ReferenceLineManager(cfg.gmi.reference_line),
+                                    env_cfg=cfg.rl_env.env)
+    tm_env.orientationless_respawn_manager = OrientationlessRespawnManager(respawn_coordinates=OrientationlessRespawnManager.get_respawns_for_very_long_checkpoints())
+            
+    # apply (Observation)-wrappers to the environment
+    for _, wrapper_conf in cfg.rl_env.wrappers.items():
+        wrapper : ObservationWrapper = hydra.utils.instantiate(wrapper_conf)
+        print(f"Wrapping environment in {wrapper.__class__.__name__}")
+        tm_env = wrapper(env=tm_env)
+
+    return tm_env

@@ -4,21 +4,20 @@ from game_interaction.process_wrapper import TMIProcessWrapper
 from game_interaction.game_instance_manager2 import GameInstanceManager
 
 from multiprocessing import Process, Queue
-from configs.config import TrainConfig, GMIConfig, PlatformConfig
+from configs.config import TrainConfig, GMIConfig, PlatformConfig, EnvConfig
 
-def run_wrapper(gmi, launch_game : bool, cmd_q : Queue, res_q : Queue, track : str, img_w : int, img_h : int, automatic_prevent_sim_finish : bool,camera:int): # apparently its better to run process like this to avoid pickel issues or smth?
+def run_wrapper(gmi, launch_game : bool, cmd_q : Queue, res_q : Queue, track : str, img_w : int, img_h : int, env_cfg : EnvConfig): # apparently its better to run process like this to avoid pickel issues or smth?
     """
     Method to run in the process-Wrapper. For arguments @see TMIProcessWrapper-constructor.
     """
     wrapper = TMIProcessWrapper(gmi, launch_game=launch_game, command_queue=cmd_q, 
                                 response_queue=res_q, track=track, 
                                 img_width=img_w, img_height=img_h, 
-                                automatic_prevent_sim_finish = automatic_prevent_sim_finish,
-                                camera= camera)
+                                config = env_cfg)
     wrapper.syncloop()
 
 
-def start_process_and_wait_for_startsignal(platform : PlatformConfig, gmi_cfg : GMIConfig, image_width : int, image_height : int) -> tuple[Process, Queue, Queue]:
+def start_process_and_wait_for_startsignal(train_config : TrainConfig, image_width : int, image_height : int) -> tuple[Process, Queue, Queue]:
     """Starts a process that wrapps TMIProcessWrapper to communicate with Trackmania instance. Waits for established communication after launching process.
     If no connection can be found or no answer received, Queue.Empty-Error is thrown.
     
@@ -35,16 +34,16 @@ def start_process_and_wait_for_startsignal(platform : PlatformConfig, gmi_cfg : 
     - rq : response-Queue to be able to receive answers from running process @see TMIProcessWrapper for format (depends on command.)"""
 
     GIM = GameInstanceManager.get_instance(
-        TMLoader_path = platform.tmloader,
-        path_to_plugin = platform.plugin,
-        TMLoader_profile_name= gmi_cfg.tm_loader_profile_name,
-        linux = platform.os == "linux",
-        headless= gmi_cfg.headless)
+        TMLoader_path = train_config.platforms.tmloader,
+        path_to_plugin = train_config.platforms.plugin,
+        TMLoader_profile_name= train_config.gmi.tm_loader_profile_name,
+        linux = train_config.platforms.os == "linux",
+        headless= train_config.gmi.headless)
 
     control_queue = Queue() # queue for commands to send to TMIProcessWrapper
     response_queue = Queue() # answers (payload) from TMIProcess Wrapper
    
-    p = Process(target=run_wrapper, args=(GIM, gmi_cfg.launch, control_queue, response_queue, gmi_cfg.track, image_width, image_height, gmi_cfg.automatic_prevent_sim_finish,gmi_cfg.camera))
+    p = Process(target=run_wrapper, args=(GIM, train_config.gmi.launch, control_queue, response_queue, train_config.gmi.track, image_width, image_height, train_config.rl_env.env))
     
     p.start()
 

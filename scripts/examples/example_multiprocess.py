@@ -14,7 +14,7 @@ from game_interaction.tminterface2 import MessageType, TMInterface
 from game_interaction.process_wrapper import TMIProcessWrapper
 from game_interaction.game_instance_manager2 import GameInstanceManager
 from game_interaction.ipc_fields import IPCFields
-from game_interaction.run_multiprocess_wrapper import start_process_and_wait_for_startsignal, run_wrapper
+from game_interaction.run_multiprocess_wrapper import run_wrapper
 
 from trackmania_env.utils.actionmap import ACTION_MAP
 from utils.scriptargs import get_argparser, config_logging, get_paths
