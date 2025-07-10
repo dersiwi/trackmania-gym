@@ -181,7 +181,7 @@ class TMIProcessWrapper:
     def request_image(self):
         """Request an image with the specified image and width (specified in class initialization)        
         cmd_id : command-id for IPC; used internally only."""
-
+        self.iface.rewind_to_current_state()
         self.iface.request_frame(self.img_width, self.img_height)
         self._req_in_progress = True
         
@@ -272,7 +272,7 @@ class TMIProcessWrapper:
         self.waitforstep_continue_sucessfully = False
 
 
-        aps = 20 # actions per second.
+        aps = 15 # actions per second.
         gametime_between_actions = 1 / aps * 1000 # convert actions per second into gametime 
         
         self.ingame_time_passed = 0
