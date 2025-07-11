@@ -203,3 +203,4 @@ outputs/
 wandb/
 runs/
 models/
+*.gif

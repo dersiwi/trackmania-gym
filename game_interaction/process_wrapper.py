@@ -255,8 +255,8 @@ class TMIProcessWrapper:
         return cmd
 
     def waitforstep_execution(self, action, cmd_id : int):
-        if self.use_rewind:
-            self.iface.rewind_to_current_state()
+        #if self.use_rewind:
+        #    self.iface.rewind_to_current_state()
         self.waitforstep_step_cmd_id = cmd_id
         self.send_action(action)
         self.waitforstep_req_img_next_syncstep = True
