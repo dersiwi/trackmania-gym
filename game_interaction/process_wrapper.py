@@ -357,9 +357,9 @@ class TMIProcessWrapper:
             
             if msgtype == int(MessageType.SC_RUN_STEP_SYNC): # simulation step is complete
 
-                _time = self.iface._read_int32() # _time in this case is the total simulation time (i think)
-
-                if _time > 0:
+                _time = self.iface._read_int32() # _time in this case is the total simulation time since last respawn
+                
+                if _time > 0: # if _time < 0, countdown is running
                     increment = _time - global_ingame_time
                     self.ingame_time_tracking += increment
                     self.ingame_time_passed += increment
