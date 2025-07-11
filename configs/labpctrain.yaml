@@ -31,7 +31,7 @@ image:
 wandb:
   use: True
   entity : tmnf-practical-ss25
-  project : tmnf_dqn
+  project : tmnf_ppo
   checkpoint_freq : 500000 # after how many steps should the model be saved automatically
   eval_freq : 1000000 # after how many steps should we check if there is a new better model
 
