@@ -131,6 +131,7 @@ class TMIProcessWrapper:
 
 
         self.waitforstep : bool = False
+        self.waitforstepmode_on = True
         self.max_waiting_duration : float = 1
 
         self.ui_disabled = False

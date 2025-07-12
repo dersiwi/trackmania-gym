@@ -105,8 +105,8 @@ class ObservationManager:
                 "state": spaces.Box(low=-np.inf, high=np.inf, shape=(statevector_dim,), dtype=np.float32),
             })
     
-
-
+    def reset(self):
+        pass
 
     
     # from https://discuss.python.org/t/enhancing-getattr-to-support-nested-attribute-access-with-dotted-strings/74305/9
