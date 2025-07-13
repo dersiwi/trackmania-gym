@@ -13,6 +13,9 @@ from tminterface.structs import (
     Engine)
 
 IMAGE_SIZE = 64
+MS_TO_KMH = 3.6       # meters per second to kilometers per hour
+MILLISECONDS_TO_SECONDS = 1000  # milliseconds to seconds
+
 class SophyObsManager(ObservationManager):
     def __init__(self, observation_list, colorspace, convert_torch, img_width, img_height,maxlen_history:int = 3):
         assert img_width == img_height == IMAGE_SIZE, (
@@ -72,7 +75,8 @@ class SophyObsManager(ObservationManager):
         orientation = dyna_current.rotation.to_numpy().T  # (3, 3)
         velocity = np.array(dyna_current.linear_speed,dtype=np.float32)  # (3,)
         angular_speed = np.array(dyna_current.angular_speed,dtype=np.float32)  # (3,)
-        delta_t = game_states.time - self.last_time
+        time =  game_states.time/MILLISECONDS_TO_SECONDS
+        delta_t = time - self.last_time # normal time is counted in ms
         assert delta_t != 0
 
         v_t:np.ndarray = orientation.dot(velocity)  #(3,)
@@ -95,7 +99,7 @@ class SophyObsManager(ObservationManager):
         h_d_t:np.ndarray = h_a_t[1:] - h_a_t[:-1]
 
         
-        self.last_time =  game_states.time
+        self.last_time =  time
         self.last_velocity = v_t
 
         # for debuggin purposes
