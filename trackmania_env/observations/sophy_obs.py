@@ -12,14 +12,20 @@ from tminterface.structs import (
     RealTimeState,
     Engine)
 
+IMAGE_SIZE = 64
 class SophyObsManager(ObservationManager):
     def __init__(self, observation_list, colorspace, convert_torch, img_width, img_height,maxlen_history:int = 3):
+        assert img_width == img_height == IMAGE_SIZE, (
+            f"Sophy was trained on {IMAGE_SIZE}x{IMAGE_SIZE} images. "
+            "Please use square images of this size."
+        )
         super().__init__(observation_list, colorspace, convert_torch, img_width, img_height)
         self.last_velocity = np.array([0.,0.,0.],dtype=np.float)
         self.maxlen_history = maxlen_history
         self.angles : deque = deque([0.]*self.maxlen_history, maxlen=self.maxlen_history) # History of the last three steering angles
         self.last_time = 0 # dunno if this should be set to zero after env reset because in game timer doesn't reset 
         self.epsilon = 1e-6  # Tolerance for float comparisons
+        self.max_degree_radians = np.pi / 6 # equivalent to np.deg2rad(30) so the max steering angle is |30| degree 
 
     def reset(self):
         self.last_velocity = np.array([0.,0.,0.],dtype=np.float)
@@ -31,6 +37,13 @@ class SophyObsManager(ObservationManager):
     
     def get_values_from_state_dict(self, obs):
         return super().get_values_from_state_dict(obs)
+    
+    def cnvt_imgs(self, images):
+        assert self.colorspace == ObservationManager.Colorspace.RGB, (
+        "Invalid colorspace: Sophy was trained using RGB images, as described in the original paper. "
+        "Please use RGB colorspace."
+        )
+        return super().cnvt_imgs(images)
     
     def get_propriocentric_features(self, game_states: SimStateData):
         """
@@ -75,8 +88,8 @@ class SophyObsManager(ObservationManager):
 
         # steering angle
         turning_rate = game_states.scene_mobil.turning_rate # [-1,1]
-        steering_angle = 30 * turning_rate # when wheels are fully to the right then turning rate is equal to 1 but they only rotate too roughly 30 degree.
-        assert np.abs(steering_angle) <= 30 + self.epsilon, f"steering_angle out of range: {steering_angle}"
+        steering_angle = self.max_degree_radians * turning_rate # when wheels are fully to the right then turning rate is equal to 1 but they only rotate too roughly 30 degree.
+        assert np.abs(steering_angle) <= self.max_degree_radians + self.epsilon, f"steering_angle out of range: {steering_angle}"
         self.angles.append(steering_angle)
         h_a_t:np.ndarray = np.array(self.angles)
         h_d_t:np.ndarray = h_a_t[1:] - h_a_t[:-1]
@@ -95,15 +108,38 @@ class SophyObsManager(ObservationManager):
         self.info["steer"] = steer
 
         self.info["history_steering_angles"] = h_a_t
-        self.info["history_steering_delats"] = h_d_t
+        self.info["history_steering_deltas"] = h_d_t
 
         propriocentric_features: np.ndarray = np.hstack([
-            v_t.ravel(),
-            a_t.ravel(),
-            v_r_t.ravel(),
-            c_t.ravel(),
-            h_a_t.ravel(),
-            h_d_t.ravel(),
-        ],dtype =  np.float32)
+            v_t.ravel(),    #(3,)
+            a_t.ravel(),    #(3,)
+            v_r_t.ravel(),  #(3,)
+            c_t.ravel(),    #(3,)
+            h_a_t.ravel(),  #(n,)
+            h_d_t.ravel(),  #(n-1,)
+        ],dtype =  np.float32) # total (3*4 + 2*n - 1)
 
         return propriocentric_features
+ 
+    def global_features(self, game_states: SimStateData):
+        """
+        Extracts global course point features from the input game states, following the method
+        described in Wurman et al. (2022).
+    
+        Course points describe the geometry of the track via the left and right boundaries and the
+        center line. At each time step, this method computes the 3D relative positions of course 
+        points ahead of the agent, based on its current velocity. These points are sampled from 
+        0.1 to 6.0 seconds into the future, at 0.1-second intervals, assuming constant forward speed.
+    
+        The distance to each course point is dynamically computed using the agent's current speed 
+        (i.e., distance = velocity x time). This results in 59 course points per line (left, center, right), 
+        giving a predictive spatial representation of the upcoming track segment.
+    
+        Args:
+            game_states (SimStateData): The current simulation state(s), including vehicle speed and 
+                position.
+    
+        Returns:
+            np.ndarray or torch.Tensor: A tensor containing the relative 3D coordinates of the course 
+                points for the left, center, and right track lines.
+        """
