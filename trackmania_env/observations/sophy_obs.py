@@ -4,22 +4,11 @@ from gymnasium import spaces
 import torch
 from scipy.interpolate import CubicSpline
 from trackmania_env.observations.observation_manager import ObservationManager
+from trackmania_env.utils import constants
 from game_interaction.ipc_fields import IPCFields
-from tminterface.structs import (
-    CheckpointData, 
-    SimStateData, 
-    CheckpointTime,
-    HmsDynaStateStruct,
-    HmsDynaStruct,
-    SceneVehicleCar,
-    SimulationWheel,
-    RealTimeState,
-    Engine)
+from tminterface.structs import SimStateData, HmsDynaStateStruct
 
 IMAGE_SIZE = 64
-MS_TO_KMH = 3.6       # meters per second to kilometers per hour
-MILLISECONDS_TO_SECONDS = 1000  # milliseconds to seconds
-MAX_DISTANCE_TO_REFLINE = 15
 
 class SophyObsManager(ObservationManager):
     def __init__(self, observation_list, colorspace, convert_torch, img_width, img_height,maxlen_history:int = 3,lookahead_sec = 6,n_points = 60):
@@ -42,8 +31,8 @@ class SophyObsManager(ObservationManager):
         self.global_features_dim = self.n_points * 3
 
     def reset(self):
-        self.last_velocity = np.array([0.,0.,0.],dtype=np.float)
-        self.h_a_t = np.array([0.,0.,0.],dtype=np.float)
+        self.last_velocity = np.array([0.,0.,0.],dtype=np.float32)
+        self.h_a_t = np.array([0.,0.,0.],dtype=np.float32)
         self.angles : deque = deque([0.]*self.maxlen_history, maxlen=self.maxlen_history)
 
     def get_observation_dict(self):
@@ -103,7 +92,7 @@ class SophyObsManager(ObservationManager):
         orientation = dyna_current.rotation.to_numpy().T.astype(np.float32)  # (3, 3)
         velocity = np.array(dyna_current.linear_speed,dtype=np.float32)  # (3,)
         angular_speed = np.array(dyna_current.angular_speed,dtype=np.float32)  # (3,)
-        time =  game_states.time/MILLISECONDS_TO_SECONDS
+        time =  game_states.time/constants.MILLISECONDS_TO_SECONDS
         delta_t = time - self.last_time # normal time is counted in ms
         assert delta_t != 0
 
@@ -180,10 +169,10 @@ class SophyObsManager(ObservationManager):
         dyna_current: HmsDynaStateStruct = game_states.dyna.current_state # current dynamic state of the car, such as its position, orientation, speed ... .
         position = np.array(dyna_current.position,dtype=np.float32,)  # (3,)
         orientation = dyna_current.rotation.to_numpy().T.astype(np.float32)  # (3, 3)
-        speed = game_states.display_speed / MS_TO_KMH
+        speed = game_states.display_speed / constants.MS_TO_KMH
 
         next_idx, d, drel = self.env.reference_line.get_distance_to_next_point()
-        if d > MAX_DISTANCE_TO_REFLINE : speed = 0
+        if d > constants.MAX_DISTANCE_TO_REFLINE : speed = 0
 
         cp_passed = max(self.lookahead_sec * speed,1) // self.env.reference_line.mean_segment_length
         end_idx = int(next_idx + cp_passed)

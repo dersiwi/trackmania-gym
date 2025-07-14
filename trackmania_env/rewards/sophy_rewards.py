@@ -1,12 +1,9 @@
 from trackmania_env.rewards.reward_calculation import RewradCalculator
 from tminterface.structs import CheckpointData, SimStateData, CheckpointTime
 from game_interaction.ipc_fields import IPCFields
+from trackmania_env.utils import constants
 import numpy as np
 import torch
-
-MS_TO_KMH = 3.6       # meters per second to kilometers per hour
-MILLISECONDS_TO_SECONDS = 1000  # milliseconds to seconds
-MAX_DISTANCE_TO_REFLINE = 15 # the distance after which the car is considered to be off-course
 
 class SophyRewards(RewradCalculator):
 
@@ -14,7 +11,7 @@ class SophyRewards(RewradCalculator):
         self.last_time = 0
         self.last_lateral_contact_time = 0
         self.last_off_course_time = 0
-
+        self.last_drel = 0
         self.maxlen_history:int = maxlen_history # TODO add this to the config
 
         self.c_d = reward_cfg.c_d # threshold angle
@@ -31,6 +28,7 @@ class SophyRewards(RewradCalculator):
 
     def reset(self):
         self.last_lateral_contact_time = 0
+        self.last_drel = 0
         #self.last_off_course_time = 0
 
     
@@ -75,27 +73,27 @@ class SophyRewards(RewradCalculator):
         """
         ssD : SimStateData = observations[IPCFields.SIMSTATE]
         propriocentric_features = processed_obs["propriocentric_features"]
-        time =  ssD.time/MILLISECONDS_TO_SECONDS
+        time =  ssD.time/ constants.MILLISECONDS_TO_SECONDS
         delta_time = time - self.last_time
 
         # This value is in km/h. When manually computing speed by taking the norm of the 3D velocity vector,
         # the result matches the displayed speed after multiplying by 3.6 (to convert from m/s to km/h).
-        speed = ssD.display_speed / MS_TO_KMH
+        speed = ssD.display_speed / constants.MS_TO_KMH
 
         # progress
         next_refline_index, d, drel = self.refline_manager.get_distance_to_next_point()
-        rp = d
+        rp = np.sign(drel-self.last_drel)*d
         rp = rp* self.w_progress
 
         # off-course
         lateral_distance = self.refline_manager.calculate_lateral_difference(idx=next_refline_index,car_position=ssD.position)
-        is_off_course = lateral_distance >= MAX_DISTANCE_TO_REFLINE
+        is_off_course = lateral_distance >= constants.MAX_DISTANCE_TO_REFLINE
         off_course_time = self.last_off_course_time + (delta_time if is_off_course else 0)
         ro = -(off_course_time - self.last_off_course_time) * speed
         ro= ro* self.w_off_course
 
         # wall
-        lateral_contact_time = ssD.scene_mobil.last_has_any_lateral_contact_time/ MILLISECONDS_TO_SECONDS
+        lateral_contact_time = ssD.scene_mobil.last_has_any_lateral_contact_time/ constants.MILLISECONDS_TO_SECONDS
         rw = -(lateral_contact_time - self.last_lateral_contact_time) * speed
         rw = rw * self.w_wall
 
@@ -129,6 +127,7 @@ class SophyRewards(RewradCalculator):
         self.last_lateral_contact_time = lateral_contact_time
         self.last_time = time 
         self.last_off_course_time = off_course_time
+        self.last_drel = drel
 
         return reward, {"total": reward,
                         "progress": rp,
