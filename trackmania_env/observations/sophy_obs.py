@@ -2,6 +2,7 @@ import numpy as np
 from collections import deque
 from gymnasium import spaces
 import torch
+from scipy.interpolate import CubicSpline
 from trackmania_env.observations.observation_manager import ObservationManager
 from game_interaction.ipc_fields import IPCFields
 from tminterface.structs import (
@@ -20,7 +21,7 @@ MS_TO_KMH = 3.6       # meters per second to kilometers per hour
 MILLISECONDS_TO_SECONDS = 1000  # milliseconds to seconds
 
 class SophyObsManager(ObservationManager):
-    def __init__(self, observation_list, colorspace, convert_torch, img_width, img_height,maxlen_history:int = 3):
+    def __init__(self, observation_list, colorspace, convert_torch, img_width, img_height,maxlen_history:int = 3,lookahead_sec = 6,n_points = 60):
         assert img_width == img_height == IMAGE_SIZE, (
             f"Sophy was trained on {IMAGE_SIZE}x{IMAGE_SIZE} images. "
             "Please use square images of this size."
@@ -33,8 +34,11 @@ class SophyObsManager(ObservationManager):
         self.epsilon = 1e-6  # Tolerance for float comparisons
         self.max_degree_radians = np.pi / 6 # equivalent to np.deg2rad(30) so the max steering angle is |30| degree 
 
+        self.lookahead_sec = lookahead_sec
+        self.n_points = n_points
+
         self.propriocentric_features_dim = 3*4 + 2*self.maxlen_history - 1
-        self.global_features_dim = 60 * 3
+        self.global_features_dim = self.n_points * 3
 
     def reset(self):
         self.last_velocity = np.array([0.,0.,0.],dtype=np.float)
@@ -95,7 +99,6 @@ class SophyObsManager(ObservationManager):
         """
         
         dyna_current: HmsDynaStateStruct = game_states.dyna.current_state # current dynamic state of the car, such as its position, orientation, speed ... .
-        position = np.array(dyna_current.position,dtype=np.float32,)  # (3,)
         orientation = dyna_current.rotation.to_numpy().T.astype(np.float32)  # (3, 3)
         velocity = np.array(dyna_current.linear_speed,dtype=np.float32)  # (3,)
         angular_speed = np.array(dyna_current.angular_speed,dtype=np.float32)  # (3,)
@@ -172,7 +175,6 @@ class SophyObsManager(ObservationManager):
                 points for the left, center, and right track lines.
         """
         #NOTE as for now we only return the center points no left and right
-        # and will only work with the sophy reference line 
 
         dyna_current: HmsDynaStateStruct = game_states.dyna.current_state # current dynamic state of the car, such as its position, orientation, speed ... .
         position = np.array(dyna_current.position,dtype=np.float32,)  # (3,)
@@ -180,7 +182,18 @@ class SophyObsManager(ObservationManager):
         speed = game_states.display_speed / MS_TO_KMH
 
         next_idx, d, drel = self.env.reference_line.get_distance_to_next_point()
-        comming_refline_points = self.env.reference_line.get_reference_line_points(begin_idx= next_idx ,speed = speed ,extrapolate = True)
+
+        cp_passed = max(self.lookahead_sec * speed,1) // self.env.reference_line.mean_segment_length
+        end_idx = int(next_idx + cp_passed)
+
+        points =  self.env.reference_line.get_reference_line_points(
+                    begin_idx= next_idx, 
+                    end_idx= end_idx, 
+                    extrapolate=True,
+                    stride= 1)
+        
+        assert points.shape[0] != 0
+        comming_refline_points = np.repeat(points, self.n_points, axis=0) if points.shape[0] == 1 else self.interpolate_points(points)
         comming_refline_points : np.ndarray = np.array(orientation).dot((comming_refline_points - np.array(position)).T).T
 
         self.info["comming_refline_points"] = comming_refline_points
@@ -188,3 +201,24 @@ class SophyObsManager(ObservationManager):
         self.info["position"] = position
      
         return comming_refline_points.ravel()
+    
+    def interpolate_points(self,points:np.ndarray):
+        # length calculation in 3D
+        diffs = np.diff(points, axis=0)
+        lengths = np.concatenate([[0], np.cumsum(np.linalg.norm(diffs, axis=1))])
+        total_length = lengths[-1]
+
+        # Create interpolation functions (x, y, z) over lengths
+        fx = CubicSpline(lengths, points[:, 0])
+        fy = CubicSpline(lengths, points[:, 1])
+        fz = CubicSpline(lengths, points[:, 2])
+
+        # Sample equidistant points along lengths
+        uniform_s = np.linspace(0, total_length, self.n_points)
+        x_sampled = fx(uniform_s)
+        y_sampled = fy(uniform_s)
+        z_sampled = fz(uniform_s)
+
+        sampled_points = np.stack([x_sampled, y_sampled, z_sampled], axis=1)  # shape: (n_points, 3)
+
+        return sampled_points
