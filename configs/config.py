@@ -9,7 +9,6 @@ class GMIConfig:
     headless: bool
     port: int
     track : str
-    automatic_prevent_sim_finish : bool
     reference_line : str
     camera: int
 

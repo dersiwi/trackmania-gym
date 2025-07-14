@@ -28,7 +28,7 @@ from trackmania_env.utils.random_respawn_manager import RandomRespawnManager
 from configs.config import EnvConfig
 from trackmania_env.utils.orientationless_random_respawn_manager import OrientationlessRespawnManager
 import time
-
+from queue import Empty
 
 class TMNF_Single_Agent_Env(gym.Env):
     """The reinforcement learning environment for Trackmania Nations Forever"""
@@ -138,13 +138,31 @@ class TMNF_Single_Agent_Env(gym.Env):
 
     def __send_command_to_process_wrapper(self, command : dict[str, any], timeout = 10) -> dict[str, any]:
         """Sends a command to the process wrapper, asserts answer matches command and returns answer from process wrapper"""
-        self.command_queue.put_nowait(command)
-        response = self.response_queue.get(timeout=timeout)
-        assert response[IPCFields.CMD_ID] == self.__ipc_cmd_id, f"Got unexepected command id from response. Expected {self.__ipc_cmd_id}, got : {response['cmd_id']}"
-        self.__ipc_cmd_id += 1
-        if not response[IPCFields.STATUS] == IPCFields.STATUS_OK:
-            self.logger.error(f"Got error when executing command {command[IPCFields.CMD]}, with message : {response[IPCFields.ERROR]}")
-        return response
+        max_commnd_sending_attempts = 10
+        attempt = 0
+        while attempt <= max_commnd_sending_attempts:
+            attempt += 1
+            try:
+                self.command_queue.put_nowait(command)
+                response = self.response_queue.get(timeout=timeout)
+                assert response[IPCFields.CMD_ID] == self.__ipc_cmd_id, f"Got unexepected command id from response. Expected {self.__ipc_cmd_id}, got : {response['cmd_id']}"
+                self.__ipc_cmd_id += 1
+                if not response[IPCFields.STATUS] == IPCFields.STATUS_OK:
+                    self.logger.error(f"Got error when executing command {command[IPCFields.CMD]}, with message : {response[IPCFields.ERROR]}")
+                    raise AttributeError()
+                return response
+            except Empty as e:
+                self.logger.error(f"Tried sending commmand '{command[IPCFields.CMD_ID]}' {attempt} times and got no response; queue is empty.")
+            except TimeoutError as tr:
+                self.logger.error(f"Tried sending commmand '{command[IPCFields.CMD_ID]}' {attempt} times and got timeout error.")
+            except AttributeError as at:
+                self.logger.error(f"Tried sending commmand '{command[IPCFields.CMD_ID]}' {attempt} times and Attribute Error.")
+
+            time.sleep(0.5) #<- waiting period between command-sends.
+
+        raise RuntimeError("Were not able to send command even after multiple tries.") # <- If this happens; the responding end most likely crashed.
+
+
     
     def __send_action(self, action : tuple[bool, bool, bool, bool]):
         self.__send_command_to_process_wrapper(TMIProcessWrapper.IPCCommands.get_act_command(self.__ipc_cmd_id, action))
@@ -211,9 +229,6 @@ class TMNF_Single_Agent_Env(gym.Env):
         
         if terminated or truncated:
             self.__log_reset_reason(terminated_info)
-
-        if race_finished:
-            self.__send_command_to_process_wrapper(TMIProcessWrapper.IPCCommands.prevent_simulation_finish(self.__ipc_cmd_id))
 
         info = self._get_info(ssD=ssD) 
 

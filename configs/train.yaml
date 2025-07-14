@@ -22,7 +22,6 @@ gmi:
   port: 8775
   track : very_long_checkpoints.Challenge.Gbx
   reference_line: tracks/reference_line/very_long_checkpoints.npy
-  automatic_prevent_sim_finish : True
   camera: 3
 
 image:
