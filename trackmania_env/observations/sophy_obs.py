@@ -19,6 +19,7 @@ from tminterface.structs import (
 IMAGE_SIZE = 64
 MS_TO_KMH = 3.6       # meters per second to kilometers per hour
 MILLISECONDS_TO_SECONDS = 1000  # milliseconds to seconds
+MAX_DISTANCE_TO_REFLINE = 15
 
 class SophyObsManager(ObservationManager):
     def __init__(self, observation_list, colorspace, convert_torch, img_width, img_height,maxlen_history:int = 3,lookahead_sec = 6,n_points = 60):
@@ -182,6 +183,7 @@ class SophyObsManager(ObservationManager):
         speed = game_states.display_speed / MS_TO_KMH
 
         next_idx, d, drel = self.env.reference_line.get_distance_to_next_point()
+        if d > MAX_DISTANCE_TO_REFLINE : speed = 0
 
         cp_passed = max(self.lookahead_sec * speed,1) // self.env.reference_line.mean_segment_length
         end_idx = int(next_idx + cp_passed)
