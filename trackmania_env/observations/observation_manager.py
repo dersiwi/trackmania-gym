@@ -7,7 +7,7 @@ from tminterface.structs import SimStateData
 from game_interaction.ipc_fields import IPCFields
 from utils.image_converter import ImageConverter
 from utils.box_dimension_flattend import get_flattened_dict_dim
-from simstate_space_dict import simstate_space_dict
+from utils.simstate_space_dict import simstate_space_dict
 
 from bytefield import ByteArrayField,IntegerField,FloatField,BooleanField, ByteStruct
 
