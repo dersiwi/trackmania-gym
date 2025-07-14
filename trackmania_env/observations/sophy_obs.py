@@ -147,3 +147,9 @@ class SophyObsManager(ObservationManager):
             np.ndarray or torch.Tensor: A tensor containing the relative 3D coordinates of the course 
                 points for the left, center, and right track lines.
         """
+        #NOTE as for now we only return the center points no left and right
+        # this will only work with the sophy reference line 
+        next_idx, d, drel = self.env.reference_line.get_distance_to_next_point()
+        speed = game_states.display_speed / MS_TO_KMH
+        comming_refline_points = self.env.reference_line.get_reference_line_points(begin_idx= next_idx ,speed = speed ,extrapolate = True)
+        return comming_refline_points
