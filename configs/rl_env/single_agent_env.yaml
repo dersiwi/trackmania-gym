@@ -30,6 +30,8 @@ env:
   waitforstep_timeout_in_s : 1.2 # this HAS to be smaller than the timeout of TMInterface
   use_rewind : true
 
+  startposition_accuracy_threshold : 0.5 # how close the start position has to be to the initial starting posiiton after each reset (in ingame-meters.)
+
 reward_manager:
   rewardterm_weights:
     accum_distance_weight : 1200

@@ -150,6 +150,8 @@ class EnvConfig:
     waitforstep_timeout_in_s : float
     use_rewind : bool
 
+    startposition_accuracy_threshold : float
+
 
 @dataclass
 class RewardManagerCfg:

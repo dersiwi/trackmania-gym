@@ -82,12 +82,13 @@ class TMNF_Single_Agent_Env(gym.Env):
         self.reference_line = reference_line
 
         # variables used for resetting car(posiiton)
-        self.start_position : list[float] = [0,0,0]
-        self.__start_position_set : bool = False
+        self.start_position :np.ndarray= None
         self.reset_mode = env_cfg.reset_mode
         
         self.position_buffer = PositionBuffer(env_cfg.position_buffer_size)
         self.position_buffer_threshold = env_cfg.position_moved_threshold
+
+        self.ignore_stuck_for_n_steps_after_reset = env_cfg.ignore_stuck_for_n_steps_after_reset
 
         self.rew_calculator = reward_calculator#get_reward_calculator(reward_calculator, self.position_buffer)
         self.rew_calculator.set_position_buffer(self.position_buffer)
@@ -122,6 +123,8 @@ class TMNF_Single_Agent_Env(gym.Env):
         self.first_reset = False
         
         self.waitforstep_timeout = env_cfg.waitforstep_timeout_in_s
+
+        self.startposition_accuracy_threshold = env_cfg.startposition_accuracy_threshold
 
     def set_respawn_manager(self, respawn_manager : OrientationlessRespawnManager):
         self.orientationless_respawn_manager = respawn_manager
@@ -188,7 +191,6 @@ class TMNF_Single_Agent_Env(gym.Env):
 
     def determine_termination_trucation(self, idx, obs : SimStateData) -> tuple[bool, bool]:
         terminated = truncated = False
-
         return terminated, truncated
 
     def step(self, action) -> Tuple[gym.spaces.Dict,float,bool,bool,Dict[str,Any]]:
@@ -224,6 +226,7 @@ class TMNF_Single_Agent_Env(gym.Env):
         i, _, _ = self.reference_line.calculate_and_step_next_point(ssD.position)
 
         terminated, truncated, terminated_info = self.termination_manager.calculate_terminations(ssD)
+        
         terminated_info["race_finished"] = race_finished
         terminated = terminated or race_finished
         
@@ -261,10 +264,6 @@ class TMNF_Single_Agent_Env(gym.Env):
         It ensures the environment starts in a consistent and valid state.
         """
         super().reset(seed=seed, options=options)
-        """
-        TODO here we can spawn the car (agent) on the same start positon or somewhere else 
-        (one of the TM Youtube channels said that random spawning helps)
-        """
         
         self.actions = deque([(False,False,False,False)] * self.n_prev_actions, maxlen=self.n_prev_actions)
         
@@ -276,8 +275,19 @@ class TMNF_Single_Agent_Env(gym.Env):
         self.n_steps = 0
 
         # reset_car hsa to be done before! raw_obs is queried. 
-        self.reset_car(None)    
+        self.reset_car(None)
         raw_obs = self.__get_raw_obs()
+
+        if self.start_position is not None:
+            tries = 0
+            """Sometimes the raw obs queried after reset are not actually the ones after reset - therefore this primitive check is implemeneted which checks that the first starting position;
+            which is recorded before any step was made somewhat matches the position after a reset; if so, collects more obs."""
+            while np.linalg.norm(raw_obs[IPCFields.SIMSTATE].position - self.start_position) > self.startposition_accuracy_threshold and tries < 10:
+                tries += 1
+                self.logger.warning(f"Start position did not match obs posiiton. Waiting until resetted. Tries : {tries}")
+                time.sleep(0.005)
+                raw_obs = self.__get_raw_obs()
+
 
         self.reference_line.calculate_and_step_next_point(raw_obs[IPCFields.SIMSTATE].position)
         observation,obs_info = self.obs_manager.get_observation(raw_obs)
@@ -289,6 +299,7 @@ class TMNF_Single_Agent_Env(gym.Env):
 
         if not self.first_reset:
             self.__send_command_to_process_wrapper(TMIProcessWrapper.IPCCommands.waitforstep(self.__ipc_cmd_id, self.waitforstep_timeout))
+            self.start_position = np.array(raw_obs[IPCFields.SIMSTATE].position)
             self.first_reset = True
 
         return observation, info
@@ -296,12 +307,10 @@ class TMNF_Single_Agent_Env(gym.Env):
     def reset_car(self, position : np.ndarray | list[float]):
         """Resets car depending on specified mode.
         Position : The position of the car in the current observation."""
+
         if self.reset_mode == "respawn"or self.reset_mode == "random_no_orientation":
             self.__respawn_car()
         elif self.reset_mode == "position" :
-            if not self.__start_position_set:
-                self.start_position = position
-                self.__start_position_set = True
             self.__reset_car_position()
         else:
             raise ValueError(f"Mode '{self.reset_mode}' for car-resetting unknown.")
