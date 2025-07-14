@@ -2,6 +2,7 @@ from trackmania_env.rewards.reward_calculation import RewradCalculator
 from tminterface.structs import CheckpointData, SimStateData, CheckpointTime
 from game_interaction.ipc_fields import IPCFields
 import numpy as np
+import torch
 
 MS_TO_KMH = 3.6       # meters per second to kilometers per hour
 MILLISECONDS_TO_SECONDS = 1000  # milliseconds to seconds
@@ -14,7 +15,7 @@ class SophyRewards(RewradCalculator):
         self.last_lateral_contact_time = 0
         self.last_off_course_time = 0
 
-        self.maxlen_history:int = maxlen_history
+        self.maxlen_history:int = maxlen_history # TODO add this to the config
 
         self.c_d = reward_cfg.c_d # threshold angle
         self.c_s = reward_cfg.c_s # sensitivity factor
@@ -101,21 +102,27 @@ class SophyRewards(RewradCalculator):
         # steering change
         # TODO: Consider creating a custom Sophy environment to avoid relying on manual indexing 
         # for field access. The current approach is unclear and can lead to confusion or bugs.
-        steering_change = np.abs(propriocentric_features[-1])
+        steering_change = torch.abs(propriocentric_features[-1])
         rs = -steering_change * self.w_steer_change
 
         # Extract the last two steering deltas
-        h_d_t_tail: np.ndarray = propriocentric_features[-2:]
-        has_sign_flip = np.sign(propriocentric_features[1]) != np.sign(propriocentric_features[0])
-        above_threshold = np.all(np.abs(h_d_t_tail) > self.c_d)
+        h_d_t_tail = propriocentric_features[-2:]
+        has_sign_flip = torch.sign(propriocentric_features[1]) != torch.sign(propriocentric_features[0])
+        above_threshold = (h_d_t_tail.abs() > self.c_d).all(dim=0)
 
         # Indicator for inconsistent steering behavior
         m_t = 1 if (has_sign_flip and above_threshold) else 0
 
-        delta_t = np.sum(np.abs(h_d_t_tail))
+        delta_t = torch.sum(torch.abs(h_d_t_tail))
         # Compute the steering history penalty
-        rh = -m_t / (1 + np.exp(-self.cs * (delta_t - self.c_o)))
+        rh = -m_t / (1 + torch.exp(-self.c_s * (delta_t - self.c_o)))
         rh = rh* self.w_steer_history
+
+        rp = float(rp)
+        ro = float(ro)
+        rw = float(rw)
+        rs = float(rs)
+        rh = float(rh)
 
         reward = rp + ro + rw + rs + rh
         
@@ -128,7 +135,8 @@ class SophyRewards(RewradCalculator):
                         "off-course": ro,
                         "wall": rw,
                         "steering_changed": rs,
-                        "steering_history": rh}
+                        "steering_history": rh,
+                        "nextpoint_reference_index" : next_refline_index,}
 
 
         

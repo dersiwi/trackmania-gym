@@ -5,6 +5,7 @@ from configs.config import TrainConfig
 
 from trackmania_env.observations.linesight_obs_wrapper import get_linesight_obs_instance
 from trackmania_env.observations.nextpoint_obs import NextPointObsManager
+from trackmania_env.observations.sophy_obs import SophyObsManager
 
 def get_observation_manager(cfg : TrainConfig) -> ObservationManager:
     """Instanciate Configuration manager according to confguration."""
@@ -25,6 +26,14 @@ def get_observation_manager(cfg : TrainConfig) -> ObservationManager:
                                         convert_torch=obs_manager_cfg.convert_torch,
                                         img_width=cfg.image.width, 
                                         img_height=cfg.image.height)
+        
+    elif cfg.rl_env.env.obs_manager == "sophy": 
+        obs_manager = SophyObsManager(observation_list=obs_manager_cfg.observation_list, 
+                                        colorspace=obs_manager_cfg.colorspace,
+                                        convert_torch=obs_manager_cfg.convert_torch,
+                                        img_width=cfg.image.width, 
+                                        img_height=cfg.image.height,
+                                        maxlen_history= obs_manager_cfg.maxlen_history)
     else:
         raise ValueError(f"Observationmanager {cfg.rl_env.env.obs_manager} not known.")    
     

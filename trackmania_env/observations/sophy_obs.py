@@ -1,6 +1,9 @@
 import numpy as np
 from collections import deque
+from gymnasium import spaces
+import torch
 from trackmania_env.observations.observation_manager import ObservationManager
+from game_interaction.ipc_fields import IPCFields
 from tminterface.structs import (
     CheckpointData, 
     SimStateData, 
@@ -23,12 +26,15 @@ class SophyObsManager(ObservationManager):
             "Please use square images of this size."
         )
         super().__init__(observation_list, colorspace, convert_torch, img_width, img_height)
-        self.last_velocity = np.array([0.,0.,0.],dtype=np.float)
+        self.last_velocity = np.array([0.,0.,0.],dtype=np.float32)
         self.maxlen_history = maxlen_history
         self.angles : deque = deque([0.]*self.maxlen_history, maxlen=self.maxlen_history) # History of the last three steering angles
         self.last_time = 0 # dunno if this should be set to zero after env reset because in game timer doesn't reset 
         self.epsilon = 1e-6  # Tolerance for float comparisons
         self.max_degree_radians = np.pi / 6 # equivalent to np.deg2rad(30) so the max steering angle is |30| degree 
+
+        self.propriocentric_features_dim = 3*4 + 2*self.maxlen_history - 1
+        self.global_features_dim = 60 * 3
 
     def reset(self):
         self.last_velocity = np.array([0.,0.,0.],dtype=np.float)
@@ -36,10 +42,28 @@ class SophyObsManager(ObservationManager):
         self.angles : deque = deque([0.]*self.maxlen_history, maxlen=self.maxlen_history)
 
     def get_observation_dict(self):
-        return super().get_observation_dict()
+
+        return spaces.Dict({
+                "image": spaces.Box(low=0, high=1.0, shape=(self.n_channels, self.img_height, self.img_width), dtype=np.uint8),
+                "propriocentric_features": spaces.Box(low=-np.inf, high=np.inf, shape=(self.propriocentric_features_dim,), dtype=np.float32),
+                "global_features": spaces.Box(low=-np.inf, high=np.inf, shape=(self.global_features_dim,), dtype=np.float32),
+            })
     
-    def get_values_from_state_dict(self, obs):
-        return super().get_values_from_state_dict(obs)
+    def get_observation(self, raw_observation : dict[str, np.ndarray | SimStateData]) -> tuple[np.ndarray | dict[str, np.ndarray] | torch.Tensor | dict[str, torch.Tensor],dict[str,any]]:
+        """
+        Takes raw observations from TMInterface and dissects them into image
+        """
+        game_states = raw_observation[IPCFields.SIMSTATE]
+        propriocentric_features = self.get_propriocentric_features(game_states)
+        global_features = self.get_global_features(game_states)
+        img = self.cnvt_imgs(raw_observation[IPCFields.IMG])
+        
+        assert img.shape == (self.n_channels, self.img_height, self.img_width), f"Expected shape to be ({self.n_channels},{self.img_height}, {self.img_width}) but got {img.shape}"
+
+        propriocentric_features = torch.from_numpy(propriocentric_features).float()
+        global_features = torch.from_numpy(global_features).float() 
+
+        return {"image": img, "propriocentric_features": propriocentric_features, "global_features": global_features}, self.info
     
     def cnvt_imgs(self, images):
         assert self.colorspace == ObservationManager.Colorspace.RGB, (
@@ -72,7 +96,7 @@ class SophyObsManager(ObservationManager):
         
         dyna_current: HmsDynaStateStruct = game_states.dyna.current_state # current dynamic state of the car, such as its position, orientation, speed ... .
         position = np.array(dyna_current.position,dtype=np.float32,)  # (3,)
-        orientation = dyna_current.rotation.to_numpy().T  # (3, 3)
+        orientation = dyna_current.rotation.to_numpy().T.astype(np.float32)  # (3, 3)
         velocity = np.array(dyna_current.linear_speed,dtype=np.float32)  # (3,)
         angular_speed = np.array(dyna_current.angular_speed,dtype=np.float32)  # (3,)
         time =  game_states.time/MILLISECONDS_TO_SECONDS
@@ -125,7 +149,7 @@ class SophyObsManager(ObservationManager):
 
         return propriocentric_features
  
-    def global_features(self, game_states: SimStateData):
+    def get_global_features(self, game_states: SimStateData):
         """
         Extracts global course point features from the input game states, following the method
         described in Wurman et al. (2022).
@@ -148,8 +172,19 @@ class SophyObsManager(ObservationManager):
                 points for the left, center, and right track lines.
         """
         #NOTE as for now we only return the center points no left and right
-        # this will only work with the sophy reference line 
-        next_idx, d, drel = self.env.reference_line.get_distance_to_next_point()
+        # and will only work with the sophy reference line 
+
+        dyna_current: HmsDynaStateStruct = game_states.dyna.current_state # current dynamic state of the car, such as its position, orientation, speed ... .
+        position = np.array(dyna_current.position,dtype=np.float32,)  # (3,)
+        orientation = dyna_current.rotation.to_numpy().T.astype(np.float32)  # (3, 3)
         speed = game_states.display_speed / MS_TO_KMH
+
+        next_idx, d, drel = self.env.reference_line.get_distance_to_next_point()
         comming_refline_points = self.env.reference_line.get_reference_line_points(begin_idx= next_idx ,speed = speed ,extrapolate = True)
-        return comming_refline_points
+        comming_refline_points : np.ndarray = np.array(orientation).dot((comming_refline_points - np.array(position)).T).T
+
+        self.info["comming_refline_points"] = comming_refline_points
+        self.info["orientation"] = orientation
+        self.info["position"] = position
+     
+        return comming_refline_points.ravel()

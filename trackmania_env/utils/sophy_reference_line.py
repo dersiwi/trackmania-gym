@@ -18,13 +18,16 @@ class SophyReflineManager(ReferenceLineManager):
         super().__init__(filepath, lookahead_size, search_recursively, recursive_lookahead_increase_factor, max_recursion_depth)
         self.lookahead_sec = lookahead_sec
         self.n_points = n_points
-        self.mean_ref_point_distance =  np.mean(np.linalg.norm(self.reference_line[1:]-self.refline.reference_line[:-1],axis=1),axis=0)
+        self.mean_ref_point_distance =  np.mean(np.linalg.norm(self.reference_line[1:]-self.reference_line[:-1],axis=1),axis=0)
 
-    def get_reference_line_points(self, begin_idx ,speed:int ,extrapolate = False):
+    def get_reference_line_points(self, begin_idx ,speed ,extrapolate = False):
         # we already assume that speed is in m/s
-        cp_passed = (self.lookahead_sec * speed) / self.mean_ref_point_distance 
-        new_end_idx = begin_idx + cp_passed
+        cp_passed = max(self.lookahead_sec * speed,1) // self.mean_ref_point_distance 
+        new_end_idx = int(begin_idx + cp_passed)
         points =  super().get_reference_line_points(begin_idx, new_end_idx, extrapolate, 1)
+        assert points.shape[0] != 0
+        if points.shape[0] == 1: 
+            return np.repeat(points, self.n_points, axis=0)
         interp_points = self.interpolate_points(points)
         return interp_points
     
