@@ -6,8 +6,8 @@ import numpy as np
 import time
 import logging, os
 
-from multiprocessing import Queue
-from queue import Empty
+from multiprocessing import Queue as MultiprocessingQueue
+from queue import Empty, Queue 
 from tminterface.structs import CheckpointData, SimStateData
 from configs.config import EnvConfig
 
@@ -79,7 +79,7 @@ class TMIProcessWrapper:
             return {IPCFields.CMD_ID : command_id, IPCFields.CMD : TMIProcessWrapper.IPCCommands.WAITFORSTEP, IPCFields.ARGS : max_wait_duraion}
         
     def __init__(self, gim : GameInstanceManager, launch_game : bool, 
-                 command_queue : Queue, response_queue : Queue, 
+                 command_queue : MultiprocessingQueue, response_queue : MultiprocessingQueue, 
                  track : str, 
                  img_width : int, img_height : int,
                  config : EnvConfig):
@@ -101,8 +101,8 @@ class TMIProcessWrapper:
             self.gim.launch_game()
             self.gim.register_iface(10)
         self.iface : TMInterface = gim.get_tminterface()
-        self.command_queue : Queue = command_queue
-        self.response_queue : Queue = response_queue
+        self.command_queue : MultiprocessingQueue = command_queue
+        self.response_queue : MultiprocessingQueue = response_queue
 
         self._act_cmd_id = -1
         self._req_img_cmd_id = -1
@@ -131,7 +131,6 @@ class TMIProcessWrapper:
 
 
         self.waitforstep : bool = False
-        self.max_waiting_duration : float = 1
 
         self.ui_disabled = False
 
@@ -149,6 +148,7 @@ class TMIProcessWrapper:
         self.waitforstep_step_cmd_id = -1
         self.waitforstep_answer_expected = False
         self.waitforstep_continue_sucessfully = False
+        self.waitforstepmode_on = False
 
         self.time_since_last_command_check = 0
         """This is the last time the command-queue was cheked"""
@@ -160,6 +160,11 @@ class TMIProcessWrapper:
 
 
         self.step_commands = Queue()
+        self.unanswered_commands : dict[int, float] = {}
+        """Holds all unanswered commands. Keys : cmd_id, value : time of arrival. Is used to send error codes, if command has not been answered in certain time."""
+
+        self.time_since_last_unanswered_handling = time.time()
+        """Time since all last unanswered commands were handled"""
 
         
     def __receive_frame(self):
@@ -172,7 +177,7 @@ class TMIProcessWrapper:
         response = {IPCFields.CMD_ID : self._req_img_cmd_id, IPCFields.STATUS : IPCFields.STATUS_OK, IPCFields.IMG : frame, IPCFields.SIMSTATE : simstate, IPCFields.SIMSTEP : self.sim_step_count}
 
         if not self._req_img_cmd_id == -1:
-            self.response_queue.put_nowait(response)
+            self.answer_command(response)
             self._req_img_cmd_id = -1
 
         return response
@@ -210,6 +215,20 @@ class TMIProcessWrapper:
         self.iface.request_frame(self.img_width, self.img_height)
         self._req_in_progress = True
 
+    def answer_command(self, response : dict):
+        """Answers a command. Delets it from unanswered commands and sends puts response into queue."""
+        del self.unanswered_commands[response[IPCFields.CMD_ID]]
+        self.response_queue.put_nowait(response)
+
+    def handle_unanswered_commands(self, max_unanswered_time : float = 20):
+        """Removes all commands that are unanswered for more than"""
+        for cmd_id in self.unanswered_commands:
+            if time.time() - self.unanswered_commands[cmd_id] > max_unanswered_time:
+                self.logger.error(f"Got a command that was unanswered for more than {max_unanswered_time} seconds. Command id: {cmd_id}")
+                self.response_queue.put_nowait({IPCFields.CMD_ID : cmd_id, IPCFields.STATUS : IPCFields.STATUS_ERROR, IPCFields.ERROR : "Could not answer command in given timeframe."})
+                del self.unanswered_commands[cmd_id]
+        
+
     def check_command_queue(self) -> dict:
         """Checks command queue for ICP and handles command appropriately. Returns command."""
         # first get command
@@ -226,51 +245,50 @@ class TMIProcessWrapper:
 
         if cmd_id == self.last_received_command_id:
             # just skip commands with doubled command-ids (commands may be sent more than once by other processes; due to error-handling e.g.)
+            self.logger.warning(f"Got command with id {cmd_id} more than once. Ignoring.")
             return None
 
         command = cmd[IPCFields.CMD]
+        self.unanswered_commands[cmd_id] = time.time()
+
         if command == TMIProcessWrapper.IPCCommands.ACT:
             self.send_action(cmd[IPCFields.ARGS])
-            self.response_queue.put_nowait({IPCFields.CMD_ID : cmd_id, IPCFields.STATUS : IPCFields.STATUS_OK})
+            self.answer_command({IPCFields.CMD_ID : cmd_id, IPCFields.STATUS : IPCFields.STATUS_OK})
 
         elif command == TMIProcessWrapper.IPCCommands.REQ_IMG:
             self._req_img_cmd_id = cmd_id
             self.request_image()
         elif command == TMIProcessWrapper.IPCCommands.END_SYNCLOOP: 
             self.stop_sync_loop()
-            self.response_queue.put_nowait({IPCFields.CMD_ID : cmd_id, IPCFields.STATUS : IPCFields.STATUS_OK})
+            self.answer_command({IPCFields.CMD_ID : cmd_id, IPCFields.STATUS : IPCFields.STATUS_OK})
         elif command == TMIProcessWrapper.IPCCommands.EXECUTE_COMMAND:
             self.iface.execute_command(cmd[IPCFields.ARGS])
-            self.response_queue.put_nowait({IPCFields.CMD_ID : cmd_id, IPCFields.STATUS : IPCFields.STATUS_OK})
+            self.answer_command({IPCFields.CMD_ID : cmd_id, IPCFields.STATUS : IPCFields.STATUS_OK})
         elif command == TMIProcessWrapper.IPCCommands.SIMULATION_STARTED:
             self.__start_cmd_id = cmd[IPCFields.CMD_ID]
         elif command == TMIProcessWrapper.IPCCommands.REVENT_SIM_FINISH:
             self.iface.prevent_simulation_finish()
-            self.response_queue.put_nowait({IPCFields.CMD_ID : cmd_id, IPCFields.STATUS : IPCFields.STATUS_OK})
+            self.answer_command({IPCFields.CMD_ID : cmd_id, IPCFields.STATUS : IPCFields.STATUS_OK})
         elif command == TMIProcessWrapper.IPCCommands.REWIND_STATE:
             self.iface.rewind_to_state(cmd[IPCFields.ARGS])
-            self.response_queue.put_nowait({IPCFields.CMD_ID : cmd_id, IPCFields.STATUS : IPCFields.STATUS_OK})
-
+            self.answer_command({IPCFields.CMD_ID : cmd_id, IPCFields.STATUS : IPCFields.STATUS_OK})
 
         elif command == TMIProcessWrapper.IPCCommands.STEP:
             assert self.waitforstepmode_on, "Cannot call step before waitfotsep has not been enabled."
-
-            if not self.waitforstep:#<-- in case waitforstep disabled itself; this enables it again after it has been called.
-                self.waitforstep_execution(cmd[IPCFields.ARGS], cmd_id = cmd_id)
+            if not self.waitforstep:
                 self.logger.warning("Self enabling self.waitforstep, as step method has been called again.")
-            self.waitforstep = True 
 
+            self.waitforstep = True
+            self.step_commands.put(cmd)
         elif command == TMIProcessWrapper.IPCCommands.WAITFORSTEP:
             self.step_time = time.time()
             self.waitforstep = True
-            self.waitforstepmode_on = True #<-- Two variables because waitforstep can disable itself.
+            self.waitforstepmode_on = True
             self.expect_next_step_command = True
-            self.max_waiting_duration = cmd[IPCFields.ARGS]
-            self.logger.info(f"Enabling wait-for-step mode. Max-Waiting-Duration set to {self.max_waiting_duration}s")
-            self.response_queue.put_nowait({IPCFields.CMD_ID : cmd_id, IPCFields.STATUS : IPCFields.STATUS_OK})
+            self.answer_command({IPCFields.CMD_ID : cmd_id, IPCFields.STATUS : IPCFields.STATUS_OK})
         else:
-            self.response_queue.put_nowait({IPCFields.CMD_ID : cmd_id, IPCFields.STATUS : IPCFields.STATUS_ERROR, IPCFields.ERROR : "NoSuchCommand"})
-
+            self.answer_command({IPCFields.CMD_ID : cmd_id, IPCFields.STATUS : IPCFields.STATUS_ERROR, IPCFields.ERROR : "NoSuchCommand"})
+            
         self.last_received_command_id = cmd_id
         self.time_since_last_command_check = time.time()
         return cmd
@@ -307,9 +325,8 @@ class TMIProcessWrapper:
 
         total_msgs = 0
         unsucessful_waitings_for_step = 0
-        
-        consecutive_timeouts = 0
-
+        continuous_step_misses = 0
+        self.time_since_last_unanswered_handling = time.time()
         while self.__run_sync_loop:
             
             # -------- methods for waitforstep
@@ -322,56 +339,40 @@ class TMIProcessWrapper:
                 self.waitforstep_req_img_next_syncstep = False
                 self.waitforstep_answer_expected = True
 
-            if self.waitforstep and not frame_and_state == None and self.waitforstep_answer_expected:
+            if self.waitforstep_answer_expected and not frame_and_state == None:
                 frame_and_state[IPCFields.CMD_ID] = self.waitforstep_step_cmd_id
-                self.response_queue.put_nowait(frame_and_state)
+                self.answer_command(frame_and_state)
                 frame_and_state = None
                 self.waitforstep_step_cmd_id = -1
                 self.waitforstep_answer_expected = False
                 self.waitforstep_continue_sucessfully = False #only after waitforstep is officially done, this shoul be tracking again.
                 self.expect_next_step_command = True
 
-            broke_becauseof_req_img = False
-
-            if self.waitforstep and (self.expect_next_step_command and self.ingame_time_passed >= self.gametime_between_actions or time.time() - self.time_since_last_command_check >= self.max_time_between_command_check):
-                
-                if time.time() - self.time_since_last_command_check >= self.max_time_between_command_check:
-                    self.logger.warning(f"Went into searching for action mode not because ingame-time matched, but rather because max time since last command checked was too great.")
-
-                waiting_duration = time.time()
-                while  time.time() - waiting_duration < self.max_waiting_duration:
-                    command = self.check_command_queue()
-                    if not command == None and command[IPCFields.CMD] == TMIProcessWrapper.IPCCommands.STEP:
-                        self.waitforstep_execution(command[IPCFields.ARGS], command[IPCFields.CMD_ID])
-                        break
-
-                    if not command == None and command[IPCFields.CMD] == TMIProcessWrapper.IPCCommands.REQ_IMG:
-                        broke_becauseof_req_img = True
-                        break
-                    time.sleep(0.0000001)
-                
+            if self.waitforstep and self.expect_next_step_command and self.ingame_time_passed >= self.gametime_between_actions:
+                try:
+                    command = self.step_commands.get_nowait()
+                    self.waitforstep_execution(command[IPCFields.ARGS], command[IPCFields.CMD_ID])
+                    continuous_step_misses = 0
+                except Empty:
+                    unsucessful_waitings_for_step += 1
+                    continuous_step_misses += 1
 
 
-                if self.waitforstep and not broke_becauseof_req_img:
-                    # self-disable mechanism for waitforstep
-                    if self.waitforstep_continue_sucessfully:
-                        consecutive_timeouts = 0
-                    else:
-                        consecutive_timeouts += 1
-                    if consecutive_timeouts >= self.disable_waitforstep_after_n_consecutive_timeouts:
-                        consecutive_timeouts = 0
-                        self.waitforstep = False
-                        self.ingame_time_passed = 0
-                        self.n_steps = 0
-                        self.logger.warning(f"Disabling waitforstep method after {self.disable_waitforstep_after_n_consecutive_timeouts} consecutive timeouts.")
-                        self.send_action((False, False, False, False))
+                # self-disable mechanism for waitforstep
+                if continuous_step_misses >= self.disable_waitforstep_after_n_consecutive_timeouts:
+                    continuous_step_misses = 0
+                    self.ingame_time_passed = 0
+                    self.n_steps = 0
+                    self.waitforstep = False
+                    self.logger.warning(f"Got no step command for more than {self.disable_waitforstep_after_n_consecutive_timeouts} Tries.")
+                    self.send_action((False, False, False, False))
 
-                unsucessful_waitings_for_step += (not self.waitforstep_continue_sucessfully and self.waitforstep and not broke_becauseof_req_img)
 
-                if total_msgs % 10000 == 0:
-                    self.logger.info(f"Could not continue successfully. Timeout; This happend in {unsucessful_waitings_for_step}/{total_msgs} loop-iterations.")
-                    total_msgs = 0 #<-- there is no need to set this to zero here but i am anxious it will overflow.
-                    unsucessful_waitings_for_step = 0
+
+            if self.waitforstep and total_msgs % 1000 == 0 and unsucessful_waitings_for_step > 0:
+                self.logger.info(f"Had no step-command in internal queue. This happend in {unsucessful_waitings_for_step}/{1000} loop-iterations.")
+                total_msgs = 0 #<-- there is no need to set this to zero here but i am anxious it will overflow.
+                unsucessful_waitings_for_step = 0
 
             #--------- end mehtods waitforstep
 
@@ -406,7 +407,7 @@ class TMIProcessWrapper:
                     self.ui_disabled = True
 
                 if not self.__start_cmd_id == -1:
-                    self.response_queue.put_nowait({IPCFields.CMD_ID : self.__start_cmd_id, IPCFields.STATUS : IPCFields.STATUS_OK})
+                    self.answer_command({IPCFields.CMD_ID : self.__start_cmd_id, IPCFields.STATUS : IPCFields.STATUS_OK})
                     self.__start_cmd_id = -1
                     self.logger.info("Sending back command that abcdefg is ready.")
 
@@ -444,8 +445,10 @@ class TMIProcessWrapper:
             else:
                 self.iface._respond_to_call(msgtype)
 
-            if not self.waitforstep:
-                self.check_command_queue()
+            
+            self.check_command_queue()
+            if time.time() - self.time_since_last_unanswered_handling > self.max_time_between_command_check:
+                self.handle_unanswered_commands()
 
         if self.launch_game:
             self.gim.close_game()
