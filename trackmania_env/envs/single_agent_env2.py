@@ -126,7 +126,7 @@ class TMNF_Single_Agent_Env(gym.Env):
     def set_respawn_manager(self, respawn_manager : OrientationlessRespawnManager):
         self.orientationless_respawn_manager = respawn_manager
 
-    def _get_info(self,ssD) -> Dict[str,Any]:
+    def _get_info(self,ssD:SimStateData) -> Dict[str,Any]:
         """Helper function for computing additional information (e.g. for debugging or logging)"""
         info = {}
         info["velocity"] = ssD.velocity
@@ -253,7 +253,7 @@ class TMNF_Single_Agent_Env(gym.Env):
         
         self.actions = deque([(False,False,False,False)] * self.n_prev_actions, maxlen=self.n_prev_actions)
         
-
+        self.obs_manager.reset()
         self.position_buffer.reset()
         self.rew_calculator.reset()
         self.reference_line.reset()
