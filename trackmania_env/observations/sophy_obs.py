@@ -94,10 +94,11 @@ class SophyObsManager(ObservationManager):
         angular_speed = np.array(dyna_current.angular_speed,dtype=np.float32)  # (3,)
         time =  game_states.time/constants.MILLISECONDS_TO_SECONDS
         delta_t = time - self.last_time # normal time is counted in ms
-        assert delta_t != 0
+        #print(delta_t)
+        #assert delta_t != 0
 
         v_t:np.ndarray = orientation.dot(velocity)  #(3,)
-        a_t:np.ndarray =(v_t - self.last_velocity)/delta_t #(3,)
+        a_t:np.ndarray =np.array([0.,0.,0.]) if delta_t == 0 else (v_t - self.last_velocity)/delta_t #(3,) # the only time delta_t should be zero is during the start
         v_r_t:np.ndarray = orientation.dot(angular_speed)  #(3,)
 
         throttle = 2.* game_states.scene_mobil.input_gas  - 1. # [-1,1] | original gas is between [0,1]
