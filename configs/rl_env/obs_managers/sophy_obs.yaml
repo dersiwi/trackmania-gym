@@ -1,0 +1,10 @@
+name: "sophy"
+n_points: 60
+lookahead_sec : 6
+maxlen_history: 3
+convert_torch: True
+img_width : 64
+img_height : 64
+colorspace : "rgb"
+observation_list:
+  - image
