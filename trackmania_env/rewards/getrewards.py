@@ -5,21 +5,24 @@ from trackmania_env.rewards.reward_calculation import RewradCalculator
 from trackmania_env.rewards.basic_rewards import BasicRewardCalculation
 from trackmania_env.rewards.linesight_rewards import LinesightRewardCalculator
 from trackmania_env.rewards.nextpointrewards import NextPointRewards,NextPointRewards2
+from trackmania_env.rewards.sophy_rewards import SophyRewards
 from configs.config import TrainConfig
 
 
 
+def get_reward_calculator(reward_calculator_cfg: TrainConfig) -> RewradCalculator:
+    name = reward_calculator_cfg.name
 
-def get_reward_calculator(cfg : TrainConfig) -> RewradCalculator:
-
-    reward_calculator = cfg.rl_env.env.reward_calculator
-    if reward_calculator == "basic":
-        return BasicRewardCalculation(cfg.rl_env.reward_manager)
-    elif reward_calculator == "linesight":
-        return LinesightRewardCalculator(cfg.rl_env.reward_manager)
-    elif reward_calculator == "nextpoint":
-        return NextPointRewards(cfg.rl_env.reward_manager)
-    elif reward_calculator == "nextpoint2":
-        return NextPointRewards2(cfg.rl_env.reward_manager)
-    else:
-        raise NameError(f"Rewardcalculator '{reward_calculator}' not known.")
+    match name:
+        case "basic":
+            return BasicRewardCalculation(reward_calculator_cfg)
+        case "linesight":
+            return LinesightRewardCalculator(reward_calculator_cfg)
+        case "nextpoint":
+            return NextPointRewards(reward_calculator_cfg)
+        case "nextpoint2":
+            return NextPointRewards2(reward_calculator_cfg)
+        case "sophy":
+            return SophyRewards(reward_calculator_cfg)
+        case _:
+            raise NameError(f"Reward calculator '{name}' not known.")

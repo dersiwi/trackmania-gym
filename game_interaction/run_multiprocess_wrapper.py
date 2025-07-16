@@ -6,14 +6,19 @@ from game_interaction.game_instance_manager2 import GameInstanceManager
 from multiprocessing import Process, Queue
 from configs.config import TrainConfig, GMIConfig, PlatformConfig, EnvConfig
 
-def run_wrapper(gmi, launch_game : bool, cmd_q : Queue, res_q : Queue, track : str, img_w : int, img_h : int, env_cfg : EnvConfig): # apparently its better to run process like this to avoid pickel issues or smth?
+def run_wrapper(gmi, launch_game : bool, cmd_q : Queue, res_q : Queue, track : str, img_w : int, img_h : int, camera_id:int ,env_cfg : EnvConfig): # apparently its better to run process like this to avoid pickel issues or smth?
     """
     Method to run in the process-Wrapper. For arguments @see TMIProcessWrapper-constructor.
     """
     wrapper = TMIProcessWrapper(gmi, launch_game=launch_game, command_queue=cmd_q, 
                                 response_queue=res_q, track=track, 
-                                img_width=img_w, img_height=img_h, 
-                                config = env_cfg)
+                                img_width=img_w, img_height=img_h,
+                                camera_id=camera_id,
+                                automatic_prevent_sim_finish= env_cfg.automatic_prevent_sim_finish,
+                                actions_per_second=  env_cfg.actions_per_second, 
+                                use_rewind= env_cfg.use_rewind,
+                                disable_waitforstep_after_n_consecutive_timeouts=  env_cfg.disable_waitforstep_after_n_consecutive_timeouts,
+                               )
     wrapper.syncloop()
 
 
@@ -43,7 +48,17 @@ def start_process_and_wait_for_startsignal(train_config : TrainConfig, image_wid
     control_queue = Queue() # queue for commands to send to TMIProcessWrapper
     response_queue = Queue() # answers (payload) from TMIProcess Wrapper
    
-    p = Process(target=run_wrapper, args=(GIM, train_config.gmi.launch, control_queue, response_queue, train_config.gmi.track, image_width, image_height, train_config.rl_env.env))
+    p = Process(target=run_wrapper, 
+                args=(GIM,
+                    train_config.gmi.launch,
+                    control_queue,
+                    response_queue,
+                    train_config.gmi.track,
+                    image_width,
+                    image_height,
+                    train_config.rl_env.obs_manager.camera_id,
+                    train_config.rl_env.env,
+                    ))
     
     p.start()
 

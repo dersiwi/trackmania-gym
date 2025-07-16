@@ -238,11 +238,18 @@ class Test_RefLine_Next_Point_Manager(TestEnvironmentCallback):
     """
 
 class Test_1D_Next_Point_Manager(TestEnvironmentCallback):
-    def __init__(self, key_to_plot, y_lim=(-10, 10)):
+    def __init__(self, keys_to_plot, y_lim=(-10, 10)):
+        """
+        Initialize the callback to plot multiple keys over time.
+
+        Args:
+            keys_to_plot (list of str): List of keys from the `info` dict to plot.
+            y_lim (tuple): Y-axis limits for the plot.
+        """
         super().__init__()
-        self.key_to_plot = key_to_plot
-        self.y_lim = y_lim  # fixed y-axis scale
-        self.vals = []
+        self.keys_to_plot = keys_to_plot if isinstance(keys_to_plot, list) else [keys_to_plot]
+        self.y_lim = y_lim
+        self.vals = {key: [] for key in self.keys_to_plot}
 
         self.fig, self.ax = plt.subplots(figsize=(6, 4))
         self._setup_plot()
@@ -250,29 +257,44 @@ class Test_1D_Next_Point_Manager(TestEnvironmentCallback):
         plt.ion()
         plt.show()
 
+    def _setup_plot(self):
+        self.ax.set_title("Debug Plot")
+        self.ax.set_xlabel("Timestep")
+        self.ax.set_ylabel("Value")
+       # self.ax.set_ylim(*self.y_lim)
+
     def _call_after_step(self, processed_obs, reward, terminated, truncated, info):
-        info["refline_idx"]  = info["rewards"]["nextpoint_reference_index"]
-        assert self.key_to_plot in info, f"The Key '{self.key_to_plot}' is not in the info dict"
-        val = info[self.key_to_plot]
-        assert np.ndim(val) <= 1, f"The value for '{self.key_to_plot}' must be 1D, got shape {np.shape(val)}"
+        info["refline_idx"] = info["rewards"]["nextpoint_reference_index"]
+        
+        # Check and store values for all keys
+        for key in self.keys_to_plot:
+            assert key in info, f"The key '{key}' is not in the info dict"
+            val = info[key]
+            assert np.ndim(val) <= 1, f"The value for '{key}' must be 1D, got shape {np.shape(val)}"
+            self.vals[key].append(val)
 
-        self.vals.append(val)
-
-        # Plot
+        # Clear and redraw the plot
         self.ax.cla()
         self._setup_plot()
 
-        self.ax.plot(range(len(self.vals)),self.vals)
+        for key in self.keys_to_plot:
+            data = np.array(self.vals[key])
+            if data.ndim == 1:
+                self.ax.plot(range(len(data)), data, label=key)
+            else:
+                for i in range(data.shape[1]):
+                    self.ax.plot(range(len(data)), data[:, i], label=f"{key}[{i}]")
 
         self.ax.legend()
         plt.draw()
         plt.pause(0.001)
 
+
     def _setup_plot(self):
-        self.ax.set_title(f"Tracking '{self.key_to_plot}' Over Time")
+        self.ax.set_title(f"Tracking '{self.keys_to_plot}' Over Time")
         self.ax.set_xlabel("Step")
-        self.ax.set_ylabel(self.key_to_plot)
-        self.ax.set_ylim(*self.y_lim)  # fixed Y-axis limits
+        #self.ax.set_ylabel(self.keys_to_plot)
+        #self.ax.set_ylim(*self.y_lim)  # fixed Y-axis limits
 
 class Test_3D_Next_Point_Manager(TestEnvironmentCallback):
     def __init__(self, key_to_plot, y_lim=(-1, 1)):

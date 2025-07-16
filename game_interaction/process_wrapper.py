@@ -82,7 +82,11 @@ class TMIProcessWrapper:
                  command_queue : Queue, response_queue : Queue, 
                  track : str, 
                  img_width : int, img_height : int,
-                 config : EnvConfig):
+                 automatic_prevent_sim_finish:bool = True,
+                 actions_per_second:int = 20,
+                 use_rewind:bool = True,
+                 camera_id:int = 2,
+                 disable_waitforstep_after_n_consecutive_timeouts:int= 5):
         """
         Parameters
         ---------
@@ -123,7 +127,7 @@ class TMIProcessWrapper:
         self.__run_sync_loop = True
         self.__start_cmd_id = -1
 
-        self.automatic_prevent_sim_finish = config.automatic_prevent_sim_finish
+        self.automatic_prevent_sim_finish = automatic_prevent_sim_finish
         """If True, iface.prevent_sim_finish() is called automatically, once the current and target checkpoint are the same."""
 
         self.map = track
@@ -131,6 +135,7 @@ class TMIProcessWrapper:
 
 
         self.waitforstep : bool = False
+        self.waitforstepmode_on = True
         self.max_waiting_duration : float = 1
 
         self.ui_disabled = False
@@ -140,11 +145,11 @@ class TMIProcessWrapper:
         self.step_time = time.time()
         """Tracks time to track step-frequency"""
 
-        self.aps = config.actions_per_second
+        self.aps = actions_per_second
         self.gametime_between_actions = 1 / self.aps * 1000 # in-game-seconds between each action
-        self.disable_waitforstep_after_n_consecutive_timeouts = config.disable_waitforstep_after_n_consecutive_timeouts
-        self.use_rewind  = config.use_rewind
-        self.camera_id = config.camera_id
+        self.disable_waitforstep_after_n_consecutive_timeouts = disable_waitforstep_after_n_consecutive_timeouts
+        self.use_rewind  = use_rewind
+        self.camera_id = camera_id
 
 
         
