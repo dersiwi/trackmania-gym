@@ -12,7 +12,7 @@ class SophyRewards(RewradCalculator):
         self.last_lateral_contact_time = 0
         self.last_off_course_time = 0
         self.last_drel = 0
-        self.maxlen_history:int = maxlen_history # TODO add this to the config
+        self.maxlen_history:int = reward_cfg.maxlen_history # TODO add this to the config
 
         self.c_d = reward_cfg.c_d # threshold angle
         self.c_s = reward_cfg.c_s # sensitivity factor

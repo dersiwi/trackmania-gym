@@ -1,5 +1,6 @@
 defaults:
   - obs_manager: sophy_obs.yaml
+  - reward_manager:  sophy_rewards.yaml
 
 env:
   _partial_: True
