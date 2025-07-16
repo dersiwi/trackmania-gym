@@ -1,3 +1,6 @@
+defaults:
+  - obs_manager: sophy_obs.yaml
+
 env:
   _partial_: True
   _target_: trackmania_env.envs.single_agent_env2.TMNF_Single_Agent_Env
@@ -5,7 +8,7 @@ env:
   position_moved_threshold : 0.8
   reset_mode : "respawn"
   reward_calculator : "sophy"
-  obs_manager : "sophy" ##use basic for other
+  obs_manager : sophy_obs.yaml ##use basic for other
   termination_manager : "no_progress"
   game_speed : 20
   countdown_speed : 20

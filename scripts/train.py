@@ -35,7 +35,7 @@ def main(cfg : TrainConfig):
     baaf.before_training()
 
     # Instanciate GMI, TMNF-Environment and start TMi-Interaction process.
-    tmi_process, control_queue, response_queue = start_process_and_wait_for_startsignal(cfg, cfg.image.width, cfg.image.height)
+    tmi_process, control_queue, response_queue = start_process_and_wait_for_startsignal(cfg, cfg.rl_env.obs_manager.img_width, cfg.rl_env.obs_manager.img_height)
 
     try:
         tm_env = get_environment(cfg, control_queue, response_queue)
