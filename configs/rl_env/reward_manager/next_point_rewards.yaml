@@ -1,0 +1,12 @@
+name: "nextpoint"
+rewardterm_weights:
+    accum_distance_weight : 1200
+    race_not_finished_weight : 0.05
+    race_finished_reward : 100
+    other_termination_punishment : 20
+    velocity_reward_weight : 1
+    backward_weight : 0
+    distance_to_center_weight : 1
+    velocity_change_reward_weight : 30
+    speed_reward_weight: 1
+lateral_distance_mode : "gauss" #triangle, gauss, trapez
