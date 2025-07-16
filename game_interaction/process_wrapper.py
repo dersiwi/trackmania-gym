@@ -152,7 +152,7 @@ class TMIProcessWrapper:
 
         self.time_since_last_command_check = 0
         """This is the last time the command-queue was cheked"""
-        self.max_time_between_command_check = 30
+        self.max_time_between_command_check = 15
         """Maximum time [in seconds] which can lay between two command-queue checks"""
 
         self.last_received_command_id = -1
@@ -238,7 +238,8 @@ class TMIProcessWrapper:
                 self.logger.error(f"Got a command that was unanswered for more than {max_unanswered_time} seconds. Command id: {cmd_id}")
                 self.response_queue.put_nowait({IPCFields.CMD_ID : cmd_id, IPCFields.STATUS : IPCFields.STATUS_ERROR, IPCFields.ERROR : "Could not answer command in given timeframe."})
                 del self.unanswered_commands[cmd_id]
-        
+
+        self.time_since_last_unanswered_handling = time.time()
 
     def check_command_queue(self) -> dict:
         """Checks command queue for ICP and handles command appropriately. Returns command."""
