@@ -149,6 +149,7 @@ class TMIProcessWrapper:
         self.waitforstep_answer_expected = False
         self.waitforstep_continue_sucessfully = False
         self.waitforstepmode_on = False
+        self.max_waiting_period_for_step_command = 0.5
 
         self.time_since_last_command_check = 0
         """This is the last time the command-queue was cheked"""
@@ -279,12 +280,13 @@ class TMIProcessWrapper:
                 self.logger.warning("Self enabling self.waitforstep, as step method has been called again.")
 
             self.waitforstep = True
-            self.step_commands.put(cmd)
+            self.step_commands.put_nowait(cmd)
         elif command == TMIProcessWrapper.IPCCommands.WAITFORSTEP:
             self.step_time = time.time()
             self.waitforstep = True
             self.waitforstepmode_on = True
             self.expect_next_step_command = True
+            self.max_waiting_period_for_step_command = cmd[IPCFields.ARGS]
             self.answer_command({IPCFields.CMD_ID : cmd_id, IPCFields.STATUS : IPCFields.STATUS_OK})
         else:
             self.answer_command({IPCFields.CMD_ID : cmd_id, IPCFields.STATUS : IPCFields.STATUS_ERROR, IPCFields.ERROR : "NoSuchCommand"})
@@ -326,7 +328,9 @@ class TMIProcessWrapper:
         total_msgs = 0
         unsucessful_waitings_for_step = 0
         continuous_step_misses = 0
+        waiting_times = []
         self.time_since_last_unanswered_handling = time.time()
+
         while self.__run_sync_loop:
             
             # -------- methods for waitforstep
@@ -349,13 +353,26 @@ class TMIProcessWrapper:
                 self.expect_next_step_command = True
 
             if self.waitforstep and self.expect_next_step_command and self.ingame_time_passed >= self.gametime_between_actions:
-                try:
-                    command = self.step_commands.get_nowait()
-                    self.waitforstep_execution(command[IPCFields.ARGS], command[IPCFields.CMD_ID])
-                    continuous_step_misses = 0
-                except Empty:
-                    unsucessful_waitings_for_step += 1
-                    continuous_step_misses += 1
+                waiting_begin = time.time()
+                waiting_time = time.time() - waiting_begin
+                waiting_period = 1.0
+                while waiting_time < waiting_period:
+                    try:
+                        command = self.step_commands.get_nowait()
+                        self.waitforstep_execution(command[IPCFields.ARGS], command[IPCFields.CMD_ID])
+                        continuous_step_misses = 0
+                        waiting_times.append(waiting_time)
+                        if len(waiting_times) > 100:
+                            self.logger.info(f"Average waiting time for step-command : {sum(waiting_times) / len(waiting_times)}s")
+                            waiting_times.clear()
+                        break
+                    except Empty:
+                        pass
+
+                    self.check_command_queue()
+                    waiting_time = time.time() - waiting_begin
+
+                continuous_step_misses += 1
 
 
                 # self-disable mechanism for waitforstep
