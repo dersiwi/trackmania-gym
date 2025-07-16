@@ -3,7 +3,7 @@ import sys, os
 sys.path.append(os.path.abspath(os.path.join(
     os.path.join(os.path.dirname(__file__), '..'), '..'))) # TODO : <- i don't want this here and it shouldnt have to be here!!!
 
-from game_interaction.process_wrapper import TMIProcessWrapper
+from game_interaction.ipc_fields import IPCCommands
 
 from game_interaction.run_multiprocess_wrapper import start_process_and_wait_for_startsignal
 from trackmania_env.observations.observations import get_observation_manager
@@ -58,7 +58,7 @@ def main(cfg : TrainConfig):
 
     tm_env.step_with_manual_input()
     
-    control_queue.put(TMIProcessWrapper.IPCCommands.get_end_syncloop_command(1000)) #1000 doesnt matter.
+    control_queue.put(IPCCommands.get_end_syncloop_command(1000)) #1000 doesnt matter.
     tmi_process.join()
 
 if __name__ == "__main__":

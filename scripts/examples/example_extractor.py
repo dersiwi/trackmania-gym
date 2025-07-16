@@ -19,7 +19,7 @@ from trackmania_env.utils.actionmap import get_reverse_action_map
 
 
 
-from game_interaction.process_wrapper import TMIProcessWrapper
+from game_interaction.ipc_fields import IPCCommands
 
 
 from game_interaction.run_multiprocess_wrapper import start_process_and_wait_for_startsignal
@@ -56,7 +56,7 @@ def main(cfg : TrainConfig):
     
     tm_env.step_with_manual_input()
     
-    control_queue.put(TMIProcessWrapper.IPCCommands.get_end_syncloop_command(1000)) #1000 doesnt matter.
+    control_queue.put(IPCCommands.get_end_syncloop_command(1000)) #1000 doesnt matter.
     tmi_process.join()
 
     out_dim = 10

@@ -17,7 +17,7 @@ from stable_baselines3.common.callbacks import BaseCallback
 # imports for communication between TMInterface and environment
 from game_interaction.game_instance_manager2 import GameInstanceManager
 from game_interaction.run_multiprocess_wrapper import start_process_and_wait_for_startsignal
-from game_interaction.process_wrapper import TMIProcessWrapper
+from game_interaction.ipc_fields import IPCCommands
 
 # gymnasium environment wrapper 
 from gymnasium import ObservationWrapper
@@ -91,7 +91,7 @@ def main(cfg : TrainConfig):
     finally:
         # Finalize training and close game all processes.
         for tmi_process, control_queue, response_queue in queues_procs:
-            control_queue.put(TMIProcessWrapper.IPCCommands.get_end_syncloop_command(1000)) #1000 doesnt matter.
+            control_queue.put(IPCCommands.get_end_syncloop_command(1000)) #1000 doesnt matter.
             tmi_process.join()
 
 def make_env(cfg,control_queue, response_queue):

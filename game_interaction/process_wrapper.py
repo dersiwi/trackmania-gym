@@ -1,6 +1,6 @@
 from game_interaction.tminterface2 import MessageType, TMInterface
 from game_interaction.game_instance_manager2 import GameInstanceManager
-from game_interaction.ipc_fields import IPCFields
+from game_interaction.ipc_fields import IPCFields, IPCCommands
 from game_interaction.tminterface_commands import TMInterfaceCommands
 import numpy as np
 import time
@@ -19,64 +19,6 @@ class TMIProcessWrapper:
 
     In order to accomplish this, a command and response queue are set-up for Inter-Process-Communication (IPC).
     """
-
-    class IPCCommands:
-        """Helper class to get commands in order to have one place where commands are generated."""
-
-        ACT = 0
-        REQ_IMG = 1
-        END_SYNCLOOP = 2
-        EXECUTE_COMMAND = 3
-        SIMULATION_STARTED = 4
-        REVENT_SIM_FINISH = 5
-        REWIND_STATE = 6
-        STEP = 7
-        WAITFORSTEP = 8
-
-        @staticmethod
-        def get_act_command(command_id : int, action : tuple[bool, bool, bool, bool]) -> dict[str, any]:
-            """Creates command for IPC communication for request_image()"""
-            return {IPCFields.CMD_ID : command_id, IPCFields.CMD : TMIProcessWrapper.IPCCommands.ACT, IPCFields.ARGS : action}
-            
-        @staticmethod
-        def get_req_img_command(command_id : int, continuous : bool = False) -> dict[str, any]:
-            """Creates command for IPC communication for request_image()"""
-            return {IPCFields.CMD_ID : command_id, IPCFields.CMD : TMIProcessWrapper.IPCCommands.REQ_IMG, IPCFields.ARGS : continuous}
-        
-        @staticmethod
-        def get_end_syncloop_command(command_id : int) -> dict[str, any]:
-            """Returns command to end syncloop execution."""
-            return {IPCFields.CMD_ID : command_id, IPCFields.CMD : TMIProcessWrapper.IPCCommands.END_SYNCLOOP, IPCFields.ARGS : None}
-        
-        @staticmethod
-        def get_cmd_command(command_id : int, command : str) -> dict[str, any]:
-            """Returns a command (for TMIProcessWrapper) that tells the underlying TMInterface to send a command to the game-instance."""
-            return {IPCFields.CMD_ID : command_id, IPCFields.CMD : TMIProcessWrapper.IPCCommands.EXECUTE_COMMAND, IPCFields.ARGS : command}
-        
-        @staticmethod
-        def get_startsignal(command_id : int) -> dict[str, any]:
-            """Returns a command which only sends a response, once the server is sending `SC_SYNC' commands; i.e. track has started."""
-            return {IPCFields.CMD_ID : command_id, IPCFields.CMD : TMIProcessWrapper.IPCCommands.SIMULATION_STARTED}
-        
-        @staticmethod
-        def prevent_simulation_finish(command_id : int) -> dict[str, any]:
-            """Sends command to call ifcae.prevent_simulation_finish """
-            return {IPCFields.CMD_ID : command_id, IPCFields.CMD : TMIProcessWrapper.IPCCommands.REVENT_SIM_FINISH}
-        
-        @staticmethod
-        def rewind_state(command_id : int, state : SimStateData) -> dict[str, any]:
-            """Sends command to call ifcae.prevent_simulation_finish """
-            return {IPCFields.CMD_ID : command_id, IPCFields.CMD : TMIProcessWrapper.IPCCommands.REWIND_STATE, IPCFields.ARGS : state}
-        
-        @staticmethod
-        def step(command_id : int, action : tuple[bool, bool, bool, bool]) -> dict[str, any]:
-            """Sends command to call ifcae.prevent_simulation_finish """
-            return {IPCFields.CMD_ID : command_id, IPCFields.CMD : TMIProcessWrapper.IPCCommands.STEP, IPCFields.ARGS : action}
-
-        @staticmethod
-        def waitforstep(command_id : int, max_wait_duraion : float) -> dict[str, any]:
-            """Sends command to setp process wrapper into stepping mode """
-            return {IPCFields.CMD_ID : command_id, IPCFields.CMD : TMIProcessWrapper.IPCCommands.WAITFORSTEP, IPCFields.ARGS : max_wait_duraion}
         
     def __init__(self, gim : GameInstanceManager, launch_game : bool, 
                  command_queue : Queue, response_queue : Queue, 
@@ -216,30 +158,30 @@ class TMIProcessWrapper:
         #self.logger.debug(f"Got command with command-id {cmd_id} of type {cmd['cmd']}") - TODO figure out if this causes huge log-files
         assert not cmd_id == -1, "Command id cannot be -1 as this is used as an internal error-code."
         command = cmd[IPCFields.CMD]
-        if command == TMIProcessWrapper.IPCCommands.ACT:
+        if command == IPCCommands.ACT:
             self.send_action(cmd[IPCFields.ARGS])
             self.response_queue.put_nowait({IPCFields.CMD_ID : cmd_id, IPCFields.STATUS : IPCFields.STATUS_OK})
 
-        elif command == TMIProcessWrapper.IPCCommands.REQ_IMG:
+        elif command == IPCCommands.REQ_IMG:
             self._req_img_cmd_id = cmd_id
             self.request_image()
-        elif command == TMIProcessWrapper.IPCCommands.END_SYNCLOOP: 
+        elif command == IPCCommands.END_SYNCLOOP: 
             self.stop_sync_loop()
             self.response_queue.put_nowait({IPCFields.CMD_ID : cmd_id, IPCFields.STATUS : IPCFields.STATUS_OK})
-        elif command == TMIProcessWrapper.IPCCommands.EXECUTE_COMMAND:
+        elif command == IPCCommands.EXECUTE_COMMAND:
             self.iface.execute_command(cmd[IPCFields.ARGS])
             self.response_queue.put_nowait({IPCFields.CMD_ID : cmd_id, IPCFields.STATUS : IPCFields.STATUS_OK})
-        elif command == TMIProcessWrapper.IPCCommands.SIMULATION_STARTED:
+        elif command == IPCCommands.SIMULATION_STARTED:
             self.__start_cmd_id = cmd[IPCFields.CMD_ID]
-        elif command == TMIProcessWrapper.IPCCommands.REVENT_SIM_FINISH:
+        elif command == IPCCommands.REVENT_SIM_FINISH:
             self.iface.prevent_simulation_finish()
             self.response_queue.put_nowait({IPCFields.CMD_ID : cmd_id, IPCFields.STATUS : IPCFields.STATUS_OK})
-        elif command == TMIProcessWrapper.IPCCommands.REWIND_STATE:
+        elif command == IPCCommands.REWIND_STATE:
             self.iface.rewind_to_state(cmd[IPCFields.ARGS])
             self.response_queue.put_nowait({IPCFields.CMD_ID : cmd_id, IPCFields.STATUS : IPCFields.STATUS_OK})
 
 
-        elif command == TMIProcessWrapper.IPCCommands.STEP:
+        elif command == IPCCommands.STEP:
             assert self.waitforstepmode_on, "Cannot call step before waitfotsep has not been enabled."
 
             if not self.waitforstep:#<-- in case waitforstep disabled itself; this enables it again after it has been called.
@@ -248,7 +190,7 @@ class TMIProcessWrapper:
             self.waitforstep = True 
                 
             return cmd   
-        elif command == TMIProcessWrapper.IPCCommands.WAITFORSTEP:
+        elif command == IPCCommands.WAITFORSTEP:
             self.step_time = time.time()
             self.waitforstep = True
             self.waitforstepmode_on = True #<-- Two variables because waitforstep can disable itself.
@@ -321,11 +263,11 @@ class TMIProcessWrapper:
                 waiting_duration = time.time()
                 while  time.time() - waiting_duration < self.max_waiting_duration:
                     command = self.check_command_queue()
-                    if not command == None and command[IPCFields.CMD] == TMIProcessWrapper.IPCCommands.STEP:
+                    if not command == None and command[IPCFields.CMD] == IPCCommands.STEP:
                         self.waitforstep_execution(command[IPCFields.ARGS], command[IPCFields.CMD_ID])
                         break
 
-                    if not command == None and command[IPCFields.CMD] == TMIProcessWrapper.IPCCommands.REQ_IMG:
+                    if not command == None and command[IPCFields.CMD] == IPCCommands.REQ_IMG:
                         broke_becauseof_req_img = True
                         break
                     time.sleep(0.0000001)

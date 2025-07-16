@@ -13,7 +13,7 @@ from gymnasium import spaces
 from queue import Queue
 from tminterface.structs import CheckpointData, SimStateData, CheckpointTime
 
-from game_interaction.process_wrapper import TMIProcessWrapper
+from game_interaction.ipc_fields import IPCCommands
 from game_interaction.tminterface_commands import TMInterfaceCommands
 from game_interaction.ipc_fields import IPCFields
 
@@ -111,10 +111,10 @@ class TMNF_Single_Agent_Env(gym.Env):
         self.observation_space = obs_manager.get_observation_dict()
         self.action_space = gym.spaces.Discrete(len(ACTION_MAP))
 
-        self.__send_command_to_process_wrapper(TMIProcessWrapper.IPCCommands.get_cmd_command(self.__ipc_cmd_id, 
+        self.__send_command_to_process_wrapper(IPCCommands.get_cmd_command(self.__ipc_cmd_id, 
                                                                                              TMInterfaceCommands.set_variable(TMInterfaceCommands.Variables.SPEED, 
                                                                                                                               value=env_cfg.game_speed)))
-        self.__send_command_to_process_wrapper(TMIProcessWrapper.IPCCommands.get_cmd_command(self.__ipc_cmd_id, 
+        self.__send_command_to_process_wrapper(IPCCommands.get_cmd_command(self.__ipc_cmd_id, 
                                                                                                     TMInterfaceCommands.set_variable(TMInterfaceCommands.Variables.COUNTDOWN_SPEED, 
                                                                                                                                     value=env_cfg.countdown_speed)))
         # this is the defautl simstateData when the car first gets spawned. We will use this for the random reset
@@ -168,7 +168,7 @@ class TMNF_Single_Agent_Env(gym.Env):
 
     
     def __send_action(self, action : tuple[bool, bool, bool, bool]):
-        self.__send_command_to_process_wrapper(TMIProcessWrapper.IPCCommands.get_act_command(self.__ipc_cmd_id, action))
+        self.__send_command_to_process_wrapper(IPCCommands.get_act_command(self.__ipc_cmd_id, action))
 
     
     def __get_raw_obs(self) -> Dict:
@@ -176,7 +176,7 @@ class TMNF_Single_Agent_Env(gym.Env):
 
         try:
             # request images, wait for response from process and check that cmd-id of response matches request-id.
-            imgs_and_simstate = self.__send_command_to_process_wrapper(TMIProcessWrapper.IPCCommands.get_req_img_command(self.__ipc_cmd_id))
+            imgs_and_simstate = self.__send_command_to_process_wrapper(IPCCommands.get_req_img_command(self.__ipc_cmd_id))
         except TimeoutError as t:
             self.logger.error(f"Timeout error while waiting for images: {t}")
 
@@ -215,7 +215,7 @@ class TMNF_Single_Agent_Env(gym.Env):
         #store action internally and send via TMInterface
         action = ACTION_MAP[action]
         self.actions.append(action)
-        raw_obs = self.__send_command_to_process_wrapper(TMIProcessWrapper.IPCCommands.step(self.__ipc_cmd_id, action))
+        raw_obs = self.__send_command_to_process_wrapper(IPCCommands.step(self.__ipc_cmd_id, action))
         
 
         ssD : SimStateData = raw_obs[IPCFields.SIMSTATE]
@@ -298,7 +298,7 @@ class TMNF_Single_Agent_Env(gym.Env):
             self.default_ssD = raw_obs[IPCFields.SIMSTATE]
 
         if not self.first_reset:
-            self.__send_command_to_process_wrapper(TMIProcessWrapper.IPCCommands.waitforstep(self.__ipc_cmd_id, self.waitforstep_timeout))
+            self.__send_command_to_process_wrapper(IPCCommands.waitforstep(self.__ipc_cmd_id, self.waitforstep_timeout))
             self.start_position = np.array(raw_obs[IPCFields.SIMSTATE].position)
             self.first_reset = True
 
@@ -319,7 +319,7 @@ class TMNF_Single_Agent_Env(gym.Env):
             # after car has been resettet to its starting position
             random_starting_pos, teleport = self.orientationless_respawn_manager.get_respawn_coordinates()
             if teleport:
-                self.__send_command_to_process_wrapper(TMIProcessWrapper.IPCCommands.get_cmd_command(self.__ipc_cmd_id, 
+                self.__send_command_to_process_wrapper(IPCCommands.get_cmd_command(self.__ipc_cmd_id, 
                                                                                                     TMInterfaceCommands.teleport(random_starting_pos)))
                 assert self.reference_line.next_point_idx == 0, f"Expected reference line to be resetted, but next_point_idx == {self.reference_line.next_point_idx}"
                 nearest_idx = self.reference_line.locate_along_refline(random_starting_pos)
@@ -328,12 +328,12 @@ class TMNF_Single_Agent_Env(gym.Env):
         
     def __respawn_car(self):
         """Respawns car by 'clicking' enter - uses internal game mechanic; also respawns in correct orientation"""
-        self.__send_command_to_process_wrapper(TMIProcessWrapper.IPCCommands.get_cmd_command(self.__ipc_cmd_id, 
+        self.__send_command_to_process_wrapper(IPCCommands.get_cmd_command(self.__ipc_cmd_id, 
                                                                                     TMInterfaceCommands.key_action("press", "enter")))
     
     def __reset_car_position(self):
         """Executes teleportation command to stored car-position; ignores rotation and keeps current rotation of car."""
-        self.__send_command_to_process_wrapper(TMIProcessWrapper.IPCCommands.get_cmd_command(self.__ipc_cmd_id, 
+        self.__send_command_to_process_wrapper(IPCCommands.get_cmd_command(self.__ipc_cmd_id, 
                                                                                     TMInterfaceCommands.teleport(self.start_position)))
     
     def render(self, mode = "human") -> Optional[np.array]:
@@ -363,4 +363,4 @@ class TMNF_Single_Agent_Env(gym.Env):
         raw_obs = self.__get_raw_obs()
         ssD = raw_obs[IPCFields.SIMSTATE] 
         reset_state = (self.random_respawn_manager.make_ssD_from_ref_point(ssD=self.default_ssD))
-        self.__send_command_to_process_wrapper(TMIProcessWrapper.IPCCommands.rewind_state(self.__ipc_cmd_id, reset_state))
+        self.__send_command_to_process_wrapper(IPCCommands.rewind_state(self.__ipc_cmd_id, reset_state))

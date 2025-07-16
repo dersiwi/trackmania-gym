@@ -9,7 +9,7 @@ from configs.config import TrainConfig
 import traceback
 
 from game_interaction.run_multiprocess_wrapper import start_process_and_wait_for_startsignal
-from game_interaction.process_wrapper import TMIProcessWrapper
+from game_interaction.ipc_fields import IPCCommands
 
 
 from utils.hydra_wandb_utils import get_models
@@ -56,7 +56,7 @@ def main(cfg : TrainConfig):
 
     finally:
         # Finalize training and close game all processes.
-        control_queue.put(TMIProcessWrapper.IPCCommands.get_end_syncloop_command(1000)) 
+        control_queue.put(IPCCommands.get_end_syncloop_command(1000)) 
         tmi_process.join()
         
 
