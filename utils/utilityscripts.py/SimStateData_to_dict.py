@@ -116,7 +116,6 @@ def flatten_struct(cls, prefix=""):
             flat_dict[full_name] = gym.spaces.Box(low=low, high=high, shape=(np.shape(field)), dtype=dtype)
 
     # tminterface by default returns a BGRA image so 4 dimensional
-    #TODO a global config would be helpfull in order to set the width and height of the image
     if isinstance(field,SimStateData):
         flat_dict["image"] = gym.spaces.Box(low=0, high=255, shape=(100,100,4), dtype=np.uint8)       
     return flat_dict
@@ -146,8 +145,10 @@ def write_space_dict_to_file(filename: str):
         f.write("}\n")
 
 
-write_space_dict_to_file("simstate_space_dict.py")
-if False:
+
+
+if __name__ == "__main__":
+    write_space_dict_to_file("simstate_space_dict.py")
     space_dict = flatten_struct(SimStateData)
     f = open( 'simstate_space_dict.py', 'w' )
     f.write("import gym\n")

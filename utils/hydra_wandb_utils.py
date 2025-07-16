@@ -7,7 +7,6 @@ from stable_baselines3.common.base_class import BaseAlgorithm
 import hydra
 from neuronal_networks.other_vision_encoders import PrebuiltResNet
 from neuronal_networks.custom_extractor import TMN_Extractor
-from utils.printutils import print_model_params
 from omegaconf import DictConfig, OmegaConf
 import wandb
 from wandb.wandb_run import Run
@@ -15,6 +14,22 @@ from itertools import chain
 from stable_baselines3 import PPO
 from neuronal_networks.lr_schedulers import LR_Scheduler
 import os
+
+def print_model_params(model : BaseAlgorithm):
+    """"Prints parametrs of the given model"""
+    print("\nExtractor, Policy and Critic architecturs:\n" + "-"*30)
+
+    for name, param in model.policy.named_parameters():
+        if param.requires_grad:
+            print(f"{name}: {param.shape}")
+
+    print("\nFeature Extractor Parameters:\n" + "-"*30)
+    for name, param in chain(model.policy.features_extractor.named_parameters(),model.policy.mlp_extractor.named_parameters()):
+        print(f"{name}: requires_grad = {param.requires_grad}")
+    print("\nActor- and Value-Networks Parameters:\n" + "-"*30)
+    for name, param in chain(model.policy.action_net.named_parameters(),model.policy.value_net.named_parameters()):
+        print(f"{name}: requires_grad = {param.requires_grad}")
+
 
 def get_vision_model(cfg : TrainConfig, in_color_channels : int, extractor_out_dim : int) -> nn.Module:
     """Create and return vision model according to configuration"""
@@ -65,15 +80,7 @@ def get_models(cfg : TrainConfig, tm_env : TMNF_Single_Agent_Env, print_params :
         model : BaseAlgorithm | PPO | SAC | DQN = model_constructor(env= tm_env, policy_kwargs=policy_kwargs,tensorboard_log= run_id,device=device ,**algorithm_params)
     
     if print_params:
-        print("\nExtractor, Policy and Critic architecturs:\n" + "-"*30)
-        print_model_params(model) 
-        if True:
-            print("\nFeature Extractor Parameters:\n" + "-"*30)
-            for name, param in chain(model.policy.features_extractor.named_parameters(),model.policy.mlp_extractor.named_parameters()):
-                print(f"{name}: requires_grad = {param.requires_grad}")
-            print("\nActor- and Value-Networks Parameters:\n" + "-"*30)
-            for name, param in chain(model.policy.action_net.named_parameters(),model.policy.value_net.named_parameters()):
-                print(f"{name}: requires_grad = {param.requires_grad}")
+        print_model_params(model)
 
     return vision_model, model
 
