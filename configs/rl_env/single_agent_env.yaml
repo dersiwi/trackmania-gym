@@ -1,6 +1,7 @@
 defaults:
-  - obs_manager: basic_obs.yaml
-  - reward_manager:  basic_rewards.yaml
+  - obs_manager: next_point_obs.yaml
+  - reward_manager:   next_point_rewards.yaml
+  - termination_manager: no_progress.yaml
 
 env:
   _partial_: True
@@ -8,64 +9,19 @@ env:
   position_buffer_size : 20
   position_moved_threshold : 0.8
   reset_mode : "respawn"
-  reward_calculator : "sophy"
-  obs_manager : sophy_obs.yaml ##use basic for other
-  termination_manager : "no_progress"
   game_speed : 20
   countdown_speed : 20
   test : False
   wrap_obs_in_test : false  # Applies an test-wrapper to the observations.
   n_previous_actions : 10
   camera_id : 2
-  # these ones are important for termination manager
-  max_steps_until_reset : 2049  ##aka timeout
-  ignore_stuck_for_n_steps_after_reset : 80 
-  increase_timeout_intervals : ## total environment steps after which an increase of timeout happens
-    - 124000
-    - 1000000
-  new_timeouts : ## specifies new values for increase of timeout (initial value is max_steps_until_reset)
-    - 512
-    - 1024
-  terminate_after_steps_without_progress : 1024
+ 
 
   automatic_prevent_sim_finish : true #If True, iface.prevent_sim_finish() is called automatically, once the current and target checkpoint are the same.
   disable_waitforstep_after_n_consecutive_timeouts : 5
   actions_per_second : 20
   waitforstep_timeout_in_s : 1.2 # this HAS to be smaller than the timeout of TMInterface
   use_rewind : True
-
-
-obsmanager:
-  observation_list: 
-        - image
-        - position
-        - velocity
-        - yaw_pitch_roll
-        - scene_mobil.sync_vehicle_state.speed_forward
-        - scene_mobil.input_steer
-        - scene_mobil.async_vehicle_state.is_turbo
-        - scene_mobil.engine.gear
-        - input_finish_event.input_data_field
-        - input_accelerate_event.time_field
-        - scene_mobil.async_vehicle_state.rest_field
-        - rotation_matrix
-        
-  colorspace : "rgb"
-  convert_torch : true
-  maxlen_history: 3
-
-linesightobsmanager:
-  colorspace : "grayscale"
-  n_zone_centers_in_inputs : 40
-  one_every_n_zone_centers_in_inputs : 20
-  n_zone_centers_extrapolate_after_end_of_map : 1000
-  n_zone_centers_extrapolate_before_start_of_map : 20
-  n_prev_actions_in_inputs : 5
-  margin_to_announce_finish_meters : 700
-  distance_between_checkpoints: 0.5
-  road_width: 90  ## a little bit of margin, could be closer to 24 probably ? Don't take risks there are curvy roads
-  sync_virtual_and_real_checkpoints : True
-
 
 
 wrappers:

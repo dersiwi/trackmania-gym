@@ -33,6 +33,7 @@ def get_environment(cfg : TrainConfig, control_queue : Queue, response_queue : Q
 
     obs_manager = get_observation_manager(obs_manager_cfg = cfg.rl_env.obs_manager, wrap_obs_in_test = cfg.rl_env.env.wrap_obs_in_test)
     reward_calculator = get_reward_calculator(reward_calculator_cfg = cfg.rl_env.reward_manager)
+    termination_manger = get_termination_manager(termination_cfg= cfg.rl_env.termination_manager)
 
     if cfg.rl_env.env.test:
         TM_ENV_CLASS = TestEnvironment
@@ -43,7 +44,7 @@ def get_environment(cfg : TrainConfig, control_queue : Queue, response_queue : Q
                                     response_queue=response_queue, 
                                     obs_manager=obs_manager,
                                     reward_calculator=reward_calculator,
-                                    termination_manger=get_termination_manager(cfg),
+                                    termination_manger=termination_manger,
                                     reference_line = ReferenceLineManager(cfg.gmi.reference_line),
                                     env_cfg=cfg.rl_env.env)
     tm_env.orientationless_respawn_manager = OrientationlessRespawnManager(respawn_coordinates=OrientationlessRespawnManager.get_respawns_for_very_long_checkpoints())

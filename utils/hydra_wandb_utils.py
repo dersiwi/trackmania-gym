@@ -21,7 +21,7 @@ def get_vision_model(cfg : TrainConfig, in_color_channels : int, extractor_out_d
     vision_model_constructor = hydra.utils.instantiate(cfg.models)
 
     #this may not be pretty, but not having the correct input channels has caused headaches
-    expected_inchannel = 1 if cfg.rl_env.obsmanager.colorspace == "grayscale" else 3
+    expected_inchannel = 1 if cfg.rl_env.obs_manager.colorspace == "grayscale" else 3
     assert in_color_channels == expected_inchannel, f"Expected {expected_inchannel} color channels, got {in_color_channels}"
 
     vision_model : nn.Module | PrebuiltResNet = vision_model_constructor(
