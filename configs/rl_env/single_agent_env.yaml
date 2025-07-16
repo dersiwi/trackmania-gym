@@ -1,6 +1,6 @@
 defaults:
-  - obs_manager: sophy_obs.yaml
-  - reward_manager:  sophy_rewards.yaml
+  - obs_manager: basic_obs.yaml
+  - reward_manager:  basic_rewards.yaml
 
 env:
   _partial_: True
@@ -34,28 +34,7 @@ env:
   waitforstep_timeout_in_s : 1.2 # this HAS to be smaller than the timeout of TMInterface
   use_rewind : True
 
-reward_manager:
-  rewardterm_weights:
-    accum_distance_weight : 1200
-    race_not_finished_weight : 0.05
-    race_finished_reward : 100
-    other_termination_punishment : 20
-    velocity_reward_weight : 1
-    backward_weight : 0
-    distance_to_center_weight : 1
-    velocity_change_reward_weight : 30
-    speed_reward_weight: 1
-  lateral_distance_mode : "gauss" #triangle, gauss, trapez
-  # TODO we need to think about refactoring all the obs,reward and referenceline manager in their own individual environments 
-  progress_weight: 0.014          # cd
-  off_course_penalty_weight: 0.034 # co (λo = 10)
-  wall_penalty_weight: 0 #10.0        # λw
-  steering_change_penalty_weight: 3.0  # λs
-  steering_history_penalty_weight: 5.0 
-  c_d : 0.014
-  c_s : 182.883569
-  c_o :  0.034
-    
+
 obsmanager:
   observation_list: 
         - image
