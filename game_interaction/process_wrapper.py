@@ -147,7 +147,6 @@ class TMIProcessWrapper:
 
         self.waitforstep_step_cmd_id = -1
         self.waitforstep_answer_expected = False
-        self.waitforstep_continue_sucessfully = False
         self.waitforstepmode_on = False
         self.max_waiting_period_for_step_command = 0.5
 
@@ -167,9 +166,12 @@ class TMIProcessWrapper:
         self.time_since_last_unanswered_handling = time.time()
         """Time since all last unanswered commands were handled"""
 
+        self.cmd_count, self.avg_cmd_exectime = 0, 0.0
+        """These two log average execution times of all commands."""
         
-    def __receive_frame(self):
-        """Receives a frame from self.ifaca If self._req_img_cmd_id != -1, it sends the aquired frame and simstate via the response-queue"""
+    def __receive_frame(self) -> dict:
+        """Receives a frame from self.ifaca If self._req_img_cmd_id != -1, it sends the aquired frame and simstate via the response-queue.
+        If receive_frame was triggered by req_img-command, it also puts the answer into the return queue, if it was triggered by waitforstep, it returns the answer."""
         frame = self.iface.get_frame(self.img_width, self.img_height)
         simstate = self.iface.get_simulation_state()
 
@@ -177,11 +179,11 @@ class TMIProcessWrapper:
         
         response = {IPCFields.CMD_ID : self._req_img_cmd_id, IPCFields.STATUS : IPCFields.STATUS_OK, IPCFields.IMG : frame, IPCFields.SIMSTATE : simstate, IPCFields.SIMSTEP : self.sim_step_count}
 
-        if not self._req_img_cmd_id == -1:
+        if not self._req_img_cmd_id == -1: #<- tis is only set by req-img-command
             self.answer_command(response)
             self._req_img_cmd_id = -1
-
-        return response
+        else: #<- if it's not set, then Process wrapper is in waitforstep-mode
+            return response
 
 
 
@@ -218,7 +220,15 @@ class TMIProcessWrapper:
 
     def answer_command(self, response : dict):
         """Answers a command. Delets it from unanswered commands and sends puts response into queue."""
+        if not response[IPCFields.CMD_ID] in self.unanswered_commands:
+            self.logger.error(f"Wanted to answer command with id {response[IPCFields.CMD_ID]} that was not in unanswered commands; has to have been removed by unanswered-handler.")
+            return 
+        exce_time = self.unanswered_commands[response[IPCFields.CMD_ID]]
         del self.unanswered_commands[response[IPCFields.CMD_ID]]
+        self.cmd_count += 1
+        self.avg_cmd_exectime += ((time.time() - exce_time) - self.avg_cmd_exectime) / self.cmd_count
+        if self.cmd_count % 10000 == 0:
+            self.logger.info(f"Average execution time of IPC-Commands {self.avg_cmd_exectime}s.")
         self.response_queue.put_nowait(response)
 
     def handle_unanswered_commands(self, max_unanswered_time : float = 20):
@@ -299,7 +309,6 @@ class TMIProcessWrapper:
         self.waitforstep_step_cmd_id = cmd_id
         self.send_action(action)
         self.waitforstep_req_img_next_syncstep = True
-        self.waitforstep_continue_sucessfully = True
         self.expect_next_step_command = False
         self.ingame_time_passed = 0
         self.n_steps += 1
@@ -328,7 +337,10 @@ class TMIProcessWrapper:
         total_msgs = 0
         unsucessful_waitings_for_step = 0
         continuous_step_misses = 0
-        waiting_times = []
+        sepcommand_count, avg_waitingtime_for_command = 0, 0.0  # alpha, avg_time = 0.01, 0.0 #for moving average.
+        """This tracks the average waiting time for step-commands"""
+
+    
         self.time_since_last_unanswered_handling = time.time()
 
         while self.__run_sync_loop:
@@ -349,30 +361,39 @@ class TMIProcessWrapper:
                 frame_and_state = None
                 self.waitforstep_step_cmd_id = -1
                 self.waitforstep_answer_expected = False
-                self.waitforstep_continue_sucessfully = False #only after waitforstep is officially done, this shoul be tracking again.
                 self.expect_next_step_command = True
 
-            if self.waitforstep and self.expect_next_step_command and self.ingame_time_passed >= self.gametime_between_actions:
+            if self.waitforstep and self.expect_next_step_command and not self._req_in_progress and self.ingame_time_passed >= self.gametime_between_actions: #'not self._req_in_progress' because if req-img command is currently handled, this should not block
                 waiting_begin = time.time()
                 waiting_time = time.time() - waiting_begin
                 waiting_period = 1.0
+                break_due_to_req_img = False
                 while waiting_time < waiting_period:
                     try:
                         command = self.step_commands.get_nowait()
                         self.waitforstep_execution(command[IPCFields.ARGS], command[IPCFields.CMD_ID])
                         continuous_step_misses = 0
-                        waiting_times.append(waiting_time)
-                        if len(waiting_times) > 100:
-                            self.logger.info(f"Average waiting time for step-command : {sum(waiting_times) / len(waiting_times)}s")
-                            waiting_times.clear()
+                        
+                        sepcommand_count += 1
+                        avg_waitingtime_for_command += (waiting_time - avg_waitingtime_for_command) / sepcommand_count # moving average?: alpha * waiting_time + (1-alpha) * avg_time
+                        if sepcommand_count % 10000 == 0:
+                            self.logger.info(f"Average waiting time for step-command : {avg_waitingtime_for_command}s")
                         break
                     except Empty:
                         pass
 
-                    self.check_command_queue()
+                    _command = self.check_command_queue()
+                    if not _command is None and _command[IPCFields.CMD] == TMIProcessWrapper.IPCCommands.REQ_IMG:
+                        # if _command is req_img, then it has to be handled in the communication loop; this is why it has to be broken here.
+                        # TODO : originally, this was only for breaking to handle image, but maybe it's not so bad to generally update the simulation if a command happened.
+                        break_due_to_req_img = True
+                        break
+                        
+
+
                     waiting_time = time.time() - waiting_begin
 
-                continuous_step_misses += 1
+                continuous_step_misses += (not break_due_to_req_img)
 
 
                 # self-disable mechanism for waitforstep
@@ -386,8 +407,8 @@ class TMIProcessWrapper:
 
 
 
-            if self.waitforstep and total_msgs % 1000 == 0 and unsucessful_waitings_for_step > 0:
-                self.logger.info(f"Had no step-command in internal queue. This happend in {unsucessful_waitings_for_step}/{1000} loop-iterations.")
+            if self.waitforstep and total_msgs % 10000 == 0 and unsucessful_waitings_for_step > 0:
+                self.logger.info(f"Had no step-command in internal queue. This happend in {unsucessful_waitings_for_step}/{10000} loop-iterations.")
                 total_msgs = 0 #<-- there is no need to set this to zero here but i am anxious it will overflow.
                 unsucessful_waitings_for_step = 0
 
