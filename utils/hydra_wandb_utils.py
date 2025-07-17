@@ -12,6 +12,8 @@ import wandb
 from wandb.wandb_run import Run
 from itertools import chain
 from stable_baselines3 import PPO
+from stable_baselines3.common.policies import ActorCriticPolicy
+
 from neuronal_networks.lr_schedulers import LR_Scheduler
 import os
 
@@ -29,6 +31,20 @@ def print_model_params(model : BaseAlgorithm):
     print("\nActor- and Value-Networks Parameters:\n" + "-"*30)
     for name, param in chain(model.policy.action_net.named_parameters(),model.policy.value_net.named_parameters()):
         print(f"{name}: requires_grad = {param.requires_grad}")
+    
+    if isinstance(model.policy, ActorCriticPolicy):
+        print("\n[INFO] Checking whether the actor and critic are using the same feature extractor:\n" + "-"*30)
+        actor_id = id(model.policy.pi_features_extractor)
+        critic_id = id(model.policy.vf_features_extractor)
+
+        print("Actor Feature Extractor ID:", actor_id)
+        print("Critic Feature Extractor ID:", critic_id)
+
+        if actor_id != critic_id:
+            print("Actor and Critic are using DIFFERENT feature extractors.")
+        else:
+            print("Actor and Critic are sharing the SAME feature extractor.")
+
 
 
 def get_vision_model(cfg : TrainConfig, in_color_channels : int, extractor_out_dim : int) -> nn.Module:
@@ -63,10 +79,11 @@ def get_models(cfg : TrainConfig, tm_env : TMNF_Single_Agent_Env, print_params :
   
     policy_kwargs = dict(
     features_extractor_class=TMN_Extractor,
+    share_features_extractor = cfg.share_features_extractor,
     features_extractor_kwargs= dict( 
     vision_model = vision_model,
     device= device,
-    out_dim =  cfg.extractors_out_dim)
+    out_dim =  cfg.extractors_out_dim,)
     )
     algorithm_params = OmegaConf.to_container(cfg.sb3.algorithm_params, resolve=True)
 
