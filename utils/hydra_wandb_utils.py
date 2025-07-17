@@ -5,7 +5,7 @@ from trackmania_env.envs.single_agent_env2 import TMNF_Single_Agent_Env
 from stable_baselines3 import PPO, SAC, DQN
 from stable_baselines3.common.base_class import BaseAlgorithm
 import hydra
-from neuronal_networks.other_vision_encoders import PrebuiltResNet
+
 from neuronal_networks.custom_extractor import TMN_Extractor
 from omegaconf import DictConfig, OmegaConf
 import wandb
@@ -39,7 +39,7 @@ def get_vision_model(cfg : TrainConfig, in_color_channels : int, extractor_out_d
     expected_inchannel = 1 if cfg.rl_env.obs_manager.colorspace == "grayscale" else 3
     assert in_color_channels == expected_inchannel, f"Expected {expected_inchannel} color channels, got {in_color_channels}"
 
-    vision_model : nn.Module | PrebuiltResNet = vision_model_constructor(
+    vision_model : nn.Module = vision_model_constructor(
         in_color_channels=in_color_channels,
         out_dim = extractor_out_dim)
     return vision_model

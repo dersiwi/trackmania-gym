@@ -4,9 +4,25 @@
 # - mobilenet_v3_large
 # for the available weights see https://docs.pytorch.org/vision/main/_modules/torchvision/models/mobilenetv2.html#mobilenet_v2
 # and https://docs.pytorch.org/vision/main/_modules/torchvision/models/mobilenetv3.html#mobilenet_v3_large
+
+# Available model names RESNET_MODELS:
+# - "resnet18"
+# - "resnet34"
+# - "resnet50"
+# - "resnet101"
+# - "resnet152"
+# - "resnext50_32x4d"
+# - "resnext101_32x8d"
+# - "resnext101_64x4d"
+# - "wide_resnet50_2"
+# - "wide_resnet101_2"
+# for the available weights see https://docs.pytorch.org/vision/0.21/_modules/torchvision/models/resnet.html#ResNet18_Weights
+
+
 _partial_: True
-_target_: neuronal_networks.mobile_net.PrebuiltMobileNet
+_target_: neuronal_networks.prebuilt_nets.PrebuiltnetImplementation
 model_name: "mobilenet_v3_small"
+modeltype : "mobilenet"
 pretrained: True
 trainable_backbone: True
 weights_name: "DEFAULT"

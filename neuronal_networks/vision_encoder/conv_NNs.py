@@ -1,6 +1,8 @@
 import torch
 import torch.nn as nn
 
+
+
 class VisionModelSix(nn.Module): #seal team 6 very cool
     def __init__(self, in_color_channels : int, out_dim : int):
         super().__init__()
@@ -80,6 +82,24 @@ class VisionModelEight(nn.Module):
         x = self.feature_projector(x)
         return x 
 
-
-
-
+class Linesight_Vision_Model(nn.Module):
+    """
+    This is the same vision model which was used in linesight_rl 
+    """
+    def __init__(self,in_color_channels=1,img_head_channels = [1, 16, 32, 64, 32]):
+        super(Linesight_Vision_Model,self).__init__()
+        img_head_channels[0] = in_color_channels
+        self.model = torch.nn.Sequential(
+            torch.nn.Conv2d(in_channels=img_head_channels[0], out_channels=img_head_channels[1], kernel_size=(4, 4), stride=2),
+            torch.nn.ReLU(inplace=True),
+            torch.nn.Conv2d(in_channels=img_head_channels[1], out_channels=img_head_channels[2], kernel_size=(4, 4), stride=2),
+            torch.nn.ReLU(inplace=True),
+            torch.nn.Conv2d(in_channels=img_head_channels[2], out_channels=img_head_channels[3], kernel_size=(3, 3), stride=2),
+            torch.nn.ReLU(inplace=True),
+            torch.nn.Conv2d(in_channels=img_head_channels[3], out_channels=img_head_channels[4], kernel_size=(3, 3), stride=1),
+            torch.nn.ReLU(inplace=True),
+            torch.nn.Flatten(),
+        )
+    def forward(self,x):
+        return self.model(x)
+    

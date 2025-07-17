@@ -8,7 +8,7 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 from torch.utils.data import DataLoader
-from neuronal_networks.conv_NNs import VisionModelEight
+from neuronal_networks.vision_encoder.conv_NNs import VisionModelEight
 from neuronal_networks.pretraining.dataloader import LateralDistanceDataset
 from tqdm import tqdm
 

@@ -1,7 +1,7 @@
 import torchvision.models as models
 import torch
 import torch.nn as nn
-from neuronal_networks.cnn_building.cnn_blocks import ImprovedCNNLayer, NaiveCNNLayer
+from neuronal_networks.vision_encoder.cnn_building.cnn_blocks import ImprovedCNNLayer, NaiveCNNLayer
 
 
 class BaseCNN(nn.Module):

@@ -26,7 +26,7 @@ from game_interaction.run_multiprocess_wrapper import start_process_and_wait_for
 from trackmania_env.observations.observations import get_observation_manager
 from trackmania_env.rewards.getrewards import get_reward_calculator
 
-from neuronal_networks.conv_NNs import PrebuiltResNet
+from neuronal_networks.vision_encoder.prebuilt_nets import PrebuiltnetImplementation
 from neuronal_networks.custom_extractor import TMN_Extractor
 
 import hydra
@@ -60,7 +60,7 @@ def main(cfg : TrainConfig):
     tmi_process.join()
 
     out_dim = 10
-    vision_model = PrebuiltResNet("resnet18",out_dims=out_dim,pretrained=True,
+    vision_model = PrebuiltnetImplementation("resnet18", "resnet", out_dims=out_dim,pretrained=True,
                                     in_color_channels=tm_env.observation_space["image"].shape[-1])
     extractor = TMN_Extractor(tm_env.observation_space,vision_model=vision_model,vision_model_out_dim=out_dim)
     with open('example_extractor_out.txt', 'w') as f:
