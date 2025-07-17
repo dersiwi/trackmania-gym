@@ -12,9 +12,9 @@ import wandb
 from wandb.wandb_run import Run
 from itertools import chain
 from stable_baselines3 import PPO
-from stable_baselines3.common.policies import ActorCriticPolicy
+from stable_baselines3.common.policies import ActorCriticPolicy,BasePolicy
+from neuronal_networks.get_policy import get_policy
 
-from neuronal_networks.lr_schedulers import LR_Scheduler
 import os
 
 def print_model_params(model : BaseAlgorithm):
@@ -74,27 +74,31 @@ def get_models(cfg : TrainConfig, tm_env : TMNF_Single_Agent_Env, print_params :
 
     Returns vision model as well as the algorithm."""
     device = cfg.platforms.device
-
     vision_model = get_vision_model(cfg, tm_env.observation_space["image"].shape[0], cfg.extractors_out_dim)
-  
-    policy_kwargs = dict(
-    features_extractor_class=TMN_Extractor,
-    share_features_extractor = cfg.share_features_extractor,
-    features_extractor_kwargs= dict( 
-    vision_model = vision_model,
-    device= device,
-    out_dim =  cfg.extractors_out_dim,)
-    )
     algorithm_params = OmegaConf.to_container(cfg.sb3.algorithm_params, resolve=True)
+  
+    policy_type, policy_kwargs = get_policy(policy_cfg=cfg.policy, device=device, vision_model=vision_model)
+
+    model_args = dict(
+    policy = policy_type,
+    env = tm_env,
+    tensorboard_log = run_id,
+    device = device,
+    verbose = cfg.policy.verbose,
+    **algorithm_params
+    )
+    # Only include policy_kwargs if they exist
+    if policy_kwargs: model_args["policy_kwargs"] = policy_kwargs
+
 
     if not (load_model_path is None):
         # TODO remove the PPO and make this modular so it can be used with different algos
-        model = PPO(policy = "MultiInputPolicy",env= tm_env, policy_kwargs=policy_kwargs,tensorboard_log= run_id,device=device ,**algorithm_params)
+        model = PPO(**model_args)
         model.set_parameters(load_model_path)
     else:
         #lr : LR_Scheduler = hydra.utils.instantiate(cfg.lr_scheduler)
         model_constructor = hydra.utils.instantiate(cfg.sb3.constructor)
-        model : BaseAlgorithm | PPO | SAC | DQN = model_constructor(env= tm_env, policy_kwargs=policy_kwargs,tensorboard_log= run_id,device=device ,**algorithm_params)
+        model : BaseAlgorithm | PPO | SAC | DQN = model_constructor(**model_args)
     
     if print_params:
         print_model_params(model)

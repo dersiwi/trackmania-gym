@@ -1,8 +1,6 @@
 constructor:
   _partial_: true
   _target_: stable_baselines3.PPO
-  policy: "MultiInputPolicy"
-  verbose: 1
 
 
 algorithm_params:

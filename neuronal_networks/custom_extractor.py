@@ -76,13 +76,13 @@ class TMN_Extractor(BaseFeaturesExtractor):
 class AsyncMLPExtractor(nn.Module):
     def __init__(self, feature_dim: int | dict[str,int], actor_MLP : nn.Module = None, critic_MLP: nn.Module = None):
         super().__init__()
-        self.policy_input_dim = feature_dim if isinstance(feature_dim, int) else feature_dim["pi"]
+        self.actor_input_dim = feature_dim if isinstance(feature_dim, int) else feature_dim["pi"]
         self.critic_input_dim = feature_dim if isinstance(feature_dim, int) else feature_dim["vf"]
         
         # Default actor MLP if none is provided
         # or is equivalent to actor_MLP if actor_MLP is not None else nn.Sequential(...)
         self.actor_net = actor_MLP or nn.Sequential(
-            nn.Linear(self.policy_input_dim, 64),
+            nn.Linear(self.actor_input_dim, 64),
             nn.ReLU(),
             nn.Linear(64, 64),
             nn.ReLU()
@@ -95,9 +95,7 @@ class AsyncMLPExtractor(nn.Module):
             nn.Linear(64, 64),
             nn.ReLU()
         )
-            
-    def forward(self):
-        return 
+                
     def forward_actor(self,policy_features):
         return self.actor_net(policy_features)
     
@@ -186,7 +184,7 @@ class AsyncActorCritic(ActorCriticPolicy):
 
     def _build_mlp_extractor(self) -> None:
 
-        self.mlp_extractor = AsyncMLPExtractor(...)
+        self.mlp_extractor = AsyncMLPExtractor(feature_dim= self.features_dim)
 
     def extract_features(self, obs: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
         """
