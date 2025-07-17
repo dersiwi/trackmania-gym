@@ -14,6 +14,7 @@ class RewradCalculator:
 
     def __init__(self, reward_cfg : RewardManagerCfg):
         self.reward_cfg = reward_cfg
+        self.env = None
         self.pos_buffer = None # do not reset or add anything to this position buffer, read-only! (no reset, no add...)
         self.refline_manager: ReferenceLineManager = None
 
@@ -24,6 +25,12 @@ class RewradCalculator:
     def set_reference_line(self,refline_manager: ReferenceLineManager):
         """ Set reference line for this instance"""
         self.refline_manager = refline_manager
+
+    def set_env(self, env):
+        from trackmania_env.envs.single_agent_env2 import TMNF_Single_Agent_Env
+        self.env : TMNF_Single_Agent_Env= env
+        self.set_reference_line(self.env.reference_line)
+        self.set_position_buffer(self.env.position_buffer)
 
     def calculate_reward(self, observations : dict[str, any], processed_obs : dict[str, any], race_finished : bool, other_terminations : dict[str, bool]) -> tuple[float, dict[str, int | float]]:
         """Calculates the rewrad given observations for current environment-step

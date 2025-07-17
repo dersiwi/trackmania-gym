@@ -1,0 +1,12 @@
+name: "race_finished"
+rewardterm_weights:
+    accum_distance_weight : 1200
+    race_not_finished_weight : 0.05 # not used
+    race_finished_reward : 100
+    other_termination_punishment : 20
+    velocity_reward_weight : 1  #not used
+    backward_weight : 0 #not used
+    distance_to_center_weight : 1 #not used
+    velocity_change_reward_weight : 30 #not used
+    speed_reward_weight: 1 #not used
+lateral_distance_mode : "gauss" #triangle, gauss, trapez

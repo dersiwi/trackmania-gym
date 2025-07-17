@@ -90,15 +90,9 @@ class TMNF_Single_Agent_Env(gym.Env):
 
         self.ignore_stuck_for_n_steps_after_reset = env_cfg.ignore_stuck_for_n_steps_after_reset
 
-        self.rew_calculator = reward_calculator#get_reward_calculator(reward_calculator, self.position_buffer)
-        self.rew_calculator.set_position_buffer(self.position_buffer)
-        self.rew_calculator.set_reference_line(self.reference_line)
-        
+        self.rew_calculator = reward_calculator
         self.obs_manager = obs_manager
-        self.obs_manager.set_env(self)
-        
         self.termination_manager = termination_manger
-        self.termination_manager.set_env(self)
 
         self.random_respawn_manager = RandomRespawnManager(self.reference_line.reference_line)
         self.orientationless_respawn_manager : OrientationlessRespawnManager = None

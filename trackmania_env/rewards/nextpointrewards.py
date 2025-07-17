@@ -21,7 +21,7 @@ class NextPointRewards(RewradCalculator):
         self.accum_distance_weight = reward_cfg.rewardterm_weights["accum_distance_weight"]
         self.race_not_finished_weight = reward_cfg.rewardterm_weights["race_not_finished_weight"]
         
-        self.race_finished_reward = reward_cfg.rewardterm_weights["race_finished_reward"]
+        self.race_finished_reward_weight = reward_cfg.rewardterm_weights["race_finished_reward"]
         self.other_termination_punishment = reward_cfg.rewardterm_weights["other_termination_punishment"]
         self.velocity_reward_weight = reward_cfg.rewardterm_weights["velocity_reward_weight"]
         self.backward_weight = reward_cfg.rewardterm_weights["backward_weight"]
@@ -112,7 +112,7 @@ class NextPointRewards(RewradCalculator):
             
         #velocity_reward = self.velocity_reward_weight * current_velocity_normed
         race_not_finished_reward = (-1) * self.race_not_finished_weight
-        race_finished = race_finished * self.race_finished_reward
+        race_finished = race_finished * self.race_finished_reward_weight
         other_term_reward = self._calculate_termination_rewards(other_terminations)
         #backward_punishment = (-1) * np.clip(d, a_min=0, a_max=100) / 100 * self.backward_weight
         
@@ -167,4 +167,39 @@ class NextPointRewards2(NextPointRewards):
         return reward, {"speed_reward" : speed_reward,
                         "accum_dist_reward" : accum_dist_reward,
                         "distance_to_center_reward" : distance_to_center_reward,
+                        "other_terminations" : other_term_reward}
+    
+
+
+class RaceFinishedRewards(NextPointRewards):
+    """Similar to NextPointRewards, but it scales the distance to center in relation to the accumulated distance."""
+    def __init__(self, reward_cfg : RewardManagerCfg):
+        super().__init__(reward_cfg)
+        self.env_timeout = 0
+    
+        """After how many (env)-steps the environment times out"""
+
+    def set_env(self, env):
+        super().set_env(env)
+        self.env_timeout = self.env.termination_manager.timeout
+
+
+    def calculate_reward(self, observations, processed_obs, race_finished, other_terminations):
+        reward = 0
+        
+        next_refline_index, d, drel = self.refline_manager.get_distance_to_next_point()
+        accum_dist_reward = self._calculate_accum_distance_reward(next_refline_index)
+        
+        other_term_reward = self._calculate_termination_rewards(other_terminations)
+        race_finished_reward = 0
+
+        if race_finished:
+            # TODO : The maximium reachable reward with this is based on the length of the track (therefore : noramlize relative to track.)
+            # (the longer the track, the more the minimal amount of env-steps requrired to reach goal, the less this reward.)
+            race_finished_reward = (1 - self.env.n_steps / self.env_timeout) * self.race_finished_reward_weight
+
+        reward = accum_dist_reward + other_term_reward + race_finished_reward
+
+        return reward, {"accum_dist_reward" : accum_dist_reward,
+                        "race_finished_reward" : race_finished_reward,
                         "other_terminations" : other_term_reward}

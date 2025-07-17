@@ -48,7 +48,11 @@ def get_environment(cfg : TrainConfig, control_queue : Queue, response_queue : Q
                                     reference_line = ReferenceLineManager(cfg.gmi.reference_line),
                                     env_cfg=cfg.rl_env.env)
     tm_env.orientationless_respawn_manager = OrientationlessRespawnManager(respawn_coordinates=OrientationlessRespawnManager.get_respawns_for_very_long_checkpoints())
-            
+    
+    reward_calculator.set_env(tm_env)
+    obs_manager.set_env(tm_env)
+    termination_manger.set_env(tm_env)
+
     # apply (Observation)-wrappers to the environment
     for _, wrapper_conf in cfg.rl_env.wrappers.items():
         wrapper : ObservationWrapper = hydra.utils.instantiate(wrapper_conf)
