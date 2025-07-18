@@ -5,7 +5,7 @@ defaults:
   - wandb_callbacks : sb3_callback.yaml
   - models: visionmodeleight.yaml
   - lr_scheduler: no_scheduling.yaml
-  - policy: basic_policy.yaml
+  - policy: sophy_policy.yaml
 
 extractors_out_dim: 64 # every extractor will produce an output with this dimension 
 share_features_extractor: True # whether to share the features extractor between actor and critic when applicable

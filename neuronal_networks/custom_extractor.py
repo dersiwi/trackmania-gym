@@ -10,7 +10,8 @@ from stable_baselines3.common.policies import ActorCriticPolicy
 from stable_baselines3.common.type_aliases import Schedule
 from stable_baselines3.common.distributions import Distribution
 from stable_baselines3.common.preprocessing import preprocess_obs
-from stable_baselines3.common.torch_layers import BaseFeaturesExtractor
+from stable_baselines3.common.torch_layers import BaseFeaturesExtractor,MlpExtractor
+from stable_baselines3.common.utils import get_device 
 
 class TMN_Extractor(BaseFeaturesExtractor):
     """
@@ -36,7 +37,9 @@ class TMN_Extractor(BaseFeaturesExtractor):
         out_dim:int = 64,
         device= "cpu",
         normalized_image: bool = False,
-    ) -> None:
+        float_model: list[int] = None,
+        activation_fn: type[nn.Module]= nn.ReLU,
+        last_activation_fn: type[nn.Module]= nn.Tanh ) -> None:
         super().__init__(observation_space, features_dim=1)
 
         total_concat_size = 0
@@ -53,12 +56,24 @@ class TMN_Extractor(BaseFeaturesExtractor):
                 assert vision_model_out_dim == out_dim
                 total_concat_size += vision_model_out_dim
             else:
-                hidden_dim = subspace.shape[0] // 2 if subspace.shape[0] > out_dim else subspace.shape[0] * 2
 
-                extractors[key] = nn.Sequential(
+                if float_model:
+                    float_net: list[nn.Module] = []
+                    last_layer_dim = subspace.shape[0]
+                    for l in float_model:
+                        float_net.append(nn.Linear(last_layer_dim, l))
+                        float_net.append(activation_fn)
+                        last_layer_dim = l
+                    float_net.append(nn.Linear(last_layer_dim, out_dim))
+                    float_net.append(last_activation_fn)
+
+                else:
+                    hidden_dim = subspace.shape[0] // 2 if subspace.shape[0] > out_dim else subspace.shape[0] * 2
+                    extractors[key] = nn.Sequential(
                     nn.Linear(subspace.shape[0], hidden_dim, device=device),
                     nn.Linear(hidden_dim, out_dim, device=device)
-                )
+                    )
+
                 total_concat_size += out_dim
 
         # Update the features dim manually
@@ -74,35 +89,62 @@ class TMN_Extractor(BaseFeaturesExtractor):
         return torch.cat(encoded_tensor_list, dim=1)
     
 class AsyncMLPExtractor(nn.Module):
-    def __init__(self, feature_dim: int | dict[str,int], actor_MLP : nn.Module = None, critic_MLP: nn.Module = None):
-        super().__init__()
-        self.actor_input_dim = feature_dim if isinstance(feature_dim, int) else feature_dim["pi"]
-        self.critic_input_dim = feature_dim if isinstance(feature_dim, int) else feature_dim["vf"]
-        
-        # Default actor MLP if none is provided
-        # or is equivalent to actor_MLP if actor_MLP is not None else nn.Sequential(...)
-        self.actor_net = actor_MLP or nn.Sequential(
-            nn.Linear(self.actor_input_dim, 64),
-            nn.ReLU(),
-            nn.Linear(64, 64),
-            nn.ReLU()
-        )
+    def __init__(
+        self,
+        feature_dim: Union[int, dict[str, int]],
+        net_arch: Union[list[int], dict[str, list[int]]],
+        activation_fn: type[nn.Module],
+        device: Union[torch.device, str] = "auto",
+    ):
+        super().__init__()  # skip MlpExtractor's __init__, we override
 
-        # Default critic MLP if none is provided
-        self.critic_net = critic_MLP or nn.Sequential(
-            nn.Linear(self.critic_input_dim, 64),
-            nn.ReLU(),
-            nn.Linear(64, 64),
-            nn.ReLU()
-        )
-                
-    def forward_actor(self,policy_features):
-        return self.actor_net(policy_features)
-    
-    def forward_critic(self,critic_features):
-        return self.critic_net(critic_features)
+        device = get_device(device)
 
-class AsyncActorCritic(ActorCriticPolicy):
+        # Handle different input dimensions for actor (pi) and critic (vf)
+        if isinstance(feature_dim, int):
+            actor_input_dim = critic_input_dim = feature_dim
+        else:
+            actor_input_dim = feature_dim.get("pi", 0)
+            critic_input_dim = feature_dim.get("vf", 0)
+
+        if isinstance(net_arch, dict):
+            pi_layers_dims = net_arch.get("pi", [])
+            vf_layers_dims = net_arch.get("vf", [])
+        else:
+            pi_layers_dims = vf_layers_dims = net_arch
+
+        # Build policy network
+        policy_net = []
+        last_layer_dim_pi = actor_input_dim
+        for layer_size in pi_layers_dims:
+            policy_net.append(nn.Linear(last_layer_dim_pi, layer_size))
+            policy_net.append(activation_fn())
+            last_layer_dim_pi = layer_size
+
+        # Build value network
+        value_net = []
+        last_layer_dim_vf = critic_input_dim
+        for layer_size in vf_layers_dims:
+            value_net.append(nn.Linear(last_layer_dim_vf, layer_size))
+            value_net.append(activation_fn())
+            last_layer_dim_vf = layer_size
+
+        self.latent_dim_pi = last_layer_dim_pi
+        self.latent_dim_vf = last_layer_dim_vf
+
+        self.policy_net = nn.Sequential(*policy_net).to(device)
+        self.value_net = nn.Sequential(*value_net).to(device)
+
+    def forward(self, features: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
+        return self.forward_actor(features), self.forward_critic(features)
+
+    def forward_actor(self, features: torch.Tensor) -> torch.Tensor:
+        return self.policy_net(features)
+
+    def forward_critic(self, features: torch.Tensor) -> torch.Tensor:
+        return self.value_net(features)
+
+class AsyncActorCriticPolicy(ActorCriticPolicy):
     """ Example of Non-shared features extractor for actor critic style policies inspired by https://github.com/DLR-RM/stable-baselines3/issues/1066#issuecomment-1246866844"""
     def __init__(
             self,
@@ -116,7 +158,7 @@ class AsyncActorCritic(ActorCriticPolicy):
             *args,
             **kwargs,
     ):
-        super(AsyncActorCritic, self).__init__(
+        super(AsyncActorCriticPolicy, self).__init__(
             observation_space,
             action_space,
             lr_schedule,
@@ -184,7 +226,11 @@ class AsyncActorCritic(ActorCriticPolicy):
 
     def _build_mlp_extractor(self) -> None:
 
-        self.mlp_extractor = AsyncMLPExtractor(feature_dim= self.features_dim)
+        self.mlp_extractor = AsyncMLPExtractor(   
+            feature_dim= self.features_dim,
+            net_arch=self.net_arch,
+            activation_fn=self.activation_fn,
+            device=self.device,)
 
     def extract_features(self, obs: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
         """

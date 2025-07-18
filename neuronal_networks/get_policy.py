@@ -1,10 +1,19 @@
 from stable_baselines3.common.policies import ActorCriticPolicy,BasePolicy
 from neuronal_networks.lr_schedulers import LR_Scheduler
-from neuronal_networks.custom_extractor import TMN_Extractor
+from neuronal_networks.custom_extractor import TMN_Extractor, AsyncActorCriticPolicy
+
 import torch.nn as nn
+import hydra
+from omegaconf import OmegaConf,DictConfig,ListConfig
+from gymnasium.spaces import Dict
 
-
-def get_policy(policy_cfg, device:int, vision_model:nn.Module) -> tuple[str | BasePolicy, dict | None]:
+def get_policy(
+        observation_space,
+        action_space,
+        policy_cfg,
+        device:int,
+        learning_rate_scheduler:LR_Scheduler,
+        vision_model:nn.Module) -> tuple[str | BasePolicy, dict | None]:
     """
     Constructs a policy definition compatible with SB3 algorithms.
 
@@ -38,7 +47,8 @@ def get_policy(policy_cfg, device:int, vision_model:nn.Module) -> tuple[str | Ba
         - If using a built-in or named SB3 policy: returns (policy_name, policy_kwargs).
         - If using a fully constructed policy class: returns (policy_instance, None).
     """
-    
+    #policy_obj = OmegaConf.to_object(DictConfig(policy_cfg))
+
     match policy_cfg.name:
         case "basic":
             return policy_cfg.type ,dict(
@@ -49,8 +59,36 @@ def get_policy(policy_cfg, device:int, vision_model:nn.Module) -> tuple[str | Ba
                     device= device,
                     out_dim =  policy_cfg.extractors_out_dim)
                 )
-        
         case "async_actor_critic":
-            0
+            actor_obs = OmegaConf.to_object(ListConfig(policy_cfg.actor.observations))
+            critic_obs = OmegaConf.to_object(ListConfig(policy_cfg.critic.observations))
+
+            policy_features_extractor = TMN_Extractor(
+                observation_space = Dict({k: v for k, v in observation_space.items() if k in actor_obs}),
+                vision_model = vision_model,
+                out_dim =  policy_cfg.actor.extractors_out_dim,
+                device= device,
+                float_model= policy_cfg.actor.float_net,
+                activation_fn =  hydra.utils.instantiate(policy_cfg.actor.activation_fn),
+                last_activation_fn =  hydra.utils.instantiate(policy_cfg.actor.last_activation_fn)
+            )
+
+            value_features_extractor = TMN_Extractor(
+                observation_space = Dict({k: v for k, v in observation_space.items() if k in critic_obs}),
+                vision_model = vision_model,
+                out_dim =  policy_cfg.critic.extractors_out_dim,
+                device= device,
+                float_model= policy_cfg.critic.float_net,
+                activation_fn =  hydra.utils.instantiate(policy_cfg.critic.activation_fn),
+                last_activation_fn =  hydra.utils.instantiate(policy_cfg.critic.last_activation_fn)
+            )
+
+            return AsyncActorCriticPolicy(
+                observation_space = observation_space,
+                action_space = action_space,
+                policy_features_extractor= policy_features_extractor,
+                value_features_extractor= value_features_extractor,
+                lr_schedule= learning_rate_scheduler.get_scheduler()
+            ),None
         case _ :
             raise ValueError(f"Policy type {policy_cfg.name} not known.") 

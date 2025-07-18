@@ -1,6 +1,7 @@
 
 import torch.nn as nn
 from configs.config import TrainConfig
+from neuronal_networks.lr_schedulers import LR_Scheduler
 from trackmania_env.envs.single_agent_env2 import TMNF_Single_Agent_Env
 from stable_baselines3 import PPO, SAC, DQN
 from stable_baselines3.common.base_class import BaseAlgorithm
@@ -76,8 +77,11 @@ def get_models(cfg : TrainConfig, tm_env : TMNF_Single_Agent_Env, print_params :
     device = cfg.platforms.device
     vision_model = get_vision_model(cfg, tm_env.observation_space["image"].shape[0], cfg.extractors_out_dim)
     algorithm_params = OmegaConf.to_container(cfg.sb3.algorithm_params, resolve=True)
+    lr : LR_Scheduler = hydra.utils.instantiate(cfg.lr_scheduler)
   
-    policy_type, policy_kwargs = get_policy(policy_cfg=cfg.policy, device=device, vision_model=vision_model)
+    policy_type, policy_kwargs = get_policy(observation_space=tm_env.observation_space,
+                                            action_space=tm_env.action_space,
+                                            policy_cfg=cfg.policy, device=device, vision_model=vision_model, learning_rate_scheduler = lr)
 
     model_args = dict(
     policy = policy_type,
@@ -96,7 +100,6 @@ def get_models(cfg : TrainConfig, tm_env : TMNF_Single_Agent_Env, print_params :
         model = PPO(**model_args)
         model.set_parameters(load_model_path)
     else:
-        #lr : LR_Scheduler = hydra.utils.instantiate(cfg.lr_scheduler)
         model_constructor = hydra.utils.instantiate(cfg.sb3.constructor)
         model : BaseAlgorithm | PPO | SAC | DQN = model_constructor(**model_args)
     
