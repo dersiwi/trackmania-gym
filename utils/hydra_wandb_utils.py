@@ -1,6 +1,7 @@
 
 import torch.nn as nn
 from configs.config import TrainConfig
+from neuronal_networks.lr_schedulers import LR_Scheduler
 from trackmania_env.envs.single_agent_env2 import TMNF_Single_Agent_Env
 from stable_baselines3 import PPO, SAC, DQN
 from stable_baselines3.common.base_class import BaseAlgorithm
@@ -12,7 +13,9 @@ import wandb
 from wandb.wandb_run import Run
 from itertools import chain
 from stable_baselines3 import PPO
-from neuronal_networks.lr_schedulers import LR_Scheduler
+from stable_baselines3.common.policies import ActorCriticPolicy,BasePolicy
+from neuronal_networks.get_policy import get_policy
+from neuronal_networks.custom_extractor import AsyncActorCriticPolicy
 import os
 
 def print_model_params(model : BaseAlgorithm):
@@ -24,11 +27,36 @@ def print_model_params(model : BaseAlgorithm):
             print(f"{name}: {param.shape}")
 
     print("\nFeature Extractor Parameters:\n" + "-"*30)
-    for name, param in chain(model.policy.features_extractor.named_parameters(),model.policy.mlp_extractor.named_parameters()):
-        print(f"{name}: requires_grad = {param.requires_grad}")
+    if isinstance(model.policy,AsyncActorCriticPolicy):
+        for name, param in chain(
+            model.policy.policy_features_extractor.named_parameters(),
+            model.policy.value_features_extractor.named_parameters(),
+            model.policy.mlp_extractor.named_parameters()):
+            print(name, param.shape)
+    else:
+        for name, param in chain(model.policy.features_extractor.named_parameters(),model.policy.mlp_extractor.named_parameters()):
+            print(f"{name}: requires_grad = {param.requires_grad}")
     print("\nActor- and Value-Networks Parameters:\n" + "-"*30)
     for name, param in chain(model.policy.action_net.named_parameters(),model.policy.value_net.named_parameters()):
         print(f"{name}: requires_grad = {param.requires_grad}")
+    
+    if isinstance(model.policy, ActorCriticPolicy):
+        print("\n[INFO] Checking whether the actor and critic are using the same feature extractor:\n" + "-"*30)
+        if isinstance(model.policy,AsyncActorCriticPolicy):
+            actor_id = id(model.policy.policy_features_extractor)
+            critic_id = id(model.policy.value_features_extractor)
+        else:   
+            actor_id = id(model.policy.pi_features_extractor)
+            critic_id = id(model.policy.vf_features_extractor)
+
+        print("Actor Feature Extractor ID:", actor_id)
+        print("Critic Feature Extractor ID:", critic_id)
+
+        if actor_id != critic_id:
+            print("Actor and Critic are using DIFFERENT feature extractors.")
+        else:
+            print("Actor and Critic are sharing the SAME feature extractor.")
+
 
 
 def get_vision_model(cfg : TrainConfig, in_color_channels : int, extractor_out_dim : int) -> nn.Module:
@@ -58,26 +86,30 @@ def get_models(cfg : TrainConfig, tm_env : TMNF_Single_Agent_Env, print_params :
 
     Returns vision model as well as the algorithm."""
     device = cfg.platforms.device
-
     vision_model = get_vision_model(cfg, tm_env.observation_space["image"].shape[0], cfg.extractors_out_dim)
-  
-    policy_kwargs = dict(
-    features_extractor_class=TMN_Extractor,
-    features_extractor_kwargs= dict( 
-    vision_model = vision_model,
-    device= device,
-    out_dim =  cfg.extractors_out_dim)
-    )
     algorithm_params = OmegaConf.to_container(cfg.sb3.algorithm_params, resolve=True)
+  
+    policy_type, policy_kwargs = get_policy(observation_space = tm_env.observation_space, policy_cfg = cfg.policy, device = device, vision_model = vision_model)
+
+    model_args = dict(
+    policy = policy_type,
+    env = tm_env,
+    tensorboard_log = run_id,
+    device = device,
+    **algorithm_params
+    )
+    # Only include policy_kwargs if they exist
+    if policy_kwargs: model_args["policy_kwargs"] = policy_kwargs
+
 
     if not (load_model_path is None):
         # TODO remove the PPO and make this modular so it can be used with different algos
-        model = PPO(policy = "MultiInputPolicy",env= tm_env, policy_kwargs=policy_kwargs,tensorboard_log= run_id,device=device ,**algorithm_params)
+        model = PPO(**model_args)
         model.set_parameters(load_model_path)
     else:
         #lr : LR_Scheduler = hydra.utils.instantiate(cfg.lr_scheduler)
         model_constructor = hydra.utils.instantiate(cfg.sb3.constructor)
-        model : BaseAlgorithm | PPO | SAC | DQN = model_constructor(env= tm_env, policy_kwargs=policy_kwargs,tensorboard_log= run_id,device=device ,**algorithm_params)
+        model : BaseAlgorithm | PPO | SAC | DQN = model_constructor(**model_args)
     
     if print_params:
         print_model_params(model)
