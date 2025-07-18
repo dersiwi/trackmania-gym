@@ -15,7 +15,7 @@ from itertools import chain
 from stable_baselines3 import PPO
 from stable_baselines3.common.policies import ActorCriticPolicy,BasePolicy
 from neuronal_networks.get_policy import get_policy
-
+from neuronal_networks.custom_extractor import AsyncActorCriticPolicy
 import os
 
 def print_model_params(model : BaseAlgorithm):
@@ -27,16 +27,27 @@ def print_model_params(model : BaseAlgorithm):
             print(f"{name}: {param.shape}")
 
     print("\nFeature Extractor Parameters:\n" + "-"*30)
-    for name, param in chain(model.policy.features_extractor.named_parameters(),model.policy.mlp_extractor.named_parameters()):
-        print(f"{name}: requires_grad = {param.requires_grad}")
+    if isinstance(model.policy,AsyncActorCriticPolicy):
+        for name, param in chain(
+            model.policy.policy_features_extractor.named_parameters(),
+            model.policy.value_features_extractor.named_parameters(),
+            model.policy.mlp_extractor.named_parameters()):
+            print(name, param.shape)
+    else:
+        for name, param in chain(model.policy.features_extractor.named_parameters(),model.policy.mlp_extractor.named_parameters()):
+            print(f"{name}: requires_grad = {param.requires_grad}")
     print("\nActor- and Value-Networks Parameters:\n" + "-"*30)
     for name, param in chain(model.policy.action_net.named_parameters(),model.policy.value_net.named_parameters()):
         print(f"{name}: requires_grad = {param.requires_grad}")
     
     if isinstance(model.policy, ActorCriticPolicy):
         print("\n[INFO] Checking whether the actor and critic are using the same feature extractor:\n" + "-"*30)
-        actor_id = id(model.policy.pi_features_extractor)
-        critic_id = id(model.policy.vf_features_extractor)
+        if isinstance(model.policy,AsyncActorCriticPolicy):
+            actor_id = id(model.policy.policy_features_extractor)
+            critic_id = id(model.policy.value_features_extractor)
+        else:   
+            actor_id = id(model.policy.pi_features_extractor)
+            critic_id = id(model.policy.vf_features_extractor)
 
         print("Actor Feature Extractor ID:", actor_id)
         print("Critic Feature Extractor ID:", critic_id)
@@ -77,18 +88,14 @@ def get_models(cfg : TrainConfig, tm_env : TMNF_Single_Agent_Env, print_params :
     device = cfg.platforms.device
     vision_model = get_vision_model(cfg, tm_env.observation_space["image"].shape[0], cfg.extractors_out_dim)
     algorithm_params = OmegaConf.to_container(cfg.sb3.algorithm_params, resolve=True)
-    lr : LR_Scheduler = hydra.utils.instantiate(cfg.lr_scheduler)
   
-    policy_type, policy_kwargs = get_policy(observation_space=tm_env.observation_space,
-                                            action_space=tm_env.action_space,
-                                            policy_cfg=cfg.policy, device=device, vision_model=vision_model, learning_rate_scheduler = lr)
+    policy_type, policy_kwargs = get_policy(observation_space = tm_env.observation_space, policy_cfg = cfg.policy, device = device, vision_model = vision_model)
 
     model_args = dict(
     policy = policy_type,
     env = tm_env,
     tensorboard_log = run_id,
     device = device,
-    verbose = cfg.policy.verbose,
     **algorithm_params
     )
     # Only include policy_kwargs if they exist
@@ -100,6 +107,7 @@ def get_models(cfg : TrainConfig, tm_env : TMNF_Single_Agent_Env, print_params :
         model = PPO(**model_args)
         model.set_parameters(load_model_path)
     else:
+        #lr : LR_Scheduler = hydra.utils.instantiate(cfg.lr_scheduler)
         model_constructor = hydra.utils.instantiate(cfg.sb3.constructor)
         model : BaseAlgorithm | PPO | SAC | DQN = model_constructor(**model_args)
     

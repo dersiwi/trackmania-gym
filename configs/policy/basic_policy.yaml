@@ -1,5 +1,4 @@
 name: "basic"
 type: "MultiInputPolicy"
 extractors_out_dim: 64 # every extractor will produce an output with this dimension 
-share_features_extractor: True # whether to share the features extractor between actor and critic when applicable
-verbose: 1
+share_features_extractor: False # whether to share the features extractor between actor and critic when applicable

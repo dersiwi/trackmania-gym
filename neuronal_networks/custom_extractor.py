@@ -62,11 +62,11 @@ class TMN_Extractor(BaseFeaturesExtractor):
                     last_layer_dim = subspace.shape[0]
                     for l in float_model:
                         float_net.append(nn.Linear(last_layer_dim, l))
-                        float_net.append(activation_fn)
+                        float_net.append(activation_fn())
                         last_layer_dim = l
                     float_net.append(nn.Linear(last_layer_dim, out_dim))
-                    float_net.append(last_activation_fn)
-
+                    float_net.append(last_activation_fn())
+                    extractors[key]= nn.Sequential(*float_net)
                 else:
                     hidden_dim = subspace.shape[0] // 2 if subspace.shape[0] > out_dim else subspace.shape[0] * 2
                     extractors[key] = nn.Sequential(
@@ -170,8 +170,8 @@ class AsyncActorCriticPolicy(ActorCriticPolicy):
         )
 
         # non-shared features extractors for the actor and the critic
-        self.policy_features_extractor = policy_features_extractor
-        self.value_features_extractor = value_features_extractor
+        self.policy_features_extractor:BaseFeaturesExtractor = policy_features_extractor
+        self.value_features_extractor:BaseFeaturesExtractor = value_features_extractor
 
 
         self.features_dim = {'pi': self.policy_features_extractor.features_dim,
@@ -192,6 +192,9 @@ class AsyncActorCriticPolicy(ActorCriticPolicy):
         # therefore we need to re-create the mlp_extractor and the optimizer
         # (that otherwise would have used obsolete features_dims and parameters).
         self._rebuild(lr_schedule)
+
+        self.policy_obs: list[str] = list(self.policy_features_extractor._observation_space.keys())
+        self.value_obs: list[str] = list(self.value_features_extractor._observation_space.keys())
 
     def _rebuild(self, lr_schedule: Schedule) -> None:
         """ Re-creates the mlp_extractor and the optimizer for the model.
@@ -241,8 +244,10 @@ class AsyncActorCriticPolicy(ActorCriticPolicy):
         """
         assert self.policy_features_extractor is not None and self.value_features_extractor is not None
         preprocessed_obs = preprocess_obs(obs, self.observation_space, normalize_images=self.normalize_images)
-        policy_features = self.policy_features_extractor(preprocessed_obs)
-        value_features = self.value_features_extractor(preprocessed_obs)
+        policy_obs = {k: v for k, v in preprocessed_obs.items() if k in self.policy_obs}
+        value_obs = {k: v for k, v in preprocessed_obs.items() if k in self.value_obs}
+        policy_features = self.policy_features_extractor(policy_obs)
+        value_features = self.value_features_extractor(value_obs)
         return policy_features, value_features
 
     def forward(self, obs: torch.Tensor, deterministic: bool = False) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:

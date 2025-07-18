@@ -1,5 +1,4 @@
 name: "async_actor_critic"
-verbose: 1
 
 actor:
    extractors_out_dim: 64
@@ -11,14 +10,18 @@ actor:
      _target_: torch.nn.Tanh
 
 critic:
-   extractors_out_dim: 64
+   extractors_out_dim: 32
    observations: [propriocentric_features,global_features]
    float_net: [2048, 2048, 2048, 2048, 32]
    activation_fn:
      _target_: torch.nn.ReLU
    last_activation_fn:
-     _target_: torch.nn.Linear
-     in_features: 32
-     out_features: 64
+     _target_: torch.nn.Identity 
 
-  
+mlp_extractor:
+  net_arch:
+    pi: [256, 128, 64]   # Policy network: 3 layers
+    vf: [128, 128, 64, 32]  # Value network: 4 layers
+
+  activation_fn:
+    _target_: torch.nn.ReLU

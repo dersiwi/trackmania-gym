@@ -9,10 +9,8 @@ from gymnasium.spaces import Dict
 
 def get_policy(
         observation_space,
-        action_space,
         policy_cfg,
         device:int,
-        learning_rate_scheduler:LR_Scheduler,
         vision_model:nn.Module) -> tuple[str | BasePolicy, dict | None]:
     """
     Constructs a policy definition compatible with SB3 algorithms.
@@ -69,8 +67,8 @@ def get_policy(
                 out_dim =  policy_cfg.actor.extractors_out_dim,
                 device= device,
                 float_model= policy_cfg.actor.float_net,
-                activation_fn =  hydra.utils.instantiate(policy_cfg.actor.activation_fn),
-                last_activation_fn =  hydra.utils.instantiate(policy_cfg.actor.last_activation_fn)
+                activation_fn =  hydra.utils.get_class(policy_cfg.actor.activation_fn._target_),
+                last_activation_fn =  hydra.utils.get_class(policy_cfg.actor.last_activation_fn._target_)
             )
 
             value_features_extractor = TMN_Extractor(
@@ -79,16 +77,20 @@ def get_policy(
                 out_dim =  policy_cfg.critic.extractors_out_dim,
                 device= device,
                 float_model= policy_cfg.critic.float_net,
-                activation_fn =  hydra.utils.instantiate(policy_cfg.critic.activation_fn),
-                last_activation_fn =  hydra.utils.instantiate(policy_cfg.critic.last_activation_fn)
+                activation_fn =  hydra.utils.get_class(policy_cfg.critic.activation_fn._target_),
+                last_activation_fn =  hydra.utils.get_class(policy_cfg.critic.last_activation_fn._target_)
             )
-
-            return AsyncActorCriticPolicy(
-                observation_space = observation_space,
-                action_space = action_space,
+            if "mlp_extractor" in policy_cfg:
+                net_arch = OmegaConf.to_object(DictConfig(policy_cfg.mlp_extractor.net_arch))
+                act_fn = hydra.utils.get_class(policy_cfg.mlp_extractor.activation_fn._target_)
+            else:
+                net_arch = None
+                act_fn = nn.Tanh  #fallback this does not really matter since it will never be used 
+            return AsyncActorCriticPolicy, dict(
                 policy_features_extractor= policy_features_extractor,
                 value_features_extractor= value_features_extractor,
-                lr_schedule= learning_rate_scheduler.get_scheduler()
-            ),None
+                net_arch=net_arch,
+                activation_fn=act_fn
+            )
         case _ :
             raise ValueError(f"Policy type {policy_cfg.name} not known.") 
