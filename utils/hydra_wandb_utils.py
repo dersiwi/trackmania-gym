@@ -59,16 +59,16 @@ def print_model_params(model : BaseAlgorithm):
 
 
 
-def get_vision_model(cfg : TrainConfig, in_color_channels : int, extractor_out_dim : int) -> nn.Module:
+def get_vision_model(cfg : TrainConfig, img_shape, extractor_out_dim : int) -> nn.Module:
     """Create and return vision model according to configuration"""
     vision_model_constructor = hydra.utils.instantiate(cfg.models)
-
+    in_color_channels = img_shape[0]
     #this may not be pretty, but not having the correct input channels has caused headaches
     expected_inchannel = 1 if cfg.rl_env.obs_manager.colorspace == "grayscale" else 3
     assert in_color_channels == expected_inchannel, f"Expected {expected_inchannel} color channels, got {in_color_channels}"
 
     vision_model : nn.Module = vision_model_constructor(
-        in_color_channels=in_color_channels,
+        img_shape = img_shape,
         out_dim = extractor_out_dim)
     return vision_model
 
@@ -86,7 +86,7 @@ def get_models(cfg : TrainConfig, tm_env : TMNF_Single_Agent_Env, print_params :
 
     Returns vision model as well as the algorithm."""
     device = cfg.platforms.device
-    vision_model = get_vision_model(cfg, tm_env.observation_space["image"].shape[0], cfg.extractors_out_dim)
+    vision_model = get_vision_model(cfg, tm_env.observation_space["image"].shape , cfg.extractors_out_dim)
     algorithm_params = OmegaConf.to_container(cfg.sb3.algorithm_params, resolve=True)
   
     policy_type, policy_kwargs = get_policy(observation_space = tm_env.observation_space, policy_cfg = cfg.policy, device = device, vision_model = vision_model)

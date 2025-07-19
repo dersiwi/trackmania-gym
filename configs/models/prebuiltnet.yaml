@@ -20,7 +20,7 @@
 
 
 _partial_: True
-_target_: neuronal_networks.prebuilt_nets.PrebuiltnetImplementation
+_target_: neuronal_networks.vision_encoder.prebuilt_nets.PrebuiltnetImplementation
 model_name: "mobilenet_v3_small"
 modeltype : "mobilenet"
 pretrained: True

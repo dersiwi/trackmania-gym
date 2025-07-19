@@ -75,7 +75,7 @@ class PrebuiltnetImplementation(PrebuiltNet):
         :param weights_name: Specify which weights should get loaded for the model
     """
     def __init__(self, model_name='mobilenet_v3_small', modeltype = "mobilenet",
-                 in_color_channels=3,
+                img_shape=(3, 256, 256),
                  out_dim=21,
                  pretrained=False,
                  trainable_backbone=False,
@@ -94,7 +94,7 @@ class PrebuiltnetImplementation(PrebuiltNet):
         
         self.resize = nn.Upsample(size=(256, 256), mode='bilinear', align_corners=False)
 
-        self.color_adjust = self.get_color_adjust(in_color_channels)
+        self.color_adjust = self.get_color_adjust(img_shape[0])
 
         # super ugly way to distinguish between Models
         self.adjust_fc_layer(out_dim)
