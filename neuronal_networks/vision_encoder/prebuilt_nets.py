@@ -6,6 +6,14 @@ import torchvision.models as models
 from torchvision.models.mobilenetv2 import WeightsEnum,MobileNet_V2_Weights
 from torchvision.models.mobilenetv3 import MobileNet_V3_Large_Weights,MobileNet_V3_Small_Weights
 
+from torchvision.models.vision_transformer import (
+    ViT_H_14_Weights,
+    ViT_B_16_Weights,
+    ViT_L_16_Weights,
+    ViT_B_32_Weights,
+    ViT_L_32_Weights
+)
+
 from torchvision.models.resnet import (
     WeightsEnum,
     ResNet18_Weights,
@@ -38,7 +46,13 @@ RESNET_MODELS_WEIGHTS: dict[str,WeightsEnum] = {
     "wide_resnet50_2": Wide_ResNet50_2_Weights,
     "wide_resnet101_2": Wide_ResNet101_2_Weights,
 }
-
+VIT_MODELS_WEIGHTS: dict[str,WeightsEnum] =  {
+    "vit_h_14": ViT_H_14_Weights,
+    "vit_b_16": ViT_B_16_Weights,
+    "vit_l_16": ViT_L_16_Weights,
+    "vit_b_32": ViT_B_32_Weights,
+    "vit_l_32": ViT_L_32_Weights,
+}
 
 class PrebuiltNet(nn.Module):
     def __init__(self, modeltype : str):
@@ -48,6 +62,8 @@ class PrebuiltNet(nn.Module):
             self.model_weights = RESNET_MODELS_WEIGHTS
         elif modeltype == "mobilenet":
             self.model_weights = MOBILENET_MODELS_WEIGHTS
+        elif modeltype == "vit":
+            self.model_weights = VIT_MODELS_WEIGHTS
     
     def adjust_fc_layer(self, out_dim : int):
         """Adjustts the output-layer of the network to match the output dimension."""
@@ -57,6 +73,15 @@ class PrebuiltNet(nn.Module):
         elif self.modeltype == "resnet": # for resnet
             in_features = self.model.fc.in_features
             self.model.fc = nn.Linear(in_features,out_dim)
+        elif self.modeltype == "vit":
+            hidden_dim = self.model.heads.head.in_features
+            self.model.heads.head = nn.Linear(hidden_dim, out_dim)
+
+VISION_MODELS_IMG_SIZES = {
+    "mobilenet": (256,256),
+    "resnet": (256,256),
+    "vit": (224,224),
+}
 
 class PrebuiltnetImplementation(PrebuiltNet):
     """
@@ -91,8 +116,9 @@ class PrebuiltnetImplementation(PrebuiltNet):
         if not trainable_backbone:
             for param in self.model.parameters():
                 param.requires_grad = False
-        
-        self.resize = nn.Upsample(size=(256, 256), mode='bilinear', align_corners=False)
+
+        self.img_size = VISION_MODELS_IMG_SIZES.get(modeltype) or self._raise_unknown_model_error(modeltype)
+        self.resize = nn.Upsample(size= self.img_size, mode='bilinear', align_corners=False)
 
         self.color_adjust = self.get_color_adjust(img_shape[0])
 
