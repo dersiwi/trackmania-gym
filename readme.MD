@@ -3,6 +3,9 @@
 - [TMNF as Gymnasium-Environment](#TMNF-as-Gym-Environment)
   - [Environment Structure](#Environment-Structure)
 
+# Setup
+
+Create conda environment using `conda env create -f conda_env.yml`.
 
 # Make Car Go Fast
 
