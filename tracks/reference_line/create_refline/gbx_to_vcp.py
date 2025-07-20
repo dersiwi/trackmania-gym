@@ -15,8 +15,8 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 import argparse
 from pathlib import Path
 
-from geometry import extract_cp_distance_interval
-from map_loader import gbx_to_raw_pos_list
+from tracks.reference_line.create_refline.geometry import extract_cp_distance_interval
+from trackmania_env.utils.map_loader import gbx_to_raw_pos_list
 
 def main():
     parser = argparse.ArgumentParser()

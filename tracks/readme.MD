@@ -2,7 +2,7 @@
 
 The `tracks` folder contains all the maps used for training, along with their associated reference lines.
 
-> !!! **Important**: Although maps are listed here, to actually play them in-game, they must be placed in your `../Documents/TmForever/Tracks/Challenges` directory.
+> !!! **Important**: Although maps are listed here, to actually play them in-game, they must be placed in your `../TmForever/Tracks/Challenges` directory.
 
 ---
 
@@ -15,12 +15,12 @@ driven in a replay. To generate a reference line for your map, follow these step
 
 1. **Drive the map** manually to the finish line and save the replay.
    - By default, replays are saved in:  
-     `../Documents/TmForever/Tracks/Replays/`
+     `../TmForever/Tracks/Replays/`
 
 2. **Convert the replay to a reference line file** using:
 
    ```bash
-   python gbx_to_vcp.py {path_to_replay}.Replay.Gbx
+   python tracks/refline/create_refline/gbx_to_vcp.py {path_to_replay}.Replay.Gbx
    ```
    This will create a `.npy` file under  `tracks/reference_line`
 
@@ -32,7 +32,7 @@ driven in a replay. To generate a reference line for your map, follow these step
         You can use the default port or specify a custom one.
     2. Once the map is loaded, run the following script to visualize the reference line:   
     ```bash
-    python add_vcp_as_triggers.py {path_to_reference_line}.npy -p {port_number}
+    python tracks/refline/create_refline/add_vcp_as_triggers.py {path_to_reference_line}.npy -p {port_number}
     ```
     3. You should now see the reference line visualized in-game as a trail of boxes, as shown in the image below.
     <p align="center">
