@@ -12,6 +12,24 @@ IMAGE_SIZE = 64
 
 class SophyObsManager(ObservationManager):
     def __init__(self, observation_list, colorspace, convert_torch, img_width, img_height,maxlen_history:int = 3,lookahead_sec = 6,n_points = 60):
+        """
+        Initializes the GT Sophy-style observation manager (https://arxiv.org/pdf/2406.12563v1).
+
+        This setup is designed to match the inputs of the GT Sophy AI racing system, including
+        fixed-size square image inputs and a specific prediction horizon. It prepares the agent to consume 
+        perception inputs (e.g., vision and track state), maintain a short history for temporal awareness, 
+        and output a trajectory of future positions.
+
+        Parameters:
+            observation_list (list): List of observation types to include (e.g., images, speed, steering).
+            colorspace (str): Color space of input images, typically "rgb" or "grayscale".
+            convert_torch (bool): Whether to convert inputs into PyTorch tensors for model compatibility.
+            img_width (int): Width of input images.
+            img_height (int): Height of input images. 
+            maxlen_history (int, default=3): Number of previous time steps to include for temporal context (e.g., past states or actions).
+            lookahead_sec (int, default=6): Time horizon in seconds over which the agent predicts the incomming reference line points.
+            n_points (int, default=60): Number of points to generate from the distance the agent traveled in lookahead_sec.
+        """
         assert img_width == img_height == IMAGE_SIZE, (
             f"Sophy was trained on {IMAGE_SIZE}x{IMAGE_SIZE} images. "
             "Please use square images of this size."
@@ -195,6 +213,19 @@ class SophyObsManager(ObservationManager):
         return comming_refline_points.ravel()
     
     def interpolate_points(self,points:np.ndarray):
+        """
+        Interpolates a sequence of 3D points to produce a uniform set of `n_points` sampled along the curve.
+
+        This method computes the arc length of the polyline defined by `points`, then performs cubic spline
+        interpolation over the x, y, and z coordinates independently. The result is a smooth path sampled at
+        equally spaced arc lengths.
+
+        Parameters:
+            points (np.ndarray): Array of shape (N, 3) representing a sequence of 3D points (x, y, z) along a path.
+
+        Returns:
+            np.ndarray: Array of shape (self.n_points, 3) containing interpolated 3D points evenly spaced by arc length.
+        """
         # length calculation in 3D
         diffs = np.diff(points, axis=0)
         lengths = np.concatenate([[0], np.cumsum(np.linalg.norm(diffs, axis=1))])
