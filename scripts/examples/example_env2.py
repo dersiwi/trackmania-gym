@@ -31,16 +31,24 @@ _HYDRA_PARAMS = {
 def main(cfg : TrainConfig):
 
     tmi_process, control_queue, response_queue = start_process_and_wait_for_startsignal(cfg, cfg.image.width, cfg.image.height)
+    obs_manager = get_observation_manager(cfg = cfg, wrap_obs_in_test = False)
+    reward_calculator = get_reward_calculator(reward_calculator_cfg = cfg.rl_env.reward_manager)
+    termination_manger = get_termination_manager(termination_cfg= cfg.rl_env.termination_manager)
 
     tm_env = TestEnvironment(
         command_queue=control_queue,
         response_queue=response_queue,
-        obs_manager=get_observation_manager(cfg), 
-        reward_calculator=get_reward_calculator(cfg),
-        termination_manger=get_termination_manager(cfg),
+        obs_manager=obs_manager, 
+        reward_calculator= reward_calculator,
+        termination_manger= termination_manger,
         reference_line=ReferenceLineManager(cfg.gmi.reference_line),
         env_cfg=cfg.rl_env.env,
         platform=cfg.platforms.os)
+    
+    reward_calculator.set_env(tm_env)
+    obs_manager.set_env(tm_env)
+    termination_manger.set_env(tm_env)
+
     tm_env.orientationless_respawn_manager = OrientationlessRespawnManager(respawn_coordinates=OrientationlessRespawnManager.get_respawns_for_very_long_checkpoints())
 
     
