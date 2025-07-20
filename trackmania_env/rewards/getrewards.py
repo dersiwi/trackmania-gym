@@ -19,12 +19,12 @@ def get_reward_calculator(reward_calculator_cfg: TrainConfig) -> RewradCalculato
         case "linesight":
             return LinesightRewardCalculator(reward_cfg=reward_calculator_cfg)
         case "nextpoint":
-            return NextPointRewards(reward_cfg=reward_calculator_cfg)
+            return NextPointRewards(**reward_calculator_cfg.args)
         case "nextpoint2":
-            return NextPointRewards2(reward_cfg=reward_calculator_cfg)
+            return NextPointRewards2(**reward_calculator_cfg.args)
         case "sophy":
             return SophyRewards(**reward_calculator_cfg.args)
         case "race_finished":
-            return RaceFinishedRewards(reward_cfg=reward_calculator_cfg)
+            return RaceFinishedRewards(**reward_calculator_cfg.args)
         case _:
             raise NameError(f"Reward calculator '{name}' not known.")

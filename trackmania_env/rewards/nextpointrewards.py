@@ -12,10 +12,11 @@ import logging
 from configs.config import RewardManagerCfg
 import math
 
+MAX_LATERAL_DISTANCE = 12 # maximal lateral difference, this is an estimate.
+
 class NextPointRewards(RewradCalculator):
 
     def __init__(self, 
-                reward_cfg : RewardManagerCfg,
                 accum_distance_weight: float=1200,
                 race_not_finished_weight: float=0.05,
                 race_finished_reward_weight: float=100,
@@ -36,7 +37,6 @@ class NextPointRewards(RewradCalculator):
         for modeling centerline distance reward using a Gaussian function.
 
         Args:
-            reward_cfg (RewardManagerCfg): Configuration object for general reward setup.
             accum_distance_weight (float): Weight for accumulated distance reward.
             race_not_finished_weight (float): Penalty weight for not finishing the race.
             race_finished_reward_weight (float): Bonus reward for finishing the race.
@@ -57,20 +57,20 @@ class NextPointRewards(RewradCalculator):
             dist_scale (float): Scaling factor for the input distance before applying the Gaussian.
     """
         
-        super().__init__(reward_cfg)
+        super().__init__()
         #self.refline_manager = ReferenceLineManager(filepath_referenceline)
 
-        self.accum_distance_weight = reward_cfg.rewardterm_weights["accum_distance_weight"]
-        self.race_not_finished_weight = reward_cfg.rewardterm_weights["race_not_finished_weight"]
+        self.accum_distance_weight = accum_distance_weight
+        self.race_not_finished_weight = race_not_finished_weight
         
-        self.race_finished_reward_weight = reward_cfg.rewardterm_weights["race_finished_reward"]
-        self.other_termination_punishment = reward_cfg.rewardterm_weights["other_termination_punishment"]
-        self.velocity_reward_weight = reward_cfg.rewardterm_weights["velocity_reward_weight"]
-        self.backward_weight = reward_cfg.rewardterm_weights["backward_weight"]
-        self.distance_to_center_weight = reward_cfg.rewardterm_weights["distance_to_center_weight"]
-        self.velocity_change_reward_weight = reward_cfg.rewardterm_weights["velocity_change_reward_weight"]
+        self.race_finished_reward_weight = race_finished_reward_weight
+        self.other_termination_punishment =other_termination_punishment
+        self.velocity_reward_weight = velocity_reward_weight
+        self.backward_weight = backward_weight
+        self.distance_to_center_weight = distance_to_center_weight
+        self.velocity_change_reward_weight = velocity_change_reward_weight
 
-        self.speed_reward_weight = reward_cfg.rewardterm_weights["speed_reward_weight"] # should be 1000
+        self.speed_reward_weight = speed_reward_weight
 
 
 
@@ -78,9 +78,9 @@ class NextPointRewards(RewradCalculator):
         
         self.current_refline_idx : int = 0
 
-        self.max_lateral_difference = 12 # maximal lateral difference, this is an estimate.
-        self.lateral_distance_mode = reward_cfg.lateral_distance_mode
-        self.mean, self.sigma, self.yshift, self.multiplicator, self.dist_scale = 0, 1.0, -1, 5, 0.3
+        self.max_lateral_difference = MAX_LATERAL_DISTANCE
+        self.lateral_distance_mode = lateral_distance_mode
+        self.mean, self.sigma, self.yshift, self.multiplicator, self.dist_scale = mean, sigma, yshift, multiplicator, dist_scale
 
 
         self.last_simstate : SimStateData = None
@@ -179,13 +179,13 @@ class NextPointRewards(RewradCalculator):
 
 class NextPointRewards2(NextPointRewards):
     """Similar to NextPointRewards, but it scales the distance to center in relation to the accumulated distance."""
-    def __init__(self, reward_cfg : RewardManagerCfg,  sf1: float = 0.4,sf2: float = 1.0):
+    def __init__(self, sf1: float = 0.4,sf2: float = 1.0,**kwargs):
         """
             sf1 (float): Scale factor for how large the distance-to-center reward can be
                          relative to the accumulated distance reward (default: 0.4).
             sf2 (float): Additional scaling for distance-to-center reward (default: 1.0).
         """
-        super().__init__(reward_cfg)
+        super().__init__(**kwargs)
         self.sf1 = 0.4
         """Scale factor of how large distance-to-center reward can be in relation to accum distance reward.""" 
         self.sf2 = 1.0
@@ -220,8 +220,8 @@ class NextPointRewards2(NextPointRewards):
 
 class RaceFinishedRewards(NextPointRewards):
     """Similar to NextPointRewards, but it scales the distance to center in relation to the accumulated distance."""
-    def __init__(self, reward_cfg : RewardManagerCfg):
-        super().__init__(reward_cfg)
+    def __init__(self,**kwargs):
+        super().__init__(**kwargs)
         self.env_timeout = 0
     
         """After how many (env)-steps the environment times out"""
