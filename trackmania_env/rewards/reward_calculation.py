@@ -12,7 +12,7 @@ from trackmania_env.utils.reference_line_manager import ReferenceLineManager
 class RewradCalculator:
     """Responsible for reward calculations for environment"""
 
-    def __init__(self, reward_cfg : RewardManagerCfg):
+    def __init__(self, reward_cfg : RewardManagerCfg=None):
         self.reward_cfg = reward_cfg
         self.env = None
         self.pos_buffer = None # do not reset or add anything to this position buffer, read-only! (no reset, no add...)

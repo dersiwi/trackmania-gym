@@ -7,8 +7,7 @@ import torch
 
 class SophyRewards(RewradCalculator):
 
-  def __init__(self, 
-                reward_cfg,
+  def __init__(self,
                 maxlen_history:int = 3,
                 progress_weight:float= 0.014,
                 off_course_penalty_weight:float = 0.034, 
@@ -42,19 +41,19 @@ class SophyRewards(RewradCalculator):
     self.last_lateral_contact_time = 0
     self.last_off_course_time = 0
     self.last_drel = 0
-    self.maxlen_history:int = reward_cfg.maxlen_history # TODO add this to the config
+    self.maxlen_history:int = maxlen_history 
 
-    self.c_d = reward_cfg.c_d # threshold angle
-    self.c_s = reward_cfg.c_s # sensitivity factor
-    self.c_o = reward_cfg.c_o # offset value
+    self.c_d = c_d # threshold angle
+    self.c_s = c_s # sensitivity factor
+    self.c_o = c_o # offset value
 
-    self.w_progress = reward_cfg.progress_weight
-    self.w_off_course = reward_cfg.off_course_penalty_weight
-    self.w_wall = reward_cfg.wall_penalty_weight
-    self.w_steer_change = reward_cfg.steering_change_penalty_weight
-    self.w_steer_history = reward_cfg.steering_history_penalty_weight
+    self.w_progress = progress_weight
+    self.w_off_course = off_course_penalty_weight
+    self.w_wall = wall_penalty_weight
+    self.w_steer_change = steering_change_penalty_weight
+    self.w_steer_history = steering_history_penalty_weight
 
-    super().__init__(reward_cfg)
+    super().__init__()
 
   def reset(self):
     self.last_lateral_contact_time = 0

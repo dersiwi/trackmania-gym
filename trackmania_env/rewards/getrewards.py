@@ -23,7 +23,7 @@ def get_reward_calculator(reward_calculator_cfg: TrainConfig) -> RewradCalculato
         case "nextpoint2":
             return NextPointRewards2(reward_cfg=reward_calculator_cfg)
         case "sophy":
-            return SophyRewards(reward_cfg=reward_calculator_cfg)
+            return SophyRewards(**reward_calculator_cfg.args)
         case "race_finished":
             return RaceFinishedRewards(reward_cfg=reward_calculator_cfg)
         case _:
