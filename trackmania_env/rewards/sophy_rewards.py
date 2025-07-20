@@ -7,32 +7,62 @@ import torch
 
 class SophyRewards(RewradCalculator):
 
-    def __init__(self, reward_cfg,maxlen_history:int = 3):
-        self.last_time = 0
-        self.last_lateral_contact_time = 0
-        self.last_off_course_time = 0
-        self.last_drel = 0
-        self.maxlen_history:int = reward_cfg.maxlen_history # TODO add this to the config
+  def __init__(self, 
+                reward_cfg,
+                maxlen_history:int = 3,
+                progress_weight:float= 0.014,
+                off_course_penalty_weight:float = 0.034, 
+                wall_penalty_weight:float = 10.0,
+                steering_change_penalty_weight:float= 3.0,
+                steering_history_penalty_weight:float= 5.0, 
+                c_d :float = 0.014,
+                c_s :float = 182.883569,
+                c_o :float =  0.034):
+    """
+      Initializes the GT Sophy-inspired reward function with tunable weights for each component.
 
-        self.c_d = reward_cfg.c_d # threshold angle
-        self.c_s = reward_cfg.c_s # sensitivity factor
-        self.c_o = reward_cfg.c_o # offset value
+      This reward function is based on a weighted sum of progress and penalties that shape 
+      expert-like racing behavior. It follows the formulation in Wurman et al. (2022), where the 
+      agent is rewarded for forward progress and penalized for undesirable driving behaviors 
+      such as going off-course, hitting walls, and erratic steering.
 
-        self.w_progress = reward_cfg.progress_weight
-        self.w_off_course = reward_cfg.off_course_penalty_weight
-        self.w_wall = reward_cfg.wall_penalty_weight
-        self.w_steer_change = reward_cfg.steering_change_penalty_weight
-        self.w_steer_history = reward_cfg.steering_history_penalty_weight
+    Parameters:
+        reward_cfg: Configuration object or dictionary specifying additional reward-related parameters.
+        maxlen_history (int, default=3): Number of previous time steps used to compute history-based penalties (e.g., steering consistency).
+        progress_weight (float, default=0.014): Weight for the course progress reward term , encouraging lap time minimization.
+        off_course_penalty_weight (float, default=0.034): Weight for the off-course penalty term , discouraging shortcutting or corner cutting.
+        wall_penalty_weight (float, default=10.0): Weight for the wall-hit penalty term , penalizing contact with track walls.
+        steering_change_penalty_weight (float, default=3.0): Weight for the steering change penalty term , discouraging abrupt steering.
+        steering_history_penalty_weight (float, default=5.0): Weight for the steering history penalty term , penalizing inconsistent steering direction over short time spans.
+        c_d (float, default=0.014): Threshold steering angle beyond which history-based penalties apply.
+        c_s (float, default=182.883569): Sensitivity factor used in the sigmoid function for the steering history penalty.
+        c_o (float, default=0.034): Offset in the sigmoid function used in the steering history penalty.
+      """
+    self.last_time = 0
+    self.last_lateral_contact_time = 0
+    self.last_off_course_time = 0
+    self.last_drel = 0
+    self.maxlen_history:int = reward_cfg.maxlen_history # TODO add this to the config
 
-        super().__init__(reward_cfg)
+    self.c_d = reward_cfg.c_d # threshold angle
+    self.c_s = reward_cfg.c_s # sensitivity factor
+    self.c_o = reward_cfg.c_o # offset value
 
-    def reset(self):
-        self.last_lateral_contact_time = 0
-        self.last_drel = 0
-        #self.last_off_course_time = 0
+    self.w_progress = reward_cfg.progress_weight
+    self.w_off_course = reward_cfg.off_course_penalty_weight
+    self.w_wall = reward_cfg.wall_penalty_weight
+    self.w_steer_change = reward_cfg.steering_change_penalty_weight
+    self.w_steer_history = reward_cfg.steering_history_penalty_weight
+
+    super().__init__(reward_cfg)
+
+  def reset(self):
+    self.last_lateral_contact_time = 0
+    self.last_drel = 0
+    #self.last_off_course_time = 0
 
     
-    def calculate_reward(self, observations, processed_obs, race_finished, other_terminations):
+  def calculate_reward(self, observations, processed_obs, race_finished, other_terminations):
         """
         https://arxiv.org/pdf/2406.12563v1
 

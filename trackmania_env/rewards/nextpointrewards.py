@@ -14,7 +14,49 @@ import math
 
 class NextPointRewards(RewradCalculator):
 
-    def __init__(self, reward_cfg : RewardManagerCfg):
+    def __init__(self, 
+                reward_cfg : RewardManagerCfg,
+                accum_distance_weight: float=1200,
+                race_not_finished_weight: float=0.05,
+                race_finished_reward_weight: float=100,
+                other_termination_punishment: float=20,
+                velocity_reward_weight: float=1,
+                backward_weight: float=0,
+                distance_to_center_weight: float=1,
+                velocity_change_reward_weight: float=30,
+                speed_reward_weight: float=1,
+                lateral_distance_mode: str= "gauss",
+                mean: float = 0,
+                sigma: float = 1.0,
+                yshift: float = -1,
+                multiplicator: float = 5,
+                dist_scale: float = 0.3):
+        """
+        Initializes the reward manager with explicit reward weights and parameters
+        for modeling centerline distance reward using a Gaussian function.
+
+        Args:
+            reward_cfg (RewardManagerCfg): Configuration object for general reward setup.
+            accum_distance_weight (float): Weight for accumulated distance reward.
+            race_not_finished_weight (float): Penalty weight for not finishing the race.
+            race_finished_reward_weight (float): Bonus reward for finishing the race.
+            other_termination_punishment (float): Penalty for other termination conditions.
+            velocity_reward_weight (float): Weight for maintaining or increasing velocity.
+            backward_weight (float): Penalty weight for moving backward.
+            distance_to_center_weight (float): Weight for staying close to the centerline.
+            velocity_change_reward_weight (float): Weight for smooth velocity changes.
+            speed_reward_weight (float): General reward for maintaining speed.
+            lateral_distance_mode (str): Mode used to calculate lateral distance (e.g. "euclidean" or "perpendicular").
+
+            mean (float): Mean of the Gaussian function used for distance-to-centerline reward.
+                         Represents the ideal centerline offset (typically 0).
+            sigma (float): Standard deviation of the Gaussian, controlling the reward falloff
+                           as the vehicle deviates from the centerline.
+            yshift (float): Vertical shift applied to the Gaussian curve to shape the baseline reward.
+            multiplicator (float): Scales the Gaussian's amplitude; higher values amplify the reward.
+            dist_scale (float): Scaling factor for the input distance before applying the Gaussian.
+    """
+        
         super().__init__(reward_cfg)
         #self.refline_manager = ReferenceLineManager(filepath_referenceline)
 
@@ -137,7 +179,12 @@ class NextPointRewards(RewradCalculator):
 
 class NextPointRewards2(NextPointRewards):
     """Similar to NextPointRewards, but it scales the distance to center in relation to the accumulated distance."""
-    def __init__(self, reward_cfg : RewardManagerCfg):
+    def __init__(self, reward_cfg : RewardManagerCfg,  sf1: float = 0.4,sf2: float = 1.0):
+        """
+            sf1 (float): Scale factor for how large the distance-to-center reward can be
+                         relative to the accumulated distance reward (default: 0.4).
+            sf2 (float): Additional scaling for distance-to-center reward (default: 1.0).
+        """
         super().__init__(reward_cfg)
         self.sf1 = 0.4
         """Scale factor of how large distance-to-center reward can be in relation to accum distance reward.""" 
