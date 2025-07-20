@@ -19,7 +19,9 @@ from trackmania_env.utils.contact_materials import physics_behavior_fromint,NUM_
 
 class LinesightObservationWrapper(ObservationManager):
 
-    def __init__(self, observation_list, colorspace, convert_torch, img_width, img_height,
+    def __init__(
+            self,
+            observation_list,
             zone_centers: np.ndarray,
             zone_transitions: np.ndarray,
             distance_between_zone_transitions: np.ndarray,
@@ -27,15 +29,53 @@ class LinesightObservationWrapper(ObservationManager):
             normalized_vector_along_track_axis: np.ndarray,
             next_real_checkpoint_positions: np.ndarray,
             max_allowable_distance_to_real_checkpoint: np.ndarray,
-            cfg : LinesightObsCfg):
+            colorspace:str = "grayscale",
+            convert_torch:bool = True,
+            img_width: int = 128,
+            img_height: int = 128,
+            n_zone_centers_extrapolate_after_end_of_map:int = 1000,
+            distance_between_checkpoints:float = 0.5,
+            road_width:int = 90,
+            n_zone_centers_in_inputs:int = 40,
+            margin_to_announce_finish_meters:int = 700,
+            one_every_n_zone_centers_in_inputs:int = 20,
+            n_zone_centers_extrapolate_before_start_of_map:int = 20,
+            n_prev_actions_in_inputs :int = 5,
+            sync_virtual_and_real_checkpoints:bool  = True
+            ):
+        """
+    Initializes the Linesight Observation Manager.
+
+    Parameters:
+        observation_list (list): List specifying which observation components to generate.
+        zone_centers (np.ndarray): Array of 3D points representing the centers of each navigation zone along the track.
+        zone_transitions (np.ndarray): Indices or coordinates of transition points between navigation zones.
+        distance_between_zone_transitions (np.ndarray): Array of distances between consecutive zone transitions.
+        distance_from_start_track_to_prev_zone_transition (np.ndarray): Array of distances from the start of the track to each previous zone transition point.
+        normalized_vector_along_track_axis (np.ndarray): Unit vector representing the general direction of the track at each zone.
+        next_real_checkpoint_positions (np.ndarray): Array of coordinates representing the positions of upcoming real checkpoints.
+        max_allowable_distance_to_real_checkpoint (np.ndarray): Maximum distance allowed to a real checkpoint for it to be considered "reached".
+        colorspace (str, default="grayscale"): Colorspace used for rendering images (e.g., "grayscale", "rgb").
+        convert_torch (bool, default=True): Whether to convert the observations (e.g. images) to PyTorch tensors.
+        img_width (int, default=128): Width of the input images in pixels.
+        img_height (int, default=128): Height of the input images in pixels.
+        n_zone_centers_extrapolate_after_end_of_map (int, default=1000): Number of synthetic zone centers to extrapolate beyond the end of the actual map.
+        distance_between_checkpoints (float, default=0.5): Distance in meters between consecutive virtual checkpoints.
+        road_width (int, default=90): Assumed road width in meters; includes margin for safety on curves.
+        n_zone_centers_in_inputs (int, default=40): Number of zone centers to include in the observation input.
+        margin_to_announce_finish_meters (int, default=700): Distance margin before the final checkpoint to begin announcing track completion.
+        one_every_n_zone_centers_in_inputs (int, default=20): Sampling interval; use one zone center every N centers in the input.
+        n_zone_centers_extrapolate_before_start_of_map (int, default=20): Number of synthetic zone centers to extrapolate before the start of the map.
+        n_prev_actions_in_inputs (int, default=5): Number of previous agent actions (e.g., steering, throttle) to include in the observation input for temporal context.
+        sync_virtual_and_real_checkpoints (bool, default=True): Whether to align virtual checkpoints with real-world checkpoints for consistent navigation and evaluation.
+    """
         super().__init__(observation_list, colorspace, convert_torch, img_width, img_height)
 
-        self.cfg = cfg # config file for this environment
         self.zone_centers: np.ndarray = zone_centers
-        self.current_zone_idx:int = cfg.n_zone_centers_extrapolate_after_end_of_map
+        self.current_zone_idx:int = n_zone_centers_extrapolate_after_end_of_map
         self.distance_since_track_begin:int = 0
         self.state_zone_center_coordinates_in_car_reference_system : np.ndarray = np.zeros(3,)
-        self.max_allowable_distance_to_virtual_checkpoint = np.sqrt((cfg.distance_between_checkpoints / 2) ** 2 + (cfg.road_width / 2) ** 2)
+        self.max_allowable_distance_to_virtual_checkpoint = np.sqrt((distance_between_checkpoints / 2) ** 2 + (road_width / 2) ** 2)
 
         self.zone_transitions = zone_transitions
         self.distance_between_zone_transitions = distance_between_zone_transitions
@@ -44,13 +84,21 @@ class LinesightObservationWrapper(ObservationManager):
         self.next_real_checkpoint_positions = next_real_checkpoint_positions
         self.max_allowable_distance_to_real_checkpoint = max_allowable_distance_to_real_checkpoint
 
+        self.n_zone_centers_in_inputs = n_zone_centers_in_inputs 
+        self.margin_to_announce_finish_meters = margin_to_announce_finish_meters
+        self.n_zone_centers_extrapolate_after_end_of_map = n_zone_centers_extrapolate_after_end_of_map
+
+        self.one_every_n_zone_centers_in_inputs = one_every_n_zone_centers_in_inputs
+        self.n_zone_centers_extrapolate_before_start_of_map =  n_zone_centers_extrapolate_before_start_of_map
+        self.n_prev_actions_in_inputs = n_prev_actions_in_inputs 
+        self.sync_virtual_and_real_checkpoints =  sync_virtual_and_real_checkpoints
+       
     def get_observation_dict(self) -> spaces.Dict:
         """Returns observation dict for environment according to initialization."""
         
-        n_channels = 1 if self.colorspace == ObservationManager.Colorspace.GRAYSCALE else 3
         float_input_dim =  (
             # dynamic states sizes (see get_dynamics_states() for understanding)
-            3* self.cfg.n_zone_centers_in_inputs 
+            3* self.n_zone_centers_in_inputs 
             + 3*3 
             #--------------------------
             # wheels and engine states sizes (see get_mobil_states() for understanding)
@@ -58,11 +106,11 @@ class LinesightObservationWrapper(ObservationManager):
             + 3*4 + 4*1
             #--------------------------
             # previous actions
-            + 4* self.env.n_prev_actions
+            + 4* self.n_prev_actions_in_inputs # TODO must match the env. but when this gets called the environment is not instantiated
             +1 # min_dist
         )
         return spaces.Dict({
-                "image": spaces.Box(low=0, high=255, shape=(n_channels,self.img_width, self.img_height), dtype=np.uint8),
+                "image": spaces.Box(low=0, high=255, shape=(self.n_channels,self.img_width, self.img_height), dtype=np.uint8),
                 "state": spaces.Box(low=-np.inf, high=np.inf, shape=(float_input_dim,), dtype=np.float32),
             })
     
@@ -99,9 +147,9 @@ class LinesightObservationWrapper(ObservationManager):
                             y_map_vector_in_car_reference_system.ravel(),
                             self.state_zone_center_coordinates_in_car_reference_system.ravel(),
                             min(
-                                self.cfg.margin_to_announce_finish_meters,
+                                self.margin_to_announce_finish_meters,
                                 self.distance_from_start_track_to_prev_zone_transition[
-                                    len(self.zone_centers) - self.cfg.n_zone_centers_extrapolate_after_end_of_map
+                                    len(self.zone_centers) - self.n_zone_centers_extrapolate_after_end_of_map
                                 ]
                                 - self.distance_since_track_begin,
                             ),
@@ -207,8 +255,8 @@ class LinesightObservationWrapper(ObservationManager):
                     # The slicing becomes:
                     # self.zone_centers[100 : 100 + 800 : 20, :] → self.zone_centers[100:900:20, :]
                     # This picks the following indices: [100, 120, 140, ..., 880] → total of 40 zone centers
-                    self.current_zone_idx : self.current_zone_idx + self.cfg.one_every_n_zone_centers_in_inputs
-                                * self.cfg.n_zone_centers_in_inputs : self.cfg.one_every_n_zone_centers_in_inputs,
+                    self.current_zone_idx : self.current_zone_idx + self.one_every_n_zone_centers_in_inputs
+                                * self.n_zone_centers_in_inputs : self.one_every_n_zone_centers_in_inputs,
                                 :,
                             ]
                             - position
@@ -239,7 +287,7 @@ class LinesightObservationWrapper(ObservationManager):
             d1 <= d2
             and d1 <= max_allowable_distance_to_virtual_checkpoint
             and current_zone_idx
-            < len(zone_centers) - 1 - self.cfg.n_zone_centers_extrapolate_after_end_of_map  # We can never enter the final virtual zone
+            < len(zone_centers) - 1 - self.n_zone_centers_extrapolate_after_end_of_map  # We can never enter the final virtual zone
             and d4 < max_allowable_distance_to_real_checkpoint[current_zone_idx] ):
             # Move from one virtual zone to another
             current_zone_idx += 1
@@ -263,10 +311,10 @@ from trackmania_env.utils.map_loader import (
 
 
 
-def get_linesight_obs_instance(cfg : TrainConfig):
-    linesightcfg : LinesightObsCfg = cfg.rl_env.linesightobsmanager
-    obsconfig : ObservationManager = cfg.rl_env.obsmanager
-    image_cfg : ImageConfig = cfg.image
+def get_linesight_obs_instance(cfg):
+    obsconfig : ObservationManager = cfg.rl_env.obs_manager
+    linesightcfg : LinesightObsCfg = obsconfig.linesightobsmanager
+
     zone_centers = load_map_with_extrapolated_centers(
         n_before = linesightcfg.n_zone_centers_extrapolate_before_start_of_map,
         n_after  = linesightcfg.n_zone_centers_extrapolate_after_end_of_map,
@@ -288,18 +336,18 @@ def get_linesight_obs_instance(cfg : TrainConfig):
         linesightcfg.sync_virtual_and_real_checkpoints)
 
 
-    return LinesightObservationWrapper(observation_list=obsconfig.observation_list, 
+    return LinesightObservationWrapper(
+                                    observation_list=obsconfig.observation_list, 
                                     colorspace=obsconfig.colorspace,
                                     convert_torch=obsconfig.convert_torch,
-                                    img_width=image_cfg.width, 
-                                    img_height=image_cfg.height,
-
-                                    zone_centers = zone_centers,
-                                    zone_transitions = zone_transitions,
+                                    img_width= obsconfig.img_width, 
+                                    img_height= obsconfig.img_height,
+                                    zone_centers= zone_centers,
+                                    zone_transitions= zone_transitions,
                                     distance_between_zone_transitions = distance_between_zone_transitions,
-                                    distance_from_start_track_to_prev_zone_transition = distance_from_start_track_to_prev_zone_transition,
-                                    normalized_vector_along_track_axis = normalized_vector_along_track_axis,
-                                    next_real_checkpoint_positions = next_real_checkpoint_positions,
-                                    max_allowable_distance_to_real_checkpoint = max_allowable_distance_to_real_checkpoint,
-
-                                    cfg = cfg.rl_env.linesightobsmanager)
+                                    distance_from_start_track_to_prev_zone_transition= distance_from_start_track_to_prev_zone_transition,
+                                    normalized_vector_along_track_axis= normalized_vector_along_track_axis,
+                                    next_real_checkpoint_positions= next_real_checkpoint_positions,
+                                    max_allowable_distance_to_real_checkpoint= max_allowable_distance_to_real_checkpoint,
+                                    n_prev_actions_in_inputs=cfg.rl_env.env.n_previous_actions,
+                                    **linesightcfg,)

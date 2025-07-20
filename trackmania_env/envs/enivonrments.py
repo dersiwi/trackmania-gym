@@ -31,7 +31,7 @@ def get_environment(cfg : TrainConfig, control_queue : Queue, response_queue : Q
         - response_queue : Response Queue used by environment to get responses by ProcessWrapper
     """
 
-    obs_manager = get_observation_manager(obs_manager_cfg = cfg.rl_env.obs_manager, wrap_obs_in_test = cfg.rl_env.env.wrap_obs_in_test)
+    obs_manager = get_observation_manager(cfg = cfg, wrap_obs_in_test = cfg.rl_env.env.wrap_obs_in_test)
     reward_calculator = get_reward_calculator(reward_calculator_cfg = cfg.rl_env.reward_manager)
     termination_manger = get_termination_manager(termination_cfg= cfg.rl_env.termination_manager)
 
