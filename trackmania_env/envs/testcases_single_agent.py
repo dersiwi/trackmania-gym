@@ -592,7 +592,7 @@ class PlotterProcess(mp.Process):
 
             except Empty: continue
 
-from trackmania_env.utils.environment_plots import Plot_Obs_Images,Plot_Rewards,Plot_Lateral_Distance,Plot_RefLine
+from trackmania_env.utils.environment_plots import Plot_Obs_Images,Plot_Rewards,Plot_Lateral_Distance,Plot_RefLine,PrintRotation
 
 class NonBlockingPlot(TestEnvironmentCallback):
     def __init__(self, plotter):
@@ -648,3 +648,11 @@ class Plot_ReferenceLine_Callback(NonBlockingPlot):
         data["comming_refline_points"] = info["comming_refline_points"]
         data["next_refline_index"] = info["rewards"]["nextpoint_reference_index"]
         self.queue.put(data)
+
+class Plot_Rotation_Callback(NonBlockingPlot):
+    def __init__(self,):
+        super().__init__(plotter=PrintRotation())
+    
+    def _call_after_step(self, processed_obs, reward, terminated, truncated, info):
+        rot_matrix = np.array(info["rotation_matrix"])
+        self.queue.put(rot_matrix)

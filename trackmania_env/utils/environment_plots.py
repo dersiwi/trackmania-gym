@@ -261,3 +261,42 @@ class Plot_RefLine(EnvPlotter):
         
         self.fig.canvas.draw()
         plt.pause(0.001)
+
+class PrintRotation(EnvPlotter):
+    def __init__(self):
+        super().__init__()
+        self.quiver = None
+        self.fig, self.ax = None,None
+        plt.ion()
+        plt.show()
+
+    def setup_plot(self):
+        self.fig = plt.figure()
+        self.ax = self.fig.add_subplot(111, projection='3d')
+
+    def plot(self, rot_matrix):
+        # Clear and redraw
+        self.ax.cla()
+        self.ax.set_xlim([-1, 1])
+        self.ax.set_ylim([-1, 1])
+        self.ax.set_zlim([-1, 1])
+        self.ax.set_xlabel("X")
+        self.ax.set_ylabel("Y")
+        self.ax.set_zlabel("Z")
+        self.ax.set_title("Live Rotation Matrix Axes")
+        # Initial dummy arrows
+        self.quiver = self.ax.quiver(0, 0, 0, 1, 0, 0, color='r', label="X-axis")
+        self.quiver = self.ax.quiver(0, 0, 0, 0, 1, 0, color='g', label="Y-axis")
+        self.quiver = self.ax.quiver(0, 0, 0, 0, 0, 1, color='b', label="Z-axis")
+        self.ax.legend()
+
+        origin = np.array([0, 0, 0])
+        x_axis = rot_matrix[:, 0]
+        y_axis = rot_matrix[:, 1]
+        z_axis = rot_matrix[:, 2]
+
+        self.ax.quiver(*origin, *x_axis, color='r', label="X-axis")
+        self.ax.quiver(*origin, *y_axis, color='g', label="Y-axis")
+        self.ax.quiver(*origin, *z_axis, color='b', label="Z-axis")
+        plt.draw()
+        plt.pause(0.001)
