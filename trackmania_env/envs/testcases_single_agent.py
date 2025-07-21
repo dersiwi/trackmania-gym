@@ -77,8 +77,6 @@ class PrintRotation(Live3dPlotEnvironmentCallback):
         self.quiver = None
         super().__init__()
 
-
-
     def _setup_plot(self):
         self.ax.set_xlim([-1, 1])
         self.ax.set_ylim([-1, 1])
@@ -556,3 +554,85 @@ class Plot_Obs_Images(TestEnvironmentCallback):
 
         self.fig.canvas.draw()
         plt.pause(0.001)  # Small pause to allow GUI update
+
+
+
+import multiprocessing as mp
+from queue import Empty
+
+class PlotterProcess(mp.Process):
+    def __init__(self, data_queue, plotter):
+        """
+        Parameters:
+            data_queue (mp.Queue): Queue receiving data to plot.
+            plotter (EnvPlotter): An instance of a concrete EnvPlotter subclass.
+        """
+        super().__init__()
+        self.queue = data_queue
+        self.plotter = plotter
+
+    def run(self):
+        """
+        Run the plotting loop in a separate process.
+        """
+        plt.ion()
+        self.plotter.setup_plot()
+
+        while True:
+            try:
+                data = self.queue.get(timeout=1)
+
+                if data is None:
+                    print("[PlotterProcess] Shutdown signal received.")
+                    break  # Graceful shutdown
+
+                # Drain any backlog, keeping the most recent item
+                while not self.queue.empty(): data = self.queue.get_nowait()
+                self.plotter.plot(data)
+
+            except Empty: continue
+
+from trackmania_env.utils.environment_plots import Plot_Obs_Images,Plot_Rewards,Plot_Lateral_Distance
+
+class NonBlockingPlot(TestEnvironmentCallback):
+    def __init__(self, plotter):
+        super().__init__()
+        self.queue = mp.Queue()
+        self.plot_process = PlotterProcess(data_queue=self.queue, plotter=plotter)
+        self.plot_process.start()
+
+    def __del__(self):
+        try:
+            self.queue.put(None)  # Signal to shutdown
+            self.plot_process.join(timeout=1)
+        except Exception:
+            pass
+
+class Plot_Obs_Images_Callback(NonBlockingPlot):
+    def __init__(self):
+        super().__init__(plotter=Plot_Obs_Images())
+
+    def _call_after_step(self, processed_obs, reward, terminated, truncated, info):
+        img_tensor = processed_obs["image"]
+        self.queue.put(img_tensor)
+
+
+BANNED =  ["nextpoint_reference_index"]
+class Plot_Rewards_Callback(NonBlockingPlot):
+    def __init__(self, key_to_plot=None, y_lim=(-1, 1)):
+        super().__init__(plotter=Plot_Rewards(key_to_plot=key_to_plot, y_lim=y_lim))
+
+    def _call_after_step(self, processed_obs, reward, terminated, truncated, info):
+        rewards = info["rewards"]
+        rewards = {k: v for k, v in rewards.items() if k not in BANNED}
+        self.queue.put(rewards)
+
+class Plot_Lateral_Distance_Callback(NonBlockingPlot):
+    def __init__(self,reference_line_manager):
+        super().__init__(plotter= Plot_Lateral_Distance(reference_line_manager))
+    
+    def _call_after_step(self, processed_obs, reward, terminated, truncated, info):
+        data = {}
+        data["position"] = info["position"]
+        data["next_refline_index"] = info["rewards"]["nextpoint_reference_index"]
+        self.queue.put(data)

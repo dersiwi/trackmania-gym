@@ -30,7 +30,7 @@ _HYDRA_PARAMS = {
 @hydra.main(**_HYDRA_PARAMS)
 def main(cfg : TrainConfig):
 
-    tmi_process, control_queue, response_queue = start_process_and_wait_for_startsignal(cfg, cfg.image.width, cfg.image.height)
+    tmi_process, control_queue, response_queue = start_process_and_wait_for_startsignal(cfg,cfg.rl_env.obs_manager.img_width, cfg.rl_env.obs_manager.img_height)
     obs_manager = get_observation_manager(cfg = cfg, wrap_obs_in_test = False)
     reward_calculator = get_reward_calculator(reward_calculator_cfg = cfg.rl_env.reward_manager)
     termination_manger = get_termination_manager(termination_cfg= cfg.rl_env.termination_manager)
@@ -59,10 +59,10 @@ def main(cfg : TrainConfig):
     #tm_env.add_env_test_calback(testcases.PrintVector2DToNextReferencePoint())
     #tm_env.add_env_test_calback(testcases.PrintVectorToNextReferencePoint())
     #tm_env.add_env_test_calback(testcases.Test_Lateral_Dist_Next_Point_Manager(tm_env.reference_line))
-    #tm_env.add_env_test_calback(testcases.Test_Reward_Next_Point_Manager())
+    #tm_env.add_env_test_calback(testcases.Test_Reward_Next_Point_Manager2())
     #tm_env.add_env_test_calback(testcases.Test_3D_Next_Point_Manager(key_to_plot="velocity_delta",y_lim=(-50,50)))
     #tm_env.add_env_test_calback(testcases.PretrainingDataCollection(reference_line_manager=tm_env.reference_line, logging_directory=r"C:\Users\siwis\Documents\dataset", continuation_idx=1721))
-    tm_env.add_env_test_calback(testcases.Plot_Obs_Images())
+    tm_env.add_env_test_calback(testcases.Plot_Lateral_Distance_Callback(tm_env.reference_line))
 
     tm_env.step_with_manual_input()
     
