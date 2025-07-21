@@ -1,7 +1,7 @@
 name: "race_finished"
 args:
-    accum_distance_weight : 1200
-    race_not_finished_weight : 0.05 # not used
+    accum_distance_weight : 10
+    race_not_finished_weight : 0.02 # not used
     race_finished_reward_weight : 100
     other_termination_punishment : 20
     velocity_reward_weight : 1  #not used
@@ -10,3 +10,6 @@ args:
     velocity_change_reward_weight : 30 #not used
     speed_reward_weight: 1 #not used
     lateral_distance_mode : "gauss" #triangle, gauss, trapez
+
+steps_without_progress_until_punishment : 512
+use_punishment : True

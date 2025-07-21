@@ -23,6 +23,8 @@ def get_reward_calculator(reward_calculator_cfg: RewardManagerCfg) -> RewradCalc
         case "sophy":
             return SophyRewards(**reward_calculator_cfg.args)
         case "race_finished":
-            return RaceFinishedRewards(**reward_calculator_cfg.args)
+            return RaceFinishedRewards(**reward_calculator_cfg.args, 
+                                       use_punishment=reward_calculator_cfg.use_punishment, 
+                                       steps_without_progress_until_punishment=reward_calculator_cfg.steps_without_progress_until_punishment)
         case _:
             raise NameError(f"Reward calculator '{name}' not known.")

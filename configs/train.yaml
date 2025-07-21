@@ -1,9 +1,9 @@
 defaults:
-  - platforms: linux.yaml  # or platforms/windows
+  - platforms: windows2.yaml  # or platforms/windows
   - rl_env: single_agent_env.yaml
   - sb3: ppo.yaml
   - wandb_callbacks : sb3_callback.yaml
-  - models: visionmodeleight.yaml
+  - models: visionmodelsix.yaml
   - lr_scheduler: no_scheduling.yaml
   - policy: basic_policy.yaml
 
@@ -11,7 +11,7 @@ extractors_out_dim: 64 # every extractor will produce an output with this dimens
 share_features_extractor: True # whether to share the features extractor between actor and critic when applicable
 
 learn_args:
-  total_timesteps: 3000000
+  total_timesteps: 8000000
   log_interval: 1
   reset_num_timesteps: True
   progress_bar: True
@@ -22,13 +22,13 @@ gmi:
   tm_loader_profile_name: "default"
   headless: False
   port: 8775
-  track : very_long_checkpoints.Challenge.Gbx
-  reference_line: tracks/reference_line/very_long_checkpoints.npy
+  track : curvy.Challenge.Gbx
+  reference_line: tracks/reference_line/curvy.npy
 
 wandb:
   use: False
   entity : tmnf-practical-ss25
   project : tmnf_ppo
   checkpoint_freq : 500000 # after how many steps should the model be saved automatically
-  eval_freq : 400000 # after how many steps should we check if there is a new better model
+  eval_freq : 1000000 # after how many steps should we check if there is a new better model
 

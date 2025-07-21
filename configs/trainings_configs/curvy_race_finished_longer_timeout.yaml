@@ -1,0 +1,122 @@
+platforms:
+  os: windows
+  home: ${oc.env:USERPROFILE,""}
+  tmloader: C:/Users/siwis/AppData/Local/TMLoader/TMLoader.exe
+  plugin: ${.home}/OneDrive/Dokumente/TMInterface/Plugins/python_link.as
+  map_dir: ${.home}/OneDrive/Dokumente/TmForever/Tracks/Challenges
+  device: cuda
+rl_env:
+  obs_manager:
+    name: nextpointobs
+    img_width: 128
+    img_height: 128
+    colorspace: grayscale
+    camera_id: 2
+    convert_torch: true
+  reward_manager:
+    name: race_finished
+    args:
+      accum_distance_weight: 10
+      race_not_finished_weight: 0.02
+      race_finished_reward_weight: 250
+      other_termination_punishment: 20
+      velocity_reward_weight: 1
+      backward_weight: 0
+      distance_to_center_weight: 1
+      velocity_change_reward_weight: 30
+      speed_reward_weight: 1
+      lateral_distance_mode: gauss
+    steps_without_progress_until_punishment: 512
+    use_punishment: true
+  termination_manager:
+    name: no_progress
+    max_steps_until_reset: 8192
+    ignore_stuck_for_n_steps_after_reset: 80
+    terminate_after_steps_without_progress: 2048
+  env:
+    _partial_: true
+    _target_: trackmania_env.envs.single_agent_env2.TMNF_Single_Agent_Env
+    n_previous_actions: 10
+    reset_mode: respawn
+    position_buffer_size: 20
+    position_moved_threshold: 0.8
+    game_speed: 20
+    countdown_speed: 20
+    wrap_obs_in_test: false
+    test: false
+    startposition_accuracy_threshold: 0.5
+    ignore_stuck_for_n_steps_after_reset: 80
+    automatic_prevent_sim_finish: true
+    disable_waitforstep_after_n_consecutive_timeouts: 5
+    actions_per_second: 20
+    waitforstep_timeout_in_s: 1.2
+    use_rewind: true
+  wrappers:
+    monitor:
+      _partial_: true
+      _target_: stable_baselines3.common.monitor.Monitor
+sb3:
+  constructor:
+    _partial_: true
+    _target_: stable_baselines3.PPO
+    verbose: 1
+  algorithm_params:
+    learning_rate: 0.00025
+    n_steps: 2048
+    batch_size: 512
+    n_epochs: 5
+    gamma: 0.99
+    gae_lambda: 0.95
+    clip_range: 0.2
+    clip_range_vf: null
+    normalize_advantage: true
+    ent_coef: 0.01
+    vf_coef: 1
+    max_grad_norm: 0.5
+    use_sde: false
+    sde_sample_freq: -1
+    rollout_buffer_class: null
+    rollout_buffer_kwargs: null
+    target_kl: null
+    stats_window_size: 100
+    seed: null
+    _init_setup_model: true
+wandb_callbacks:
+  _partial_: true
+  _target_: wandb.integration.sb3.WandbCallback
+  model_save_freq: 10000000
+  gradient_save_freq: 10000
+  log: all
+  verbose: 2
+models:
+  _partial_: true
+  _target_: neuronal_networks.vision_encoder.conv_NNs.VisionModelSix
+lr_scheduler:
+  _target_: neuronal_networks.lr_schedulers.NoScheduler
+  initial_value: 0.00025
+policy:
+  name: basic
+  type: MultiInputPolicy
+  extractors_out_dim: 64
+  share_features_extractor: false
+extractors_out_dim: 64
+share_features_extractor: true
+learn_args:
+  total_timesteps: 8000000
+  log_interval: 1
+  reset_num_timesteps: true
+  progress_bar: true
+  tb_log_name: PPO
+gmi:
+  launch: true
+  tm_loader_profile_name: default
+  headless: false
+  port: 8775
+  track: curvy.Challenge.Gbx
+  reference_line: tracks/reference_line/curvy.npy
+wandb:
+  use: false
+  entity: tmnf-practical-ss25
+  project: tmnf_ppo
+  checkpoint_freq: 500000
+  eval_freq: 1000000

@@ -101,13 +101,14 @@ def get_models(cfg : TrainConfig, tm_env : TMNF_Single_Agent_Env, print_params :
     # Only include policy_kwargs if they exist
     if policy_kwargs: model_args["policy_kwargs"] = policy_kwargs
 
+    lr : LR_Scheduler = hydra.utils.instantiate(cfg.lr_scheduler)
+    model_args["learning_rate"] = lr.get_scheduler()
 
     if not (load_model_path is None):
         # TODO remove the PPO and make this modular so it can be used with different algos
         model = PPO(**model_args)
         model.set_parameters(load_model_path)
     else:
-        #lr : LR_Scheduler = hydra.utils.instantiate(cfg.lr_scheduler)
         model_constructor = hydra.utils.instantiate(cfg.sb3.constructor)
         model : BaseAlgorithm | PPO | SAC | DQN = model_constructor(**model_args)
     

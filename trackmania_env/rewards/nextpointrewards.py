@@ -28,7 +28,8 @@ class NextPointRewards(RewradCalculator):
                 sigma: float = 1.0,
                 yshift: float = -1,
                 multiplicator: float = 5,
-                dist_scale: float = 0.3):
+                dist_scale: float = 0.3, 
+                **kwargs ):
         """
         Initializes the reward manager with explicit reward weights and parameters
         for modeling centerline distance reward using a Gaussian function.
@@ -57,6 +58,9 @@ class NextPointRewards(RewradCalculator):
     """
         
         super().__init__()
+
+        if len(kwargs) > 0:
+            print(f"Got additional kwargsuments that are not used; ignoring them : {kwargs.keys()}. Maybe they're used by a class that inherits.")
 
         self.accum_distance_weight = accum_distance_weight
         self.race_not_finished_weight = race_not_finished_weight
@@ -218,21 +222,41 @@ class NextPointRewards2(NextPointRewards):
 
 class RaceFinishedRewards(NextPointRewards):
     """Similar to NextPointRewards, but it scales the distance to center in relation to the accumulated distance."""
-    def __init__(self,**kwargs):
+    def __init__(self, steps_without_progress_until_punishment : int, use_punishment : bool, **kwargs):
         super().__init__(**kwargs)
         self.env_timeout = 0
-    
         """After how many (env)-steps the environment times out"""
+
+        self.use_punishment = use_punishment
+        self.steps_since_last_progress = 0
+        self.current_refline_idx = 0
+        self.steps_without_progress_until_punishment = steps_without_progress_until_punishment
 
     def set_env(self, env):
         super().set_env(env)
+        self.steps_since_last_progress = 0
         self.env_timeout = self.env.termination_manager.timeout
+
+    def reset(self):
+        self.steps_since_last_progress = 0
+        return super().reset()
 
 
     def calculate_reward(self, observations, processed_obs, race_finished, other_terminations):
         reward = 0
         
         next_refline_index, d, drel = self.refline_manager.get_distance_to_next_point()
+        
+        no_progress_punishment = 0
+
+        if self.use_punishment:
+            if next_refline_index == self.current_refline_idx:
+                self.steps_since_last_progress += 1
+            else:
+                self.steps_since_last_progress = 0
+
+            no_progress_punishment = self.race_not_finished_weight * (-1) * (self.steps_since_last_progress >= self.steps_without_progress_until_punishment)
+
         accum_dist_reward = self._calculate_accum_distance_reward(next_refline_index)
         
         other_term_reward = self._calculate_termination_rewards(other_terminations)
@@ -243,8 +267,9 @@ class RaceFinishedRewards(NextPointRewards):
             # (the longer the track, the more the minimal amount of env-steps requrired to reach goal, the less this reward.)
             race_finished_reward = (1 - self.env.n_steps / self.env_timeout) * self.race_finished_reward_weight
 
-        reward = accum_dist_reward + other_term_reward + race_finished_reward
+        reward = accum_dist_reward + other_term_reward + race_finished_reward + no_progress_punishment
 
         return reward, {"accum_dist_reward" : accum_dist_reward,
                         "race_finished_reward" : race_finished_reward,
-                        "other_terminations" : other_term_reward}
+                        "other_terminations" : other_term_reward,
+                        "no_progress_punishment" : no_progress_punishment}

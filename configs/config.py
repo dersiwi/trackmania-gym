@@ -177,7 +177,9 @@ class RLEnvConfig:
     reward_manager : RewardManagerCfg
     termination_manager : TerminationManagerCfg
 
-
+@dataclass
+class LearningRateSchedulerConfig:
+    initial_value : float
 
 @dataclass
 class TrainConfig:
@@ -189,6 +191,7 @@ class TrainConfig:
     platforms: Optional[PlatformConfig] = None
     models: Optional[PretrainedResNetConfig] = None
     rl_env: Optional[RLEnvConfig] = None
+    lr_scheduler : Optional[LearningRateSchedulerConfig] = None
     sb3: Optional[SB3PPOConfig] = None
     wandb_callbacks: Optional[SB3CallbackConfig]= None
     wandb: Optional[WandbConfig] = None
