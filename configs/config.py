@@ -66,10 +66,14 @@ class WrappersConfig:
     pytroch_wrapper: PytorchWrapperConfig
 
 @dataclass
-class ObservationManager:
-    observation_list : list[str]
+class ObservationManagerConfig:
+    """ObservationManagerConfig may contain attributes custom to a specific observation manager. These only list the common ones between all observation managers."""
+    observation_list : dict[str, any]
     colorspace : str
     convert_torch : bool
+    img_height : int
+    img_width : int
+    name : str
 
 
 
@@ -155,16 +159,24 @@ class EnvConfig:
 
 @dataclass
 class RewardManagerCfg:
-    rewardterm_weights : dict[str, float]
-    lateral_distance_mode : str
+    args : any
+    name : str
+
+@dataclass
+class TerminationManagerCfg:
+    """Specific termination managers may have more attributes than listed here, this only lists the common ones."""
+    max_steps_until_reset : int
+    name : str
+    ignore_stuck_for_n_steps_after_reset : int 
     
 @dataclass
 class RLEnvConfig:
     wrappers: WrappersConfig
     env : EnvConfig
-    obsmanager : ObservationManager
+    obs_manager : ObservationManagerConfig
     linesightobsmanager : LinesightObsCfg
     reward_manager : RewardManagerCfg
+    termination_manager : TerminationManagerCfg
 
 
 

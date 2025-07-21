@@ -25,17 +25,17 @@ class SophyRewards(RewradCalculator):
       agent is rewarded for forward progress and penalized for undesirable driving behaviors 
       such as going off-course, hitting walls, and erratic steering.
 
-    Parameters:
-        reward_cfg: Configuration object or dictionary specifying additional reward-related parameters.
-        maxlen_history (int, default=3): Number of previous time steps used to compute history-based penalties (e.g., steering consistency).
-        progress_weight (float, default=0.014): Weight for the course progress reward term , encouraging lap time minimization.
-        off_course_penalty_weight (float, default=0.034): Weight for the off-course penalty term , discouraging shortcutting or corner cutting.
-        wall_penalty_weight (float, default=10.0): Weight for the wall-hit penalty term , penalizing contact with track walls.
-        steering_change_penalty_weight (float, default=3.0): Weight for the steering change penalty term , discouraging abrupt steering.
-        steering_history_penalty_weight (float, default=5.0): Weight for the steering history penalty term , penalizing inconsistent steering direction over short time spans.
-        c_d (float, default=0.014): Threshold steering angle beyond which history-based penalties apply.
-        c_s (float, default=182.883569): Sensitivity factor used in the sigmoid function for the steering history penalty.
-        c_o (float, default=0.034): Offset in the sigmoid function used in the steering history penalty.
+    Parameters
+    ----------
+        - maxlen_history (int, default=3)                     : Number of previous time steps used to compute history-based penalties (e.g., steering consistency).
+        - progress_weight (float, default=0.014)              : Weight for the course progress reward term , encouraging lap time minimization.
+        - off_course_penalty_weight (float, default=0.034)    : Weight for the off-course penalty term , discouraging shortcutting or corner cutting.
+        - wall_penalty_weight (float, default=10.0)           : Weight for the wall-hit penalty term , penalizing contact with track walls.
+        - steering_change_penalty_weight (float, default=3.0) : Weight for the steering change penalty term , discouraging abrupt steering.
+        - steering_history_penalty_weight (float, default=5.0): Weight for the steering history penalty term , penalizing inconsistent steering direction over short time spans.
+        - c_d (float, default=0.014)                          : Threshold steering angle beyond which history-based penalties apply.
+        - c_s (float, default=182.883569)                     : Sensitivity factor used in the sigmoid function for the steering history penalty.
+        - c_o (float, default=0.034)                          : Offset in the sigmoid function used in the steering history penalty.
       """
     self.last_time = 0
     self.last_lateral_contact_time = 0

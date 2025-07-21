@@ -1,13 +1,10 @@
 from __future__ import annotations
-from trackmania_env.utils.position_buffer import PositionBuffer
-from tminterface.structs import CheckpointData, SimStateData, CheckpointTime
-from game_interaction.ipc_fields import IPCFields
-import numpy as np
-from numba import jit
 import wandb
 from stable_baselines3.common.callbacks import BaseCallback
 from configs.config import RewardManagerCfg
+
 from trackmania_env.utils.reference_line_manager import ReferenceLineManager
+from trackmania_env.utils.position_buffer import PositionBuffer
 
 class RewradCalculator:
     """Responsible for reward calculations for environment"""

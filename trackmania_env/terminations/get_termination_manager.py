@@ -1,9 +1,9 @@
 from trackmania_env.terminations.termination_manager import TerminationManager
 from trackmania_env.terminations.timeout_policy import TimeoutTerminationManager
 from trackmania_env.terminations.noprogress_termination import NoProgressTerminationManager
-from configs.config import TrainConfig
+from configs.config import TerminationManagerCfg
 
-def get_termination_manager(termination_cfg : TrainConfig) -> TerminationManager:
+def get_termination_manager(termination_cfg : TerminationManagerCfg) -> TerminationManager:
     """Returns instance of termination manager according to configuraion"""
     name = termination_cfg.name
     if name == "timeout_increase":

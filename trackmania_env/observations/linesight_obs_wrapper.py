@@ -1,3 +1,8 @@
+"""
+This module includes code adapted and refactored from the Linesight-AI project
+(https://github.com/Linesight-RL/linesight). Credit to the original authors
+for the foundational implementation; refactloring changes made here.
+"""
 
 from trackmania_env.observations.observation_manager import ObservationManager
 from gymnasium import spaces
@@ -47,27 +52,28 @@ class LinesightObservationWrapper(ObservationManager):
     Initializes the Linesight Observation Manager.
 
     Parameters:
-        observation_list (list): List specifying which observation components to generate.
-        zone_centers (np.ndarray): Array of 3D points representing the centers of each navigation zone along the track.
-        zone_transitions (np.ndarray): Indices or coordinates of transition points between navigation zones.
-        distance_between_zone_transitions (np.ndarray): Array of distances between consecutive zone transitions.
-        distance_from_start_track_to_prev_zone_transition (np.ndarray): Array of distances from the start of the track to each previous zone transition point.
-        normalized_vector_along_track_axis (np.ndarray): Unit vector representing the general direction of the track at each zone.
-        next_real_checkpoint_positions (np.ndarray): Array of coordinates representing the positions of upcoming real checkpoints.
-        max_allowable_distance_to_real_checkpoint (np.ndarray): Maximum distance allowed to a real checkpoint for it to be considered "reached".
-        colorspace (str, default="grayscale"): Colorspace used for rendering images (e.g., "grayscale", "rgb").
-        convert_torch (bool, default=True): Whether to convert the observations (e.g. images) to PyTorch tensors.
-        img_width (int, default=128): Width of the input images in pixels.
-        img_height (int, default=128): Height of the input images in pixels.
-        n_zone_centers_extrapolate_after_end_of_map (int, default=1000): Number of synthetic zone centers to extrapolate beyond the end of the actual map.
-        distance_between_checkpoints (float, default=0.5): Distance in meters between consecutive virtual checkpoints.
-        road_width (int, default=90): Assumed road width in meters; includes margin for safety on curves.
-        n_zone_centers_in_inputs (int, default=40): Number of zone centers to include in the observation input.
-        margin_to_announce_finish_meters (int, default=700): Distance margin before the final checkpoint to begin announcing track completion.
-        one_every_n_zone_centers_in_inputs (int, default=20): Sampling interval; use one zone center every N centers in the input.
-        n_zone_centers_extrapolate_before_start_of_map (int, default=20): Number of synthetic zone centers to extrapolate before the start of the map.
-        n_prev_actions_in_inputs (int, default=5): Number of previous agent actions (e.g., steering, throttle) to include in the observation input for temporal context.
-        sync_virtual_and_real_checkpoints (bool, default=True): Whether to align virtual checkpoints with real-world checkpoints for consistent navigation and evaluation.
+    -----------
+        - observation_list (list)             : List specifying which observation components to generate.
+        - zone_centers (np.ndarray)           : Array of 3D points representing the centers of each navigation zone along the track.
+        - zone_transitions (np.ndarray)       : Indices or coordinates of transition points between navigation zones.
+        - distance_between_zone_transitions (np.ndarray)                  : Array of distances between consecutive zone transitions.
+        - distance_from_start_track_to_prev_zone_transition (np.ndarray)  : Array of distances from the start of the track to each previous zone transition point.
+        - normalized_vector_along_track_axis (np.ndarray)                 : Unit vector representing the general direction of the track at each zone.
+        - next_real_checkpoint_positions (np.ndarray)                     : Array of coordinates representing the positions of upcoming real checkpoints.
+        - max_allowable_distance_to_real_checkpoint (np.ndarray)          : Maximum distance allowed to a real checkpoint for it to be considered "reached".
+        - colorspace (str, default="grayscale")                           : Colorspace used for rendering images (e.g., "grayscale", "rgb").
+        - convert_torch (bool, default=True)                              : Whether to convert the observations (e.g. images) to PyTorch tensors.
+        - img_width (int, default=128)                                    : Width of the input images in pixels.
+        - img_height (int, default=128)                                   : Height of the input images in pixels.
+        - n_zone_centers_extrapolate_after_end_of_map (int, default=1000) : Number of synthetic zone centers to extrapolate beyond the end of the actual map.
+        - distance_between_checkpoints (float, default=0.5)               : Distance in meters between consecutive virtual checkpoints.
+        - road_width (int, default=90)                                    : Assumed road width in meters; includes margin for safety on curves.
+        - n_zone_centers_in_inputs (int, default=40)                      : Number of zone centers to include in the observation input.
+        - margin_to_announce_finish_meters (int, default=700)             : Distance margin before the final checkpoint to begin announcing track completion.
+        - one_every_n_zone_centers_in_inputs (int, default=20)            : Sampling interval; use one zone center every N centers in the input.
+        - n_zone_centers_extrapolate_before_start_of_map (int, default=20): Number of synthetic zone centers to extrapolate before the start of the map.
+        - n_prev_actions_in_inputs (int, default=5)                       : Number of previous agent actions (e.g., steering, throttle) to include in the observation input for temporal context.
+        - sync_virtual_and_real_checkpoints (bool, default=True)          : Whether to align virtual checkpoints with real-world checkpoints for consistent navigation and evaluation.
     """
         super().__init__(observation_list, colorspace, convert_torch, img_width, img_height)
 

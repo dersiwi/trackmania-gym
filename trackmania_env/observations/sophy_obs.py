@@ -9,6 +9,7 @@ from game_interaction.ipc_fields import IPCFields
 from tminterface.structs import SimStateData, HmsDynaStateStruct
 
 IMAGE_SIZE = 64
+"""Image size as specified in sophy paper."""
 
 class SophyObsManager(ObservationManager):
     def __init__(self, observation_list, colorspace, convert_torch, img_width, img_height,maxlen_history:int = 3,lookahead_sec = 6,n_points = 60):
@@ -21,14 +22,14 @@ class SophyObsManager(ObservationManager):
         and output a trajectory of future positions.
 
         Parameters:
-            observation_list (list): List of observation types to include (e.g., images, speed, steering).
-            colorspace (str): Color space of input images, typically "rgb" or "grayscale".
-            convert_torch (bool): Whether to convert inputs into PyTorch tensors for model compatibility.
-            img_width (int): Width of input images.
-            img_height (int): Height of input images. 
-            maxlen_history (int, default=3): Number of previous time steps to include for temporal context (e.g., past states or actions).
-            lookahead_sec (int, default=6): Time horizon in seconds over which the agent predicts the incomming reference line points.
-            n_points (int, default=60): Number of points to generate from the distance the agent traveled in lookahead_sec.
+            - observation_list (list)           : List of observation types to include (e.g., images, speed, steering).
+            - colorspace (str)                  : Color space of input images, typically "rgb" or "grayscale".
+            - convert_torch (bool)              : Whether to convert inputs into PyTorch tensors for model compatibility.
+            - img_width (int)                   : Width of input images.
+            - img_height (int)                  : Height of input images. 
+            - maxlen_history (int, default=3)   : Number of previous time steps to include for temporal context (e.g., past states or actions).
+            - lookahead_sec (int, default=6)    : Time horizon in seconds over which the agent predicts the incomming reference line points.
+            - n_points (int, default=60)        : Number of points to generate from the distance the agent traveled in lookahead_sec.
         """
         assert img_width == img_height == IMAGE_SIZE, (
             f"Sophy was trained on {IMAGE_SIZE}x{IMAGE_SIZE} images. "

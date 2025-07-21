@@ -1,15 +1,17 @@
 from trackmania_env.observations.observation_manager import ObservationManager
 from trackmania_env.observations.observation_test import ObservationTest
  
-from configs.config import TrainConfig
+from configs.config import TrainConfig, ObservationManagerConfig
 
 from trackmania_env.observations.linesight_obs_wrapper import get_linesight_obs_instance
 from trackmania_env.observations.nextpoint_obs import NextPointObsManager
 from trackmania_env.observations.sophy_obs import SophyObsManager
 
-def get_observation_manager(cfg : TrainConfig, wrap_obs_in_test:bool = False) -> ObservationManager:
-    """Instanciate Configuration manager according to confguration."""
-    obs_manager_cfg = cfg.rl_env.obs_manager
+def get_observation_manager(cfg : TrainConfig, wrap_obs_in_test : bool = False) -> ObservationManager:
+    """Instanciate Configuration manager according to confguration.
+        - wrap_obs_in_test : If True, Instanciates ObservationTest() with given instanciated observation wrapper."""
+    
+    obs_manager_cfg : ObservationManagerConfig = cfg.rl_env.obs_manager
     name = obs_manager_cfg.name 
     match name:
         case "basic":

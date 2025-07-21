@@ -1,16 +1,13 @@
 from __future__ import annotations
-from trackmania_env.utils.position_buffer import PositionBuffer
 from tminterface.structs import CheckpointData, SimStateData, CheckpointTime
-from game_interaction.ipc_fields import IPCFields
 import numpy as np
-from numba import jit
-
-from trackmania_env.rewards.reward_calculation import RewradCalculator
-from trackmania_env.utils.reference_line_manager import ReferenceLineManager
 from scipy.stats import norm
 import logging
-from configs.config import RewardManagerCfg
-import math
+from typing import Literal
+
+from trackmania_env.rewards.reward_calculation import RewradCalculator
+from game_interaction.ipc_fields import IPCFields
+
 
 MAX_LATERAL_DISTANCE = 12 # maximal lateral difference, this is an estimate.
 
@@ -26,7 +23,7 @@ class NextPointRewards(RewradCalculator):
                 distance_to_center_weight: float=1,
                 velocity_change_reward_weight: float=30,
                 speed_reward_weight: float=1,
-                lateral_distance_mode: str= "gauss",
+                lateral_distance_mode: Literal["gauss", "triangle", "trapez"] = "gauss",
                 mean: float = 0,
                 sigma: float = 1.0,
                 yshift: float = -1,
@@ -36,35 +33,36 @@ class NextPointRewards(RewradCalculator):
         Initializes the reward manager with explicit reward weights and parameters
         for modeling centerline distance reward using a Gaussian function.
 
-        Args:
-            accum_distance_weight (float): Weight for accumulated distance reward.
-            race_not_finished_weight (float): Penalty weight for not finishing the race.
-            race_finished_reward_weight (float): Bonus reward for finishing the race.
-            other_termination_punishment (float): Penalty for other termination conditions.
-            velocity_reward_weight (float): Weight for maintaining or increasing velocity.
-            backward_weight (float): Penalty weight for moving backward.
-            distance_to_center_weight (float): Weight for staying close to the centerline.
-            velocity_change_reward_weight (float): Weight for smooth velocity changes.
-            speed_reward_weight (float): General reward for maintaining speed.
-            lateral_distance_mode (str): Mode used to calculate lateral distance (e.g. "euclidean" or "perpendicular").
+        Parameters:
+        -----------
+            - accum_distance_weight (float):        Weight for accumulated distance reward.
+            - race_not_finished_weight (float):     Penalty weight for not finishing the race.
+            - race_finished_reward_weight (float):  Bonus reward for finishing the race.
+            - other_termination_punishment (float): Penalty for other termination conditions.
+            - velocity_reward_weight (float):       Weight for maintaining or increasing velocity.
+            - backward_weight (float): Penalty      weight for moving backward.
+            - distance_to_center_weight (float):    Weight for staying close to the centerline.
+            - velocity_change_reward_weight (float):Weight for smooth velocity changes.
+            - speed_reward_weight (float):          General reward for maintaining speed.
+            - lateral_distance_mode (str):          Mode used to calculate lateral distance.
 
-            mean (float): Mean of the Gaussian function used for distance-to-centerline reward.
+            - mean (float)  : Mean of the Gaussian function used for distance-to-centerline reward. (Only active if literal_distance_mode = "Gauss")
                          Represents the ideal centerline offset (typically 0).
-            sigma (float): Standard deviation of the Gaussian, controlling the reward falloff
-                           as the vehicle deviates from the centerline.
-            yshift (float): Vertical shift applied to the Gaussian curve to shape the baseline reward.
-            multiplicator (float): Scales the Gaussian's amplitude; higher values amplify the reward.
-            dist_scale (float): Scaling factor for the input distance before applying the Gaussian.
+            - sigma (float) : Standard deviation of the Gaussian, controlling the reward falloff 
+                           as the vehicle deviates from the centerline. (Only active if literal_distance_mode = "Gauss")
+
+            - yshift (float)        : Vertical shift applied to the Gaussian curve to shape the baseline reward.
+            - multiplicator (float) : Scales the Gaussian's amplitude; higher values amplify the reward.
+            - dist_scale (float)    : Scaling factor for the input distance before applying the Gaussian.
     """
         
         super().__init__()
-        #self.refline_manager = ReferenceLineManager(filepath_referenceline)
 
         self.accum_distance_weight = accum_distance_weight
         self.race_not_finished_weight = race_not_finished_weight
         
         self.race_finished_reward_weight = race_finished_reward_weight
-        self.other_termination_punishment =other_termination_punishment
+        self.other_termination_punishment = other_termination_punishment
         self.velocity_reward_weight = velocity_reward_weight
         self.backward_weight = backward_weight
         self.distance_to_center_weight = distance_to_center_weight

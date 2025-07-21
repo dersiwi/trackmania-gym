@@ -1,3 +1,9 @@
+"""
+This module includes code adapted and refactored from the Linesight-AI project
+(https://github.com/Linesight-RL/linesight). Credit to the original authors
+for the foundational implementation; refactloring changes made here.
+"""
+
 from __future__ import annotations
 
 import subprocess

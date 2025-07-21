@@ -1,16 +1,14 @@
-from tminterface.structs import CheckpointData, SimStateData, CheckpointTime
 
-from trackmania_env.utils.position_buffer import PositionBuffer
 from trackmania_env.rewards.reward_calculation import RewradCalculator
 from trackmania_env.rewards.basic_rewards import BasicRewardCalculation
 from trackmania_env.rewards.linesight_rewards import LinesightRewardCalculator
 from trackmania_env.rewards.nextpointrewards import NextPointRewards,NextPointRewards2, RaceFinishedRewards
 from trackmania_env.rewards.sophy_rewards import SophyRewards
-from configs.config import TrainConfig
+from configs.config import RewardManagerCfg
 
 
 
-def get_reward_calculator(reward_calculator_cfg: TrainConfig) -> RewradCalculator:
+def get_reward_calculator(reward_calculator_cfg: RewardManagerCfg) -> RewradCalculator:
     name = reward_calculator_cfg.name
 
     match name:

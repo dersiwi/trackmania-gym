@@ -1,10 +1,14 @@
+"""
+This module includes code adapted and refactored from the Linesight-AI project
+(https://github.com/Linesight-RL/linesight). Credit to the original authors
+for the foundational implementation; refactloring changes made here.
+"""
+
 from __future__ import annotations
-from trackmania_env.utils.position_buffer import PositionBuffer
+import numpy as np
+
 from tminterface.structs import CheckpointData, SimStateData, CheckpointTime
 from game_interaction.ipc_fields import IPCFields
-import numpy as np
-from numba import jit
-
 from trackmania_env.rewards.reward_calculation import RewradCalculator
 from trackmania_env.utils.speedslide_quality import speedslide_quality_tarmac
 
