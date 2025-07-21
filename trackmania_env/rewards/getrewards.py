@@ -15,9 +15,9 @@ def get_reward_calculator(reward_calculator_cfg: TrainConfig) -> RewradCalculato
 
     match name:
         case "basic":
-            return BasicRewardCalculation(reward_cfg=reward_calculator_cfg)
+            return BasicRewardCalculation()
         case "linesight":
-            return LinesightRewardCalculator(reward_cfg=reward_calculator_cfg)
+            return LinesightRewardCalculator(**reward_calculator_cfg.args)
         case "nextpoint":
             return NextPointRewards(**reward_calculator_cfg.args)
         case "nextpoint2":

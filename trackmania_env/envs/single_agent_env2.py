@@ -120,6 +120,8 @@ class TMNF_Single_Agent_Env(gym.Env):
 
         self.startposition_accuracy_threshold = env_cfg.startposition_accuracy_threshold
 
+        self.info = {}
+
     def set_respawn_manager(self, respawn_manager : OrientationlessRespawnManager):
         self.orientationless_respawn_manager = respawn_manager
 

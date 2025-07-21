@@ -1,1 +1,12 @@
 name: "linesight"
+args:
+  constant_reward_per_ms: -0.0012
+  ms_per_action: 50
+  reward_per_m_advanced_along_centerline: 0.01
+  final_speed_reward_as_if_duration_s: 0
+  engineered_speedslide_reward: 1
+  engineered_neoslide_reward: 1
+  engineered_kamikaze_reward: 1
+  engineered_close_to_vcp_reward: 1
+  engineered_reward_min_dist_to_cur_vcp: 5
+  engineered_reward_max_dist_to_cur_vcp: 25

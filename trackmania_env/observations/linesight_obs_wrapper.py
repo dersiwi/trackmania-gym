@@ -106,7 +106,7 @@ class LinesightObservationWrapper(ObservationManager):
             + 3*4 + 4*1
             #--------------------------
             # previous actions
-            + 4* self.n_prev_actions_in_inputs # TODO must match the env. but when this gets called the environment is not instantiated
+            + 4* self.n_prev_actions_in_inputs # NOTE must match the env.
             +1 # min_dist
         )
         return spaces.Dict({
@@ -140,14 +140,15 @@ class LinesightObservationWrapper(ObservationManager):
                             # from Linesight: 
                             #   pb4's theory was that it would help understand neoslides where you have to steer in a direction, 
                             #   not steer then steer and brake. We are not sure if it is really necessary to have these inputs
-                            np.array(self.env.actions).ravel(),
-                            car_gear_and_wheels.ravel(),
-                            angular_velocity_in_car_reference_system.ravel(),
-                            velocity_in_car_reference_system.ravel(),
-                            y_map_vector_in_car_reference_system.ravel(),
-                            self.state_zone_center_coordinates_in_car_reference_system.ravel(),
+
+                            np.array(self.env.actions).ravel(),                                             # 4* self.n_prev_actions_in_inputs
+                            car_gear_and_wheels.ravel(),                                                    # 4*NUM_SURFACE_CATEGORIES + 3*4 + 4*1
+                            angular_velocity_in_car_reference_system.ravel(),                               # 3
+                            velocity_in_car_reference_system.ravel(),                                       # 3
+                            y_map_vector_in_car_reference_system.ravel(),                                   # 3
+                            self.state_zone_center_coordinates_in_car_reference_system.ravel(),             # 3* self.n_zone_centers_in_inputs 
                             min(
-                                self.margin_to_announce_finish_meters,
+                                self.margin_to_announce_finish_meters,                                      # 1
                                 self.distance_from_start_track_to_prev_zone_transition[
                                     len(self.zone_centers) - self.n_zone_centers_extrapolate_after_end_of_map
                                 ]
@@ -156,6 +157,8 @@ class LinesightObservationWrapper(ObservationManager):
                         )
                     ).astype(np.float32)
         
+        self.env.info["meters_advanced_along_centerline"] = floats[-1]
+        self.env.info["state_zone_center_coordinates_in_car_reference_system"] = self.state_zone_center_coordinates_in_car_reference_system
         return floats
     
 
