@@ -24,11 +24,6 @@ gmi:
   port: 8775
   track : very_long_checkpoints.Challenge.Gbx
   reference_line: tracks/reference_line/very_long_checkpoints.npy
-  camera: 3
-
-image:
-  width: 128
-  height: 128
 
 wandb:
   use: False
