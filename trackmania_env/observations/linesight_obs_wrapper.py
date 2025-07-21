@@ -311,7 +311,7 @@ class LinesightObservationWrapper(ObservationManager):
         return current_zone_idx
     
 from trackmania_env.observations.linesight_obs_wrapper import LinesightObservationWrapper
-from configs.config import LinesightObsCfg, ObservationManager, ImageConfig, RLEnvConfig, TrainConfig
+from configs.config import LinesightObsCfg, ObservationManagerConfig
 
 from trackmania_env.utils.map_loader import (
     load_map_with_extrapolated_centers,
