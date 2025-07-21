@@ -1,4 +1,6 @@
 import numpy as np
+import torch
+from PIL import Image
 
 class ImageConverter:
 
@@ -17,3 +19,15 @@ class ImageConverter:
         gray : np.ndarray = 0.114 * b + 0.587 * g + 0.299 * r
         gray = gray[np.newaxis, :, :]
         return gray.astype(np.float32)
+    
+
+    @staticmethod
+    def save_image(img : np.ndarray | torch.Tensor, filepath : str) -> None:
+        """Saves an image to the given path"""
+        if type(img) == torch.Tensor:
+            img = img.numpy()
+        if img.shape[0] == 1: # grayscale
+            img = img.squeeze()
+
+        pimg = Image.fromarray((img * 255).astype('uint8'))
+        pimg.save(filepath)

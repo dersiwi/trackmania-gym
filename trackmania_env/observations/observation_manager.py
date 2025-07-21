@@ -5,7 +5,9 @@ from gymnasium import spaces
 from tminterface.structs import SimStateData
 from game_interaction.ipc_fields import IPCFields
 from utils.image_converter import ImageConverter
-
+from PIL import Image
+import os
+import traceback
 
 class ObservationManager:
 
@@ -16,7 +18,19 @@ class ObservationManager:
 
         REV_DICT = {"grayscale" : 0, "rgb" : 1, "rgba" : 2} #this is somewhat ugly but this way the config contains a readable string
 
-    def __init__(self, colorspace : str, convert_torch : bool, img_width : int, img_height : int, obs_have_img: bool = True):
+    def __init__(self, colorspace : str, convert_torch : bool, img_width : int, img_height : int, obs_have_img: bool = True, img_dump_freq : int = 1000000, n_dump_imgs : int= 20):
+        """
+        Parameters
+        ---------
+            - colorspace : string specifying the colorspace "grayscale", "rgb", "rgba"
+            - convert_torch : if true, observations are converted from numpy to torch-tensor    
+            - img_width     : width of image
+            - img_height    : height of image
+            - obs_have_img  : If True, image is passed along with state-vector, if false, only state vector is returned by get_observation(). If set to -1, no images are dumped.
+            - img_dump_freq : Specifies a frequency in which n_dump_imgs are dumped in logs/observations/. The idea behind this is to manually control, if the states produced by
+            the environment match the expected. 
+            - n_dump_imgs   : Amount of images that are dumped
+        """
         self.obs_have_img = obs_have_img
         self.colorspace : int = ObservationManager.Colorspace.REV_DICT[colorspace]
         self.convert_torch : bool = convert_torch
@@ -27,6 +41,13 @@ class ObservationManager:
         self.n_channels = 1 if self.colorspace == ObservationManager.Colorspace.GRAYSCALE else 3
 
         self.info = {}
+
+        self.img_dump_freq = img_dump_freq
+        self.n_dump_imgs = n_dump_imgs
+        self.n_imgs_dumped = 0
+        self.img_dir = "logs/control_imgs"
+        if self.img_dump_freq > -1:
+            os.makedirs(self.img_dir, exist_ok=True)
 
 
     def set_env(self, environment):
@@ -64,6 +85,20 @@ class ObservationManager:
     def reset(self):
         """Resets the observation-manager. This is called if the environment is reset."""
         pass
+
+    def _dump_imgs(self, img : np.ndarray | torch.Tensor):
+        """Dumps images periodically, according to self.img_dump_freq, self.n_imgs_dumped. This is to manually inspect the 
+        output of the observations from the environment to the agent. Can be turned off by setting self.img_dump_ferq = -1."""
+        try:
+            ImageConverter.save_image(img, filepath=os.path.join(self.img_dir, f"processed_img_{self.env.total_steps}.png"))
+        except Exception as e:
+            traceback.print_exc()
+
+        self.n_imgs_dumped += 1
+        if self.n_imgs_dumped >= self.n_dump_imgs:
+            self.n_imgs_dumped = 0
+        
+
     
     def get_observation(self, raw_observation : dict[str, np.ndarray | SimStateData]) -> tuple[np.ndarray | dict[str, np.ndarray] | torch.Tensor | dict[str, torch.Tensor],dict[str,any]]:
         """
@@ -76,6 +111,9 @@ class ObservationManager:
 
         if self.obs_have_img:
             imgs = self.cnvt_imgs(raw_observation[IPCFields.IMG])
+            if not self.img_dump_freq == -1 and (self.env.total_steps % self.img_dump_freq == 0 or self.n_imgs_dumped >= 1):
+                self._dump_imgs(imgs)
+
             assert imgs.shape == (self.n_channels, self.img_height, self.img_width), f"Expected shape to be ({self.n_channels},{self.img_height}, {self.img_width}) but got {imgs.shape}"
             return {"image" : imgs, "state" : state_observation_vector},self.info
         else:
