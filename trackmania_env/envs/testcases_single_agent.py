@@ -587,12 +587,12 @@ class PlotterProcess(mp.Process):
                     break  # Graceful shutdown
 
                 # Drain any backlog, keeping the most recent item
-                while not self.queue.empty(): data = self.queue.get_nowait()
+                while not self.queue.empty(): data = self.queue.get_nowait() # NOTE this introduces skips, thing of removing this to prevent confusion
                 self.plotter.plot(data)
 
             except Empty: continue
 
-from trackmania_env.utils.environment_plots import Plot_Obs_Images,Plot_Rewards,Plot_Lateral_Distance
+from trackmania_env.utils.environment_plots import Plot_Obs_Images,Plot_Rewards,Plot_Lateral_Distance,Plot_RefLine
 
 class NonBlockingPlot(TestEnvironmentCallback):
     def __init__(self, plotter):
@@ -634,5 +634,17 @@ class Plot_Lateral_Distance_Callback(NonBlockingPlot):
     def _call_after_step(self, processed_obs, reward, terminated, truncated, info):
         data = {}
         data["position"] = info["position"]
+        data["next_refline_index"] = info["rewards"]["nextpoint_reference_index"]
+        self.queue.put(data)
+
+class Plot_ReferenceLine_Callback(NonBlockingPlot):
+    def __init__(self,reference_line):
+        super().__init__(plotter=Plot_RefLine(reference_line))
+    
+    def _call_after_step(self, processed_obs, reward, terminated, truncated, info):
+        data = {}
+        data["position"] = info["position"]
+        data["orientation"] = info["orientation"]
+        data["comming_refline_points"] = info["comming_refline_points"]
         data["next_refline_index"] = info["rewards"]["nextpoint_reference_index"]
         self.queue.put(data)

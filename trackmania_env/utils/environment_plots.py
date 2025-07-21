@@ -133,6 +133,7 @@ class Plot_Lateral_Distance(EnvPlotter):
         self.bar_fig, self.bar_ax = None,None
         self.gauss_plot = None 
 
+        #TODO maybe use the correct values from the nextpoint rewards obs manager gaussian
         self.gauss_dist = norm(0,np.sqrt(12))
         # Create values for the smooth Gaussian curve
         self.x_vals = np.linspace(-50, 50, 500)
@@ -147,24 +148,24 @@ class Plot_Lateral_Distance(EnvPlotter):
     def setup_plot(self):
         # Create ONE figure
         self.fig = plt.figure(figsize=(12, 8))
-    
+
         # Use GridSpec to control layout
         gs = gridspec.GridSpec(2, 2, width_ratios=[2, 1], height_ratios=[1, 1])
-    
+
         # Left side: map view takes two rows
         self.ax_map = self.fig.add_subplot(gs[:, 0])
         self.ax_map.set_title("XZ View (World Space)")
         self.ax_map.set_xlabel("X Axis")
         self.ax_map.set_ylabel("Z Axis")
         self.ax_map.set_aspect('equal')
-    
+
         # Top-right: bar plot
         self.ax_bar = self.fig.add_subplot(gs[0, 1])
         self.bar_container = self.ax_bar.bar(["Distance"], [0.0], color='magenta')
         self.ax_bar.set_ylim(0, 10)
         self.ax_bar.set_ylabel("Euclidean Distance")
         self.ax_bar.set_title("Lateral Distance")
-    
+
         # Bottom-right: Gaussian PDF plot
         self.ax_gauss = self.fig.add_subplot(gs[1, 1])
         self.ax_gauss.plot(self.x_vals, self.y_vals, label='Gaussian PDF', color='blue')
@@ -172,7 +173,7 @@ class Plot_Lateral_Distance(EnvPlotter):
         self.ax_gauss.set_xlabel("Lateral Distance")
         self.ax_gauss.set_ylabel("Probability Density")
         self.ax_gauss.legend()
-    
+
         self.fig.tight_layout()
     
     def plot(self, info):
@@ -213,5 +214,50 @@ class Plot_Lateral_Distance(EnvPlotter):
         self.ax_gauss.legend()
 
         self.fig.tight_layout()
+        self.fig.canvas.draw()
+        plt.pause(0.001)
+
+class Plot_RefLine(EnvPlotter):
+    def __init__(self, reference_line : np.ndarray):
+        super().__init__()
+        self.reference_line = reference_line
+        self.fig, self.ax = None,None
+        plt.ion()
+        plt.show()
+
+    def setup_plot(self):
+        self.fig, self.ax = plt.subplots(figsize=(11, 11))
+        self.ax.set_title("XZ View (World Space)")
+        self.ax.set_xlabel("X Axis")
+        self.ax.set_ylabel("Z Axis")
+        self.ax.set_aspect('equal')
+
+    def plot(self,info):
+        
+        points = info["comming_refline_points"]
+        orientation = info["orientation"]
+        inv_orientation = orientation.T
+        position = info["position"]
+        next_refline_index = info["next_refline_index"]
+
+        # 1. Check determinant ≈ 1 since in_rotation should be a rotation matrix 
+        det = np.linalg.det(inv_orientation)
+        assert np.isclose(det, 1.0, atol=1e-5), f"Determinant not close to 1: det = {det}"
+        # 2. Check if inv_orientation @ orientation ≈ Identity
+        ident = inv_orientation @ orientation
+        assert np.allclose(ident, np.eye(3), atol=1e-5), f"Matrix product not identity:\n{ident}"
+
+        # Transform points to world coordinates
+        points = (inv_orientation @ points.T).T + position
+
+        # Clear and redraw plot
+        self.ax.cla()
+
+        # Plot reference line (black), transformed points (red), and position (green), and next reference-line-point (blue)
+        self.ax.plot(-1. * self.reference_line[:, 0], self.reference_line[:, 2], color='black', linestyle='-')
+        self.ax.plot(-1. * points[:, 0], points[:, 2], color='red', marker='o', linestyle='-')
+        self.ax.scatter(-1. * position[0], position[2], color='green', marker='x', s=50)
+        self.ax.scatter(-1. * self.reference_line[next_refline_index, 0], self.reference_line[next_refline_index, 2], color='blue', marker='x', s=50)
+        
         self.fig.canvas.draw()
         plt.pause(0.001)
