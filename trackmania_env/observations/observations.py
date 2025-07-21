@@ -1,4 +1,5 @@
 from trackmania_env.observations.observation_manager import ObservationManager
+from trackmania_env.observations.listbased_state_obs import ListbasedObs
 from trackmania_env.observations.observation_test import ObservationTest
  
 from configs.config import TrainConfig, ObservationManagerConfig
@@ -15,7 +16,7 @@ def get_observation_manager(cfg : TrainConfig, wrap_obs_in_test : bool = False) 
     name = obs_manager_cfg.name 
     match name:
         case "basic":
-            obs_manager = ObservationManager(observation_list=obs_manager_cfg.observation_list, 
+            obs_manager = ListbasedObs(observation_list=obs_manager_cfg.observation_list, 
                                         colorspace=obs_manager_cfg.colorspace,
                                         convert_torch=obs_manager_cfg.convert_torch,
                                         img_width=obs_manager_cfg.img_width, 
@@ -24,15 +25,13 @@ def get_observation_manager(cfg : TrainConfig, wrap_obs_in_test : bool = False) 
             obs_manager = get_linesight_obs_instance(cfg)
 
         case "nextpointobs":
-            obs_manager = NextPointObsManager(observation_list=obs_manager_cfg.observation_list, 
-                                        colorspace=obs_manager_cfg.colorspace,
+            obs_manager = NextPointObsManager(colorspace=obs_manager_cfg.colorspace,
                                         convert_torch=obs_manager_cfg.convert_torch,
                                         img_width=obs_manager_cfg.img_width, 
                                         img_height=obs_manager_cfg.img_height)
         
         case "sophy": 
-            obs_manager = SophyObsManager(observation_list=obs_manager_cfg.observation_list, 
-                                        colorspace=obs_manager_cfg.colorspace,
+            obs_manager = SophyObsManager(colorspace=obs_manager_cfg.colorspace,
                                         convert_torch=obs_manager_cfg.convert_torch,
                                         img_width=obs_manager_cfg.img_width, 
                                         img_height=obs_manager_cfg.img_height,
@@ -45,7 +44,6 @@ def get_observation_manager(cfg : TrainConfig, wrap_obs_in_test : bool = False) 
     
     if wrap_obs_in_test:
         obs_manager = ObservationTest(obs_mangager=obs_manager,
-                                      observation_list=obs_manager_cfg.observation_list, 
                                         colorspace=obs_manager_cfg.colorspace,
                                         convert_torch=obs_manager_cfg.convert_torch,
                                         img_width=obs_manager_cfg.img_width, 

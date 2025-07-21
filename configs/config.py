@@ -68,7 +68,6 @@ class WrappersConfig:
 @dataclass
 class ObservationManagerConfig:
     """ObservationManagerConfig may contain attributes custom to a specific observation manager. These only list the common ones between all observation managers."""
-    observation_list : dict[str, any]
     colorspace : str
     convert_torch : bool
     img_height : int

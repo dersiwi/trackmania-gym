@@ -8,16 +8,3 @@ camera_id: 2
 
 # other 
 convert_torch: True
-observation_list: 
-        - image
-        - position
-        - velocity
-        - yaw_pitch_roll
-        - scene_mobil.sync_vehicle_state.speed_forward
-        - scene_mobil.input_steer
-        - scene_mobil.async_vehicle_state.is_turbo
-        - scene_mobil.engine.gear
-        - input_finish_event.input_data_field
-        - input_accelerate_event.time_field
-        - scene_mobil.async_vehicle_state.rest_field
-        - rotation_matrix

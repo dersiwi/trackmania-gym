@@ -13,5 +13,3 @@ lookahead_sec: 6
 # other 
 maxlen_history: 3
 convert_torch: True
-observation_list:
-  - image

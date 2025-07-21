@@ -7,8 +7,6 @@ camera_id: 3
 
 # other 
 convert_torch: True
-observation_list: 
-        - image
 
 linesightobsmanager:
   n_zone_centers_in_inputs : 40

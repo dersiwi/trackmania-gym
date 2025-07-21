@@ -12,7 +12,7 @@ IMAGE_SIZE = 64
 """Image size as specified in sophy paper."""
 
 class SophyObsManager(ObservationManager):
-    def __init__(self, observation_list, colorspace, convert_torch, img_width, img_height,maxlen_history:int = 3,lookahead_sec = 6,n_points = 60):
+    def __init__(self, colorspace, convert_torch, img_width, img_height,maxlen_history:int = 3,lookahead_sec = 6,n_points = 60):
         """
         Initializes the GT Sophy-style observation manager (https://arxiv.org/pdf/2406.12563v1).
 
@@ -22,7 +22,6 @@ class SophyObsManager(ObservationManager):
         and output a trajectory of future positions.
 
         Parameters:
-            - observation_list (list)           : List of observation types to include (e.g., images, speed, steering).
             - colorspace (str)                  : Color space of input images, typically "rgb" or "grayscale".
             - convert_torch (bool)              : Whether to convert inputs into PyTorch tensors for model compatibility.
             - img_width (int)                   : Width of input images.
@@ -35,7 +34,7 @@ class SophyObsManager(ObservationManager):
             f"Sophy was trained on {IMAGE_SIZE}x{IMAGE_SIZE} images. "
             "Please use square images of this size."
         )
-        super().__init__(observation_list, colorspace, convert_torch, img_width, img_height)
+        super().__init__(colorspace, convert_torch, img_width, img_height)
         self.last_velocity = np.array([0.,0.,0.],dtype=np.float32)
         self.maxlen_history = maxlen_history
         self.angles : deque = deque([0.]*self.maxlen_history, maxlen=self.maxlen_history) # History of the last three steering angles

@@ -19,8 +19,8 @@ from trackmania_env.utils.contact_materials import physics_behavior_fromint,NUM_
 
 
 class NextPointObsManager(ObservationManager):
-    def __init__(self, observation_list, colorspace, convert_torch, img_width, img_height):
-        super().__init__(observation_list, colorspace, convert_torch, img_width, img_height)
+    def __init__(self, colorspace, convert_torch, img_width, img_height):
+        super().__init__(colorspace, convert_torch, img_width, img_height)
         self.reference_line_points_lookahead = 10
         self.refeence_line_stride = 10
         assert self.reference_line_points_lookahead % self.refeence_line_stride == 0
