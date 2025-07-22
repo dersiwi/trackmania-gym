@@ -10,7 +10,7 @@ The distance between virtual checkpoints is currently 50cm (hardcoded).
 import sys, os
 sys.path.insert(0, '..')
 # TODO : <- i don't want this here and it shouldnt have to be here!!!
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))) 
+sys.path.append(os.path.abspath(os.path.join(os.path.join(os.path.join(os.path.dirname(__file__), '..'), '..'), '..'))) 
 
 import argparse
 from pathlib import Path
