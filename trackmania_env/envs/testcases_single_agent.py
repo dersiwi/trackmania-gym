@@ -592,7 +592,7 @@ class PlotterProcess(mp.Process):
 
             except Empty: continue
 
-from trackmania_env.utils.environment_plots import Plot_Obs_Images,Plot_Rewards,Plot_Lateral_Distance,Plot_RefLine,PrintRotation,Plot_1D_Values
+from trackmania_env.utils.environment_plots import Plot_Obs_Images,Plot_Rewards,Plot_Lateral_Distance,Plot_RefLine,PrintRotation,Plot_1D_Values,Plot_3D_Values
 
 class NonBlockingPlot(TestEnvironmentCallback):
     def __init__(self, plotter):
@@ -669,4 +669,19 @@ class Plot_1D_Values_Callback(NonBlockingPlot):
             val = info[key]
             assert np.ndim(val) <= 1, f"The value for '{key}' must be 1D, got shape {np.shape(val)}"
             self.data[key] = val
+        self.queue.put(self.data)
+
+class Plot_3D_Values_Callback(NonBlockingPlot):
+    def __init__(self, key_to_plot, y_lim= None):
+        self.key_to_plot = key_to_plot
+        self.data = {}
+        super().__init__(plotter=Plot_3D_Values(key_to_plot=key_to_plot, y_lim=y_lim))
+
+    def _call_after_step(self, processed_obs, reward, terminated, truncated, info):
+        assert self.key_to_plot in info, f"The key '{self.key_to_plot}' is not in the info dict"
+        val = np.asarray(info[self.key_to_plot])
+        assert val.ndim == 1 and val.shape[0] == 3, \
+            f"The value for '{self.key_to_plot}' must be a 3D vector, got shape {val.shape}"
+
+        self.data[self.key_to_plot] = val
         self.queue.put(self.data)
