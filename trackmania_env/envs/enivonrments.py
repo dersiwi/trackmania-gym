@@ -22,20 +22,21 @@ from configs.config import TrainConfig
 from multiprocessing import Queue
 import gymnasium as gym
 
-def get_environment(cfg : TrainConfig, control_queue : Queue, response_queue : Queue) -> gym.Env:
+def get_environment(cfg : TrainConfig, control_queue : Queue, response_queue : Queue, test : bool = False) -> gym.Env:
     """Initializes environment according to given configuration file and applies wrappers, if specified in conifg.
     Parameters
     ----------
         - cfg : Train-Configuration
         - control_queue : Queue used by environment to send controls to Process-Wrapper
         - response_queue : Response Queue used by environment to get responses by ProcessWrapper
+        - test (Default : Falsee): In addition to setting test in config, setting this true always returns a test environment and does not apply any wrappers to the environment.
     """
 
     obs_manager = get_observation_manager(cfg = cfg, wrap_obs_in_test = cfg.rl_env.env.wrap_obs_in_test)
     reward_calculator = get_reward_calculator(reward_calculator_cfg = cfg.rl_env.reward_manager)
     termination_manger = get_termination_manager(termination_cfg= cfg.rl_env.termination_manager)
 
-    if cfg.rl_env.env.test:
+    if cfg.rl_env.env.test or test:
         TM_ENV_CLASS = TestEnvironment
     else:
         TM_ENV_CLASS = TMNF_Single_Agent_Env
@@ -53,10 +54,11 @@ def get_environment(cfg : TrainConfig, control_queue : Queue, response_queue : Q
     obs_manager.set_env(tm_env)
     termination_manger.set_env(tm_env)
 
-    # apply (Observation)-wrappers to the environment
-    for _, wrapper_conf in cfg.rl_env.wrappers.items():
-        wrapper : ObservationWrapper = hydra.utils.instantiate(wrapper_conf)
-        print(f"Wrapping environment in {wrapper.__class__.__name__}")
-        tm_env = wrapper(env=tm_env)
+    if not test:
+        # apply (Observation)-wrappers to the environment : only relevant for training with sb3
+        for _, wrapper_conf in cfg.rl_env.wrappers.items():
+            wrapper : ObservationWrapper = hydra.utils.instantiate(wrapper_conf)
+            print(f"Wrapping environment in {wrapper.__class__.__name__}")
+            tm_env = wrapper(env=tm_env)
 
     return tm_env
