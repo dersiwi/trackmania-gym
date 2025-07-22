@@ -38,7 +38,7 @@ class VisionModel(nn.Module):
         return x
 
 class VisionModelSix(VisionModel):  # Seal Team 6. Very cool.
-    def __init__(self,out_dim: int, img_shape=(3, 64, 64)):
+    def __init__(self,out_dim: int, img_shape=(3, 64, 64), use_dropout = False):
         encoder = nn.Sequential(
             nn.Conv2d(img_shape[0], 32, kernel_size=5, stride=1, padding=2),
             nn.ReLU(inplace=True),
@@ -56,15 +56,53 @@ class VisionModelSix(VisionModel):  # Seal Team 6. Very cool.
             nn.ReLU(inplace=True),
         )
 
+        def make_feature_projector(in_dim, out_dim, use_dropout):
+            encoder_layer = [nn.Flatten(), nn.Linear(in_dim, out_dim), nn.ReLU(inplace=True)]
+            if use_dropout:
+                encoder_layer.append(nn.Dropout(0.2))
+            return nn.Sequential(*encoder_layer)
+        
+
         # Call the base constructor with flattening included in the projector
+        
         super().__init__(
             encoder= encoder,
-            feature_projector=lambda in_dim: nn.Sequential(
-                nn.Flatten(),                    
-                nn.Linear(in_dim, out_dim),
-                nn.ReLU(inplace=True),
-                nn.Dropout(0.2)
-            ),
+            feature_projector=lambda in_dim: make_feature_projector(in_dim, out_dim, use_dropout),
+            img_shape=img_shape
+        )
+
+class VisionModelSixImprovement(VisionModel):
+    def __init__(self,out_dim: int, img_shape=(3, 64, 64), use_dropout = False):
+        encoder = nn.Sequential(
+            nn.Conv2d(img_shape[0], 32, kernel_size=3, stride=1, padding=1),
+            nn.ReLU(),
+            nn.Conv2d(32, 32, kernel_size=3, stride=1, padding=1),
+            nn.ReLU(),
+            nn.MaxPool2d(2, 2),
+
+            nn.Conv2d(32, 64, kernel_size=3, stride=1, padding=1),
+            nn.ReLU(),
+            nn.Conv2d(64, 64, kernel_size=3, stride=1, padding=1),
+            nn.ReLU(),
+            nn.MaxPool2d(2, 2),
+
+            nn.Conv2d(64, 128, kernel_size=3, stride=1, padding=1),
+            nn.ReLU(),
+            nn.AdaptiveAvgPool2d((2,2))
+        )
+
+        def make_feature_projector(in_dim, out_dim, use_dropout):
+            encoder_layer = [nn.Flatten(), nn.Linear(in_dim, out_dim), nn.ReLU(inplace=True)]
+            if use_dropout:
+                encoder_layer.append(nn.Dropout(0.2))
+            return nn.Sequential(*encoder_layer)
+        
+
+        # Call the base constructor with flattening included in the projector
+        
+        super().__init__(
+            encoder= encoder,
+            feature_projector=lambda in_dim: make_feature_projector(in_dim, out_dim, use_dropout),
             img_shape=img_shape
         )
 

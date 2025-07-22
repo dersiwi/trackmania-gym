@@ -5,7 +5,7 @@ This script would typically be used to check that the .npy file contains Virtual
 """
 import sys, os
 # TODO : <- i don't want this here and it shouldnt have to be here!!!
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))) 
+sys.path.append(os.path.abspath(os.path.join(os.path.join(os.path.join(os.path.dirname(__file__), '..'), '..'), '..'))) 
 
 import argparse
 from pathlib import Path
@@ -18,7 +18,7 @@ from game_interaction.tminterface2 import MessageType, TMInterface
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("npy_path", type=Path)
-    parser.add_argument("--tmi_port", "-p", type=int, default=8477)
+    parser.add_argument("--tmi_port", "-p", type=int, default=8775)
     args = parser.parse_args()
 
     iface = TMInterface(args.tmi_port)

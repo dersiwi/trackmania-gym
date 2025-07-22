@@ -3,7 +3,7 @@ defaults:
   - rl_env: single_agent_env.yaml
   - sb3: ppo.yaml
   - wandb_callbacks : sb3_callback.yaml
-  - models: visionmodelsix.yaml
+  - models: visionmodelsix_improvement.yaml
   - lr_scheduler: no_scheduling.yaml
   - policy: basic_policy.yaml
 
@@ -11,7 +11,7 @@ extractors_out_dim: 64 # every extractor will produce an output with this dimens
 share_features_extractor: True # whether to share the features extractor between actor and critic when applicable
 
 learn_args:
-  total_timesteps: 8000000
+  total_timesteps: 4000000
   log_interval: 1
   reset_num_timesteps: True
   progress_bar: True

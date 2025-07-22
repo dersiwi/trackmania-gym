@@ -67,9 +67,8 @@ def get_vision_model(cfg : TrainConfig, img_shape, extractor_out_dim : int) -> n
     expected_inchannel = 1 if cfg.rl_env.obs_manager.colorspace == "grayscale" else 3
     assert in_color_channels == expected_inchannel, f"Expected {expected_inchannel} color channels, got {in_color_channels}"
 
-    vision_model : nn.Module = vision_model_constructor(
-        img_shape = img_shape,
-        out_dim = extractor_out_dim)
+    vision_model : nn.Module = vision_model_constructor(img_shape = img_shape, out_dim = extractor_out_dim)
+    
     return vision_model
 
 def get_models(cfg : TrainConfig, tm_env : TMNF_Single_Agent_Env, print_params : bool = False,run_id:str = "test",load_model_path: str | None = None) -> tuple[nn.Module, BaseAlgorithm | PPO]:
