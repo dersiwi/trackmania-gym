@@ -62,7 +62,7 @@ def main(cfg : TrainConfig):
     #tm_env.add_env_test_calback(testcases.Test_Reward_Next_Point_Manager2())
     #tm_env.add_env_test_calback(testcases.Test_3D_Next_Point_Manager(key_to_plot="velocity_delta",y_lim=(-50,50)))
     #tm_env.add_env_test_calback(testcases.PretrainingDataCollection(reference_line_manager=tm_env.reference_line, logging_directory=r"C:\Users\siwis\Documents\dataset", continuation_idx=1721))
-    tm_env.add_env_test_calback(testcases.Plot_Lateral_Distance_Callback(tm_env.reference_line))
+    tm_env.add_env_test_calback(testcases.Plot_1D_Values_Callback(keys_to_plot=["display_speed","gas","last_has_any_lateral_contact_time"]))
 
     tm_env.step_with_manual_input()
     

@@ -300,3 +300,43 @@ class PrintRotation(EnvPlotter):
         self.ax.quiver(*origin, *z_axis, color='b', label="Z-axis")
         plt.draw()
         plt.pause(0.001)
+
+class Plot_1D_Values(EnvPlotter):
+    """
+    This plots the 1D values specified by keys_to_plot from the environment.
+    """
+    def __init__(self, keys_to_plot, y_lim = None):
+        """
+        Initialize the callback to plot multiple keys over time.
+
+        Args:
+            keys_to_plot (list of str): List of keys from the `info` dict to plot.
+            y_lim (tuple): Y-axis limits for the plot.
+        """
+        super().__init__()
+        self.keys_to_plot = keys_to_plot if isinstance(keys_to_plot, list) else [keys_to_plot]
+        self.y_lim = y_lim
+        self.vals = {key: [] for key in self.keys_to_plot}
+
+        self.fig, self.ax = None,None
+        plt.ion()
+        plt.show()
+  
+    def setup_plot(self):
+        self.fig, self.ax = plt.subplots(figsize=(6, 4))
+        
+    def plot(self,data):
+        
+        # Clear and redraw the plot
+        self.ax.cla()
+        self.ax.set_title("Debug Plot")
+        self.ax.set_xlabel("Timestep")
+        if self.y_lim: self.ax.set_ylim(*self.y_lim)
+
+        for key in self.keys_to_plot:
+            self.vals[key].append(data[key])
+            self.ax.plot(range(len(self.vals[key])), self.vals[key], label=key)
+
+        self.ax.legend()
+        plt.draw()
+        plt.pause(0.001)

@@ -128,6 +128,9 @@ class TMNF_Single_Agent_Env(gym.Env):
     def _get_info(self,ssD:SimStateData) -> Dict[str,Any]:
         """Helper function for computing additional information (e.g. for debugging or logging)"""
         info = {}
+        info["display_speed"] = ssD.display_speed
+        info["gas"] = ssD.scene_mobil.input_gas
+        info["last_has_any_lateral_contact_time"] = ssD.scene_mobil.last_has_any_lateral_contact_time
         info["velocity"] = ssD.velocity
         info["position"] = ssD.position
         info["rotation_matrix"] = ssD.rotation_matrix
