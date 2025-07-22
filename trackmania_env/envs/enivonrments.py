@@ -47,7 +47,8 @@ def get_environment(cfg : TrainConfig, control_queue : Queue, response_queue : Q
                                     reward_calculator=reward_calculator,
                                     termination_manger=termination_manger,
                                     reference_line = ReferenceLineManager(cfg.gmi.reference_line),
-                                    env_cfg=cfg.rl_env.env)
+                                    env_cfg=cfg.rl_env.env,
+                                    platform= cfg.platforms.os)
     tm_env.orientationless_respawn_manager = OrientationlessRespawnManager(respawn_coordinates=OrientationlessRespawnManager.get_respawns_for_very_long_checkpoints())
     
     reward_calculator.set_env(tm_env)

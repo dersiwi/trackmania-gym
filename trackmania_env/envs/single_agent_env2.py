@@ -44,7 +44,8 @@ class TMNF_Single_Agent_Env(gym.Env):
             reward_calculator : RewradCalculator,
             termination_manger : TerminationManager,
             reference_line: ReferenceLineManager,
-            env_cfg : EnvConfig):
+            env_cfg : EnvConfig,
+            platform:str):
         
         """
         Initializes the custom Gymnasium environment.
