@@ -300,3 +300,93 @@ class PrintRotation(EnvPlotter):
         self.ax.quiver(*origin, *z_axis, color='b', label="Z-axis")
         plt.draw()
         plt.pause(0.001)
+
+class Plot_1D_Values(EnvPlotter):
+    """
+    This plots the 1D values specified by keys_to_plot from the environment.
+    """
+    def __init__(self, keys_to_plot, y_lim = None):
+        """
+        Initialize the callback to plot multiple keys over time.
+
+        Args:
+            keys_to_plot (list of str): List of keys from the `info` dict to plot.
+            y_lim (tuple): Y-axis limits for the plot.
+        """
+        super().__init__()
+        self.keys_to_plot = keys_to_plot if isinstance(keys_to_plot, list) else [keys_to_plot]
+        self.y_lim = y_lim
+        self.vals = {key: [] for key in self.keys_to_plot}
+
+        self.fig, self.ax = None,None
+        plt.ion()
+        plt.show()
+  
+    def setup_plot(self):
+        self.fig, self.ax = plt.subplots(figsize=(6, 4))
+        
+    def plot(self,data):
+        
+        # Clear and redraw the plot
+        self.ax.cla()
+        self.ax.set_title("Debug Plot")
+        self.ax.set_xlabel("Timestep")
+        if self.y_lim: self.ax.set_ylim(*self.y_lim)
+
+        for key in self.keys_to_plot:
+            self.vals[key].append(data[key])
+            self.ax.plot(range(len(self.vals[key])), self.vals[key], label=key)
+
+        self.ax.legend()
+        plt.draw()
+        plt.pause(0.001)
+
+
+class Plot_3D_Values(EnvPlotter):
+    """
+    This plots 3D vector values (x, y, z) over time from the environment info dict.
+    """
+    def __init__(self, key_to_plot, y_lim= None):
+        """
+        Initialize the callback to plot the 3D vector values over time.
+
+        Args:
+            key_to_plot (str): Key from the `info` dict containing a 3D vector.
+            y_lim (tuple): Y-axis limits for the plots.
+        """
+        super().__init__()
+        self.key_to_plot = key_to_plot
+        self.y_lim = y_lim
+        self.vals = []
+
+        self.fig, self.axes = None, None
+        plt.ion()
+        plt.show()
+
+    def setup_plot(self):
+        self.fig, self.axes = plt.subplots(3, 1, figsize=(6, 6), sharex=True)
+
+    def plot(self, data):
+        val = np.asarray(data[self.key_to_plot])
+        self.vals.append(val)
+
+        # Clear and redraw the subplots
+        for ax in self.axes:
+            ax.cla()
+
+        vals_array = np.array(self.vals)  # shape: (timesteps, 3)
+        labels = ['x', 'y', 'z']
+        colors = ['r', 'g', 'b']
+
+        for i in range(3):
+            self.axes[i].plot(range(len(vals_array)), vals_array[:, i], color=colors[i], label=labels[i])
+            self.axes[i].set_ylabel(labels[i])
+            if self.y_lim: self.axes[i].set_ylim(*self.y_lim)
+            self.axes[i].legend()
+            self.axes[i].grid(True)
+
+        self.axes[2].set_xlabel("Timestep")
+        self.fig.suptitle(f"3D Vector Plot: '{self.key_to_plot}'")
+
+        plt.draw()
+        plt.pause(0.001)

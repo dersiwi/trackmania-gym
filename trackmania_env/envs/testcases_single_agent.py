@@ -592,7 +592,7 @@ class PlotterProcess(mp.Process):
 
             except Empty: continue
 
-from trackmania_env.utils.environment_plots import Plot_Obs_Images,Plot_Rewards,Plot_Lateral_Distance,Plot_RefLine,PrintRotation
+from trackmania_env.utils.environment_plots import Plot_Obs_Images,Plot_Rewards,Plot_Lateral_Distance,Plot_RefLine,PrintRotation,Plot_1D_Values,Plot_3D_Values
 
 class NonBlockingPlot(TestEnvironmentCallback):
     def __init__(self, plotter):
@@ -629,25 +629,25 @@ class Plot_Rewards_Callback(NonBlockingPlot):
 
 class Plot_Lateral_Distance_Callback(NonBlockingPlot):
     def __init__(self,reference_line_manager):
+        self.data = {}
         super().__init__(plotter= Plot_Lateral_Distance(reference_line_manager))
     
     def _call_after_step(self, processed_obs, reward, terminated, truncated, info):
-        data = {}
-        data["position"] = info["position"]
-        data["next_refline_index"] = info["rewards"]["nextpoint_reference_index"]
-        self.queue.put(data)
+        self.data["position"] = info["position"]
+        self.data["next_refline_index"] = info["rewards"]["nextpoint_reference_index"]
+        self.queue.put(self.data)
 
 class Plot_ReferenceLine_Callback(NonBlockingPlot):
     def __init__(self,reference_line):
+        self.data = {}
         super().__init__(plotter=Plot_RefLine(reference_line))
     
     def _call_after_step(self, processed_obs, reward, terminated, truncated, info):
-        data = {}
-        data["position"] = info["position"]
-        data["orientation"] = info["orientation"]
-        data["comming_refline_points"] = info["comming_refline_points"]
-        data["next_refline_index"] = info["rewards"]["nextpoint_reference_index"]
-        self.queue.put(data)
+        self.data["position"] = info["position"]
+        self.data["orientation"] = info["orientation"]
+        self.data["comming_refline_points"] = info["comming_refline_points"]
+        self.data["next_refline_index"] = info["rewards"]["nextpoint_reference_index"]
+        self.queue.put(self.data)
 
 class Plot_Rotation_Callback(NonBlockingPlot):
     def __init__(self,):
@@ -656,3 +656,32 @@ class Plot_Rotation_Callback(NonBlockingPlot):
     def _call_after_step(self, processed_obs, reward, terminated, truncated, info):
         rot_matrix = np.array(info["rotation_matrix"])
         self.queue.put(rot_matrix)
+
+class Plot_1D_Values_Callback(NonBlockingPlot):
+    def __init__(self, keys_to_plot, y_lim = None):
+        self.keys_to_plot = keys_to_plot
+        self.data = {}
+        super().__init__(plotter=Plot_1D_Values(keys_to_plot=keys_to_plot, y_lim = y_lim))
+    
+    def _call_after_step(self, processed_obs, reward, terminated, truncated, info):
+        for key in self.keys_to_plot:
+            assert key in info, f"The key '{key}' is not in the info dict"
+            val = info[key]
+            assert np.ndim(val) <= 1, f"The value for '{key}' must be 1D, got shape {np.shape(val)}"
+            self.data[key] = val
+        self.queue.put(self.data)
+
+class Plot_3D_Values_Callback(NonBlockingPlot):
+    def __init__(self, key_to_plot, y_lim= None):
+        self.key_to_plot = key_to_plot
+        self.data = {}
+        super().__init__(plotter=Plot_3D_Values(key_to_plot=key_to_plot, y_lim=y_lim))
+
+    def _call_after_step(self, processed_obs, reward, terminated, truncated, info):
+        assert self.key_to_plot in info, f"The key '{self.key_to_plot}' is not in the info dict"
+        val = np.asarray(info[self.key_to_plot])
+        assert val.ndim == 1 and val.shape[0] == 3, \
+            f"The value for '{self.key_to_plot}' must be a 3D vector, got shape {val.shape}"
+
+        self.data[self.key_to_plot] = val
+        self.queue.put(self.data)
