@@ -1,7 +1,7 @@
 name: "sophy"
 args:
   progress_weight: 3.0        
-  off_course_penalty_weight: 0.034
+  off_course_penalty_weight: 10.0
   wall_penalty_weight: 10.0       
   steering_change_penalty_weight: 3.0  
   steering_history_penalty_weight: 5.0 

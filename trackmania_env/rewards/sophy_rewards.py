@@ -111,7 +111,7 @@ class SophyRewards(RewradCalculator):
 
         # progress
         next_refline_index, d, drel = self.refline_manager.get_distance_to_next_point()
-        rp = np.sign(drel-self.last_drel)*d
+        rp = drel-self.last_drel
         rp = rp* self.w_progress
 
         # off-course
