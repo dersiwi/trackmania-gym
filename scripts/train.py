@@ -30,6 +30,7 @@ from utils.hydra_wandb_utils import get_models, init_and_login_wandb, BeforeAndA
 
 @hydra.main(**_HYDRA_PARAMS)
 def main(cfg : TrainConfig):
+    #print(cfg.name)
 
     baaf = BeforeAndAfterTraining(hydra_run_dir=HydraConfig.get().run.dir, cfg = cfg)
     baaf.before_training()

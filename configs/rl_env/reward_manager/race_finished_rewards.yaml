@@ -2,7 +2,7 @@ name: "race_finished"
 args:
     accum_distance_weight : 10
     race_not_finished_weight : 0.02 # not used
-    race_finished_reward_weight : 100
+    race_finished_reward_weight : 300
     other_termination_punishment : 20
     velocity_reward_weight : 1  #not used
     backward_weight : 0 #not used

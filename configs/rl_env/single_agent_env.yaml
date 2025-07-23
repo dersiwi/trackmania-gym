@@ -13,8 +13,8 @@ env:
   position_buffer_size : 20
   position_moved_threshold : 0.8
 
-  game_speed : 20
-  countdown_speed : 20
+  game_speed : 70
+  countdown_speed : 70
 
   wrap_obs_in_test : False  # Applies an test-wrapper to the observations.
   test : False

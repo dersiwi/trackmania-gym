@@ -1,6 +1,12 @@
-defaults:
-  - platforms: windows.yaml
+platforms:
+  os: windows
+  home: ${oc.env:USERPROFILE,""}
+  tmloader: C:/Users/siwis/AppData/Local/TMLoader/TMLoader.exe
+  plugin: ${.home}/OneDrive/Dokumente/TMInterface/Plugins/python_link.as
+  map_dir: ${.home}/OneDrive/Dokumente/TmForever/Tracks/Challenges
+  device: cuda
 
+  
 rl_env:
 
   obs_manager:
@@ -137,3 +143,4 @@ wandb:
   project : tmnf_ppo
   checkpoint_freq : 500000 # after how many steps should the model be saved automatically
   eval_freq : 400000 # after how many steps should we check if there is a new better model
+name : "Nextpoint"

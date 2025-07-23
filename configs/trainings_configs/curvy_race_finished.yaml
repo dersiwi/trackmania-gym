@@ -122,3 +122,4 @@ wandb:
   project: tmnf_ppo
   checkpoint_freq: 500000
   eval_freq: 1000000
+name : "Curvy. No-Progress-Termination after 256 steps."
