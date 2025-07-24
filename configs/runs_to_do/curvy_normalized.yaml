@@ -1,33 +1,33 @@
 platforms:
- os: windows
- home: ${oc.env:USERPROFILE,""}  # This is the equivalent of expanduser("~") on Windows , "" fallback value if no such environment variable
- tmloader: C:/Users/ALR-Students/Desktop/TmNationsForever/TMLoader-1.0.1-win32/TMLoader.exe
- plugin: C:/Users/ALR-Students/Documents/TMInterface/Plugins/Python_Link.as
- map_dir: C:/Users/ALR-Students/Documents/TmForever/Tracks/Challenges
- device: cuda
+  os: windows
+  home: ${oc.env:USERPROFILE,""}
+  tmloader: C:/Users/siwis/AppData/Local/TMLoader/TMLoader.exe
+  plugin: ${.home}/OneDrive/Dokumente/TMInterface/Plugins/python_link.as
+  map_dir: ${.home}/OneDrive/Dokumente/TmForever/Tracks/Challenges
+  device: cuda
 rl_env:
   obs_manager:
-    name: sophy
-    img_width: 64
-    img_height: 64
-    colorspace: rgb
-    camera_id: 3
-    n_points: 60
-    lookahead_sec: 6
-    maxlen_history: 3
+    name: nextpointobs
+    img_width: 128
+    img_height: 128
+    colorspace: grayscale
+    camera_id: 2
     convert_torch: true
   reward_manager:
-    name: sophy
+    name: race_finished
     args:
-      progress_weight: 3.0
-      off_course_penalty_weight: 10.0
-      wall_penalty_weight: 10.0
-      steering_change_penalty_weight: 3.0
-      steering_history_penalty_weight: 5.0
-      c_d: 0.014
-      c_s: 182.883569
-      c_o: 0.034
-      maxlen_history: 3
+      accum_distance_weight: 10
+      race_not_finished_weight: 0.02
+      race_finished_reward_weight: 300
+      other_termination_punishment: 20
+      velocity_reward_weight: 1
+      backward_weight: 0
+      distance_to_center_weight: 1
+      velocity_change_reward_weight: 30
+      speed_reward_weight: 1
+      lateral_distance_mode: gauss
+    steps_without_progress_until_punishment: 512
+    use_punishment: true
   termination_manager:
     name: no_progress
     max_steps_until_reset: 8192
@@ -39,7 +39,8 @@ rl_env:
     n_previous_actions: 10
     reset_mode: respawn
     position_buffer_size: 20
-    position_moved_threshold: 0.2
+    position_moved_threshold: 0.8
+    normalize_rewards: true
     game_speed: 70
     countdown_speed: 70
     wrap_obs_in_test: false
@@ -90,58 +91,18 @@ wandb_callbacks:
   verbose: 2
 models:
   _partial_: true
-  _target_: neuronal_networks.vision_encoder.conv_NNs.SophyVisionModel
+  _target_: neuronal_networks.vision_encoder.conv_NNs.VisionModelSix
 lr_scheduler:
   _target_: neuronal_networks.lr_schedulers.DropoffScheduler
-  initial_learning_rate: 0.00025
-  scheduling_beginn: 0.7
-  scheduling_type: linear
-  propagate_progress: false
+  initial_learning_rate: 2.5e-4 
+  scheduling_beginn : 0.5
+  scheduling_type : "linear"
+  propagate_progress : True
 policy:
-  name: async_actor_critic
-  actor:
-    extractors_out_dim: 64
-    observations:
-    - image
-    - propriocentric_features
-    float_net:
-    - 2048
-    - 2048
-    - 2048
-    - 2048
-    - 4
-    activation_fn:
-      _target_: torch.nn.ReLU
-    last_activation_fn:
-      _target_: torch.nn.Tanh
-  critic:
-    extractors_out_dim: 32
-    observations:
-    - propriocentric_features
-    - global_features
-    float_net:
-    - 2048
-    - 2048
-    - 2048
-    - 2048
-    - 32
-    activation_fn:
-      _target_: torch.nn.ReLU
-    last_activation_fn:
-      _target_: torch.nn.Identity
-  mlp_extractor:
-    net_arch:
-      pi:
-      - 256
-      - 128
-      - 64
-      vf:
-      - 128
-      - 128
-      - 64
-      - 32
-    activation_fn:
-      _target_: torch.nn.ReLU
+  name: basic
+  type: MultiInputPolicy
+  extractors_out_dim: 64
+  share_features_extractor: false
 extractors_out_dim: 64
 share_features_extractor: true
 learn_args:
@@ -155,8 +116,8 @@ gmi:
   tm_loader_profile_name: default
   headless: false
   port: 8775
-  track: simple1_validated.Challenge.Gbx
-  reference_line: tracks/reference_line/simple1_validated.npy
+  track: curvy.Challenge.Gbx
+  reference_line: tracks/reference_line/curvy.npy
 wandb:
   use: true
   entity: tmnf-practical-ss25

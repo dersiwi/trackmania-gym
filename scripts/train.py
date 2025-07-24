@@ -42,7 +42,7 @@ def main(cfg : TrainConfig):
         tm_env = get_environment(cfg, control_queue, response_queue)
         
         # get algorithm and start learning process
-        vision_model, model = get_models(cfg, tm_env, print_params = True, run_id=baaf.get_tensorboard_login_identifier(),load_model_path = r"C:\Users\siwis\Documents\makecargofast\trackmania-gym\outputs\2025-07-24\01-01-49\models\checkpoints\checkpoint_6000000_steps.zip")
+        vision_model, model = get_models(cfg, tm_env, print_params = True, run_id=baaf.get_tensorboard_login_identifier())
 
         model.learn(**cfg.learn_args, callback=baaf.get_callbacks_for_training(tm_env))
 
