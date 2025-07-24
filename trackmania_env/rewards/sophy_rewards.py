@@ -38,6 +38,7 @@ class SophyRewards(RewradCalculator):
         - c_s (float, default=182.883569)                     : Sensitivity factor used in the sigmoid function for the steering history penalty.
         - c_o (float, default=0.034)                          : Offset in the sigmoid function used in the steering history penalty.
       """
+    super().__init__()
     self.last_time = 0
     self.last_lateral_contact_time = 0
     self.last_off_course_time = 0
@@ -58,7 +59,7 @@ class SophyRewards(RewradCalculator):
     self.angles : deque = deque([0.]*self.maxlen_history, maxlen=self.maxlen_history) # History of the last three steering angles
     self.epsilon = 1e-6  # Tolerance for float comparisons
 
-    super().__init__()
+    self.track_lenght = None 
 
   def reset(self):
     self.last_lateral_contact_time = 0
@@ -111,6 +112,7 @@ class SophyRewards(RewradCalculator):
         time =  ssD.time/ constants.MILLISECONDS_TO_SECONDS
         delta_time = time - self.last_time
 
+        self.track_lenght = self.track_lenght or np.sum(self.refline_manager.segment_lengths)
         # This value is in km/h. When manually computing speed by taking the norm of the 3D velocity vector,
         # the result matches the displayed speed after multiplying by 3.6 (to convert from m/s to km/h).
         speed = ssD.display_speed / constants.MS_TO_KMH
@@ -118,7 +120,7 @@ class SophyRewards(RewradCalculator):
         # progress
         next_refline_index, d, drel = self.refline_manager.get_distance_to_next_point()
         rp = drel-self.last_drel
-        rp = rp* self.w_progress
+        rp = rp* self.w_progress * self.track_lenght 
 
         # off-course
         lateral_distance = d#self.refline_manager.calculate_lateral_difference(idx=next_refline_index,car_position=ssD.position)
