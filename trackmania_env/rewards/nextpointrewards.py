@@ -29,6 +29,7 @@ class NextPointRewards(RewradCalculator):
                 yshift: float = -1,
                 multiplicator: float = 5,
                 dist_scale: float = 0.3, 
+                normalize : bool = False,
                 **kwargs ):
         """
         Initializes the reward manager with explicit reward weights and parameters
@@ -57,7 +58,7 @@ class NextPointRewards(RewradCalculator):
             - dist_scale (float)    : Scaling factor for the input distance before applying the Gaussian.
     """
         
-        super().__init__()
+        super().__init__(normalize)
 
         if len(kwargs) > 0:
             print(f"Got additional kwargsuments that are not used; ignoring them : {kwargs.keys()}. Maybe they're used by a class that inherits.")
@@ -162,7 +163,7 @@ class NextPointRewards(RewradCalculator):
         
         reward = accum_dist_reward + race_not_finished_reward + race_finished + other_term_reward + distance_to_center_reward + speed_reward 
         self.last_simstate = ssD
-        return reward, {"total" : reward, 
+        return super().normalize_reward(reward), {"total" : reward, 
                         "accumulated_distance" : accum_dist_reward,
                         "distance_to_center" : distance_to_center_reward,
                         "nextpoint_reference_index" : next_refline_index,
@@ -181,13 +182,13 @@ class NextPointRewards(RewradCalculator):
 
 class NextPointRewards2(NextPointRewards):
     """Similar to NextPointRewards, but it scales the distance to center in relation to the accumulated distance."""
-    def __init__(self, sf1: float = 0.4,sf2: float = 1.0,**kwargs):
+    def __init__(self, sf1: float = 0.4,sf2: float = 1.0, normalize : bool = False, **kwargs):
         """
             sf1 (float): Scale factor for how large the distance-to-center reward can be
                          relative to the accumulated distance reward (default: 0.4).
             sf2 (float): Additional scaling for distance-to-center reward (default: 1.0).
         """
-        super().__init__(**kwargs)
+        super().__init__(**kwargs, normalize = normalize)
         self.sf1 = 0.4
         """Scale factor of how large distance-to-center reward can be in relation to accum distance reward.""" 
         self.sf2 = 1.0
@@ -213,7 +214,7 @@ class NextPointRewards2(NextPointRewards):
 
         reward = speed_reward + accum_dist_reward + distance_to_center_reward + other_term_reward
 
-        return reward, {"speed_reward" : speed_reward,
+        return super().normalize_reward(reward), {"speed_reward" : speed_reward,
                         "accum_dist_reward" : accum_dist_reward,
                         "distance_to_center_reward" : distance_to_center_reward,
                         "other_terminations" : other_term_reward}
@@ -222,8 +223,8 @@ class NextPointRewards2(NextPointRewards):
 
 class RaceFinishedRewards(NextPointRewards):
     """Similar to NextPointRewards, but it scales the distance to center in relation to the accumulated distance."""
-    def __init__(self, steps_without_progress_until_punishment : int, use_punishment : bool, **kwargs):
-        super().__init__(**kwargs)
+    def __init__(self, steps_without_progress_until_punishment : int, use_punishment : bool, normalize : bool = False, **kwargs):
+        super().__init__(normalize=normalize, **kwargs)
         self.env_timeout = 0
         """After how many (env)-steps the environment times out"""
 
@@ -269,7 +270,7 @@ class RaceFinishedRewards(NextPointRewards):
 
         reward = accum_dist_reward + other_term_reward + race_finished_reward + no_progress_punishment
 
-        return reward, {"accum_dist_reward" : accum_dist_reward,
+        return super().normalize_reward(reward), {"accum_dist_reward" : accum_dist_reward,
                         "race_finished_reward" : race_finished_reward,
                         "other_terminations" : other_term_reward,
                         "no_progress_punishment" : no_progress_punishment}

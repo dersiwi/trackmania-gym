@@ -16,7 +16,8 @@ class SophyRewards(RewradCalculator):
                 steering_history_penalty_weight:float= 5.0, 
                 c_d :float = 0.014,
                 c_s :float = 182.883569,
-                c_o :float =  0.034):
+                c_o :float =  0.034,
+                normalize : bool = False):
     """
       Initializes the GT Sophy-inspired reward function with tunable weights for each component.
 
@@ -53,7 +54,7 @@ class SophyRewards(RewradCalculator):
     self.w_steer_change = steering_change_penalty_weight
     self.w_steer_history = steering_history_penalty_weight
 
-    super().__init__()
+    super().__init__(normalize)
 
   def reset(self):
     self.last_lateral_contact_time = 0
@@ -158,13 +159,13 @@ class SophyRewards(RewradCalculator):
         self.last_off_course_time = off_course_time
         self.last_drel = drel
 
-        return reward, {"total": reward,
-                        "progress": rp,
-                        "off-course": ro,
-                        "wall": rw,
-                        "steering_changed": rs,
-                        "steering_history": rh,
-                        "nextpoint_reference_index" : next_refline_index,}
+        return super().normalize_reward(reward), {"total": reward,
+                                                  "progress": rp,
+                                                  "off-course": ro,
+                                                  "wall": rw,
+                                                  "steering_changed": rs,
+                                                  "steering_history": rh,
+                                                  "nextpoint_reference_index" : next_refline_index,}
 
 
         

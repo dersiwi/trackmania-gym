@@ -104,6 +104,8 @@ class DropoffScheduler(LR_Scheduler):
         scheduler of selected type."""
 
         def schedule(progress_remaining : float) -> float:
+            progress_remaining = 1 - progress_remaining # i actually want the progress to go from 0 (start) to 1 (end)
+            
             if progress_remaining < self.scheduling_beginn:
                 return self.initial_value
             else:
