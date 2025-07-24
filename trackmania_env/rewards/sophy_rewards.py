@@ -1,3 +1,4 @@
+from collections import deque
 from trackmania_env.rewards.reward_calculation import RewradCalculator
 from tminterface.structs import CheckpointData, SimStateData, CheckpointTime
 from game_interaction.ipc_fields import IPCFields
@@ -53,11 +54,17 @@ class SophyRewards(RewradCalculator):
     self.w_steer_change = steering_change_penalty_weight
     self.w_steer_history = steering_history_penalty_weight
 
+    self.max_degree_radians = np.pi / 6 # equivalent to np.deg2rad(30) so the max steering angle is |30| degree 
+    self.angles : deque = deque([0.]*self.maxlen_history, maxlen=self.maxlen_history) # History of the last three steering angles
+    self.epsilon = 1e-6  # Tolerance for float comparisons
+
     super().__init__()
 
   def reset(self):
     self.last_lateral_contact_time = 0
     self.last_drel = 0
+    self.angles : deque = deque([0.]*self.maxlen_history, maxlen=self.maxlen_history)
+
     #self.last_off_course_time = 0
 
     
@@ -101,7 +108,6 @@ class SophyRewards(RewradCalculator):
             float: The scalar reward value for the current time step.
         """
         ssD : SimStateData = observations[IPCFields.SIMSTATE]
-        propriocentric_features = processed_obs["propriocentric_features"]
         time =  ssD.time/ constants.MILLISECONDS_TO_SECONDS
         delta_time = time - self.last_time
 
@@ -115,7 +121,7 @@ class SophyRewards(RewradCalculator):
         rp = rp* self.w_progress
 
         # off-course
-        lateral_distance = self.refline_manager.calculate_lateral_difference(idx=next_refline_index,car_position=ssD.position)
+        lateral_distance = d#self.refline_manager.calculate_lateral_difference(idx=next_refline_index,car_position=ssD.position)
         is_off_course = lateral_distance >= constants.MAX_DISTANCE_TO_REFLINE
         off_course_time = self.last_off_course_time + (delta_time if is_off_course else 0)
         ro = -(off_course_time - self.last_off_course_time) * speed
@@ -129,12 +135,21 @@ class SophyRewards(RewradCalculator):
         # steering change
         # TODO: Consider creating a custom Sophy environment to avoid relying on manual indexing 
         # for field access. The current approach is unclear and can lead to confusion or bugs.
-        steering_change = torch.abs(propriocentric_features[-1])
+
+        turning_rate = ssD.scene_mobil.turning_rate # [-1,1]
+        steering_angle = self.max_degree_radians * turning_rate # when wheels are fully to the right then turning rate is equal to 1 but they only rotate too roughly 30 degree.
+        assert np.abs(steering_angle) <= self.max_degree_radians + self.epsilon, f"steering_angle out of range: {steering_angle}"
+        self.angles.append(steering_angle)
+
+        h_a_t:np.ndarray = torch.tensor(self.angles,dtype=torch.float)
+        h_d_t:np.ndarray = h_a_t[1:] - h_a_t[:-1]
+
+        steering_change = torch.abs(h_d_t[-1])
         rs = -steering_change * self.w_steer_change
 
         # Extract the last two steering deltas
-        h_d_t_tail = propriocentric_features[-2:]
-        has_sign_flip = torch.sign(propriocentric_features[1]) != torch.sign(propriocentric_features[0])
+        h_d_t_tail = h_d_t[-2:]
+        has_sign_flip = torch.sign(h_d_t[-1]) != torch.sign(h_d_t[-2])
         above_threshold = (h_d_t_tail.abs() > self.c_d).all(dim=0)
 
         # Indicator for inconsistent steering behavior
