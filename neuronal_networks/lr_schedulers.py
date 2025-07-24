@@ -117,12 +117,12 @@ class DropoffScheduler(LR_Scheduler):
 if __name__ ==  "__main__":
     from matplotlib import pyplot as plt
     
-    lr = DropoffScheduler(2.5*10e-4, 0.5, "exponential")
+    lr = DropoffScheduler(2.5*10e-4, 0.5, "linear")
     f = lr.get_scheduler()
     r = []
     total_steps = 500
     for i in range(total_steps):
         r.append(f(i / total_steps))
     
-    plt.plot([i for i in range(total_steps)], r)
+    plt.plot([i / total_steps for i in range(total_steps)], r)
     plt.show()

@@ -1,6 +1,6 @@
 defaults:
   - obs_manager: next_point_obs.yaml
-  - reward_manager:   race_finished_rewards.yaml
+  - reward_manager:   next_point_rewards.yaml
   - termination_manager: no_progress.yaml
 
 env:

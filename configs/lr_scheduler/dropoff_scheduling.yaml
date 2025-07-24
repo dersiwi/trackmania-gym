@@ -1,5 +1,5 @@
 _target_: neuronal_networks.lr_schedulers.DropoffScheduler
-initial_value: 2.5e-4 
+initial_learning_rate: 2.5e-4 
 scheduling_beginn : 0.7
 scheduling_type : "linear"
 propagate_progress : False
