@@ -203,4 +203,5 @@ outputs/
 wandb/
 runs/
 models/
+checkpoints/
 *.gif
