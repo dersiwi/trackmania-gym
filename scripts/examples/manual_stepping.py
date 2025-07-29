@@ -22,6 +22,7 @@ from trackmania_env.envs.enivonrments import get_environment
 import glob
 import random
 import time
+from queue import Empty  # Catch this specific exception
 
 _HYDRA_PARAMS = {
     "version_base": "1.3",
@@ -44,19 +45,31 @@ def main(cfg : TrainConfig):
 
     # Instanciate GMI, TMNF-Environment and start TMi-Interaction process.
     tmi_process, control_queue, response_queue = start_process_and_wait_for_startsignal(cfg, cfg.image.width, cfg.image.height)
+    queue_empty_error = []
+    cfg.gmi.track = "straight_line.Challenge.Gbx"
+    cfg.gmi.reference_line = "tracks/reference_line/straight_line.npy"
 
     try:
         tm_env = get_environment(cfg, control_queue, response_queue)
         obs, info = tm_env.reset()
         n_steps = 1000000
         for i in range(n_steps):
-            processed_obs, reward, terminated, truncated, info = tm_env.step(random.randint(0, 11))
-            if i % 4098 == 0 and i > 0:
-                time.sleep(15)
-            if terminated or truncated:
-                tm_env.reset()
-            print_progress_bar(i, n_steps, suffix=f"[{i}/{n_steps}]")
+            try:
+                processed_obs, reward, terminated, truncated, info =  tm_env.step(0)# tm_env.step(random.randint(0, 11))
+                if i % 4098 == 0 and i > 0:
+                    time.sleep(15)
+                if terminated or truncated:
+                    tm_env.reset()
         
+
+            except Exception as step_e:
+                print(f"[Error] Unknown exception at step {i}")
+                traceback.print_exc()
+                queue_empty_error.append(-1)
+                tm_env.reset()  #<-- try resetting. 
+                continue
+            print_progress_bar(i, n_steps, suffix=f"[{i}/{n_steps}]")
+
     except Exception as e:
         traceback.print_exc()
 

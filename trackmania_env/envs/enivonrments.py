@@ -33,7 +33,7 @@ def get_environment(cfg : TrainConfig, control_queue : Queue, response_queue : Q
     """
 
     obs_manager = get_observation_manager(cfg = cfg, wrap_obs_in_test = cfg.rl_env.env.wrap_obs_in_test)
-    reward_calculator = get_reward_calculator(reward_calculator_cfg = cfg.rl_env.reward_manager)
+    reward_calculator = get_reward_calculator(reward_calculator_cfg = cfg.rl_env.reward_manager, normalize=cfg.rl_env.env.normalize_rewards)
     termination_manger = get_termination_manager(termination_cfg= cfg.rl_env.termination_manager)
 
     if cfg.rl_env.env.test or test:

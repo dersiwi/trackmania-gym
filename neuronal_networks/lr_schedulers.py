@@ -104,6 +104,8 @@ class DropoffScheduler(LR_Scheduler):
         scheduler of selected type."""
 
         def schedule(progress_remaining : float) -> float:
+            progress_remaining = 1 - progress_remaining # i actually want the progress to go from 0 (start) to 1 (end)
+            
             if progress_remaining < self.scheduling_beginn:
                 return self.initial_value
             else:
@@ -117,12 +119,12 @@ class DropoffScheduler(LR_Scheduler):
 if __name__ ==  "__main__":
     from matplotlib import pyplot as plt
     
-    lr = DropoffScheduler(2.5*10e-4, 0.5, "exponential")
+    lr = DropoffScheduler(2.5*10e-4, 0.5, "linear",propagate_progress = True)
     f = lr.get_scheduler()
     r = []
     total_steps = 500
     for i in range(total_steps):
-        r.append(f(i / total_steps))
+        r.append(f(1 - i / total_steps))
     
-    plt.plot([i for i in range(total_steps)], r)
+    plt.plot([i / total_steps for i in range(total_steps)], r)
     plt.show()

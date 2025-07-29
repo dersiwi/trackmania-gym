@@ -7,8 +7,8 @@ import numpy as np
 
 class BasicRewardCalculation(RewradCalculator):
 
-    def __init__(self):
-        super().__init__()
+    def __init__(self, normalize : bool = False):
+        super().__init__(normalize)
 
     def calculate_reward(self, observations, processed_obs : dict[str, any], race_finished, other_terminations) -> tuple[float, dict[str, any]]:
         ssD : SimStateData = observations[IPCFields.SIMSTATE]
@@ -17,4 +17,4 @@ class BasicRewardCalculation(RewradCalculator):
 
         if race_finished:
             reward += 10000
-        return reward, {}
+        return super().normalize_reward(reward), {}

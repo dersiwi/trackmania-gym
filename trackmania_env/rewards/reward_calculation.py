@@ -1,19 +1,21 @@
 from __future__ import annotations
 import wandb
 from stable_baselines3.common.callbacks import BaseCallback
-from configs.config import RewardManagerCfg
+import numpy as np
 
 from trackmania_env.utils.reference_line_manager import ReferenceLineManager
 from trackmania_env.utils.position_buffer import PositionBuffer
+from trackmania_env.rewards.normalizer import RewardNormalizer
 
 class RewradCalculator:
     """Responsible for reward calculations for environment"""
 
-    def __init__(self, reward_cfg : RewardManagerCfg=None):
-        self.reward_cfg = reward_cfg
+    def __init__(self, normalize : bool = False):
         self.env = None
         self.pos_buffer = None # do not reset or add anything to this position buffer, read-only! (no reset, no add...)
         self.refline_manager: ReferenceLineManager = None
+        self.normalizer = RewardNormalizer()
+        self.normalize = normalize
 
     def set_position_buffer(self, position_buffer : PositionBuffer):
         """Set position buffer for this instance"""
@@ -41,7 +43,8 @@ class RewradCalculator:
 
         Returns 
         -------
-            - reward : which is the cummulative reward of all reward terms
+            - self.normalize_reward(reward) : which is the cummulative reward of all reward terms, normalized, depending on the 
+                initialization of this class.
             - reward_info : dictionary containing reward-term-names (str) as keys and the values
                 of individual reward terms for this calculation as values (this may also include non-reward values).
 
@@ -49,6 +52,12 @@ class RewradCalculator:
         For Future implementations; be sure to only put (str, float/int) pairs into the reward_info-dictionary as this s expected by RewardLogCallback.  
         """
         raise NotImplementedError("Do Not use this class directly. Use RewardCalculator.get_instance()")
+    
+    def normalize_reward(self, rewards : float) -> float | np.ndarray:
+        """Normalizes rewards, if self.normalize == True. If not, just returns them as is"""
+        if self.normalize:
+            return self.normalizer.normalize_float(rewards)
+        return rewards
 
     def reset(self) -> None:
         """resets rewrad calculator"""

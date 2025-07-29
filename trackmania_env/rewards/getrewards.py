@@ -8,23 +8,24 @@ from configs.config import RewardManagerCfg
 
 
 
-def get_reward_calculator(reward_calculator_cfg: RewardManagerCfg) -> RewradCalculator:
+def get_reward_calculator(reward_calculator_cfg: RewardManagerCfg, normalize: bool = False) -> RewradCalculator:
     name = reward_calculator_cfg.name
 
     match name:
         case "basic":
-            return BasicRewardCalculation()
+            return BasicRewardCalculation(normalize)
         case "linesight":
             return LinesightRewardCalculator(**reward_calculator_cfg.args)
         case "nextpoint":
-            return NextPointRewards(**reward_calculator_cfg.args)
+            return NextPointRewards(**reward_calculator_cfg.args, normalize=normalize)
         case "nextpoint2":
-            return NextPointRewards2(**reward_calculator_cfg.args)
+            return NextPointRewards2(**reward_calculator_cfg.args, normalize=normalize)
         case "sophy":
-            return SophyRewards(**reward_calculator_cfg.args)
+            return SophyRewards(**reward_calculator_cfg.args, normalize=normalize)
         case "race_finished":
             return RaceFinishedRewards(**reward_calculator_cfg.args, 
                                        use_punishment=reward_calculator_cfg.use_punishment, 
-                                       steps_without_progress_until_punishment=reward_calculator_cfg.steps_without_progress_until_punishment)
+                                       steps_without_progress_until_punishment=reward_calculator_cfg.steps_without_progress_until_punishment,
+                                       normalize=normalize)
         case _:
             raise NameError(f"Reward calculator '{name}' not known.")

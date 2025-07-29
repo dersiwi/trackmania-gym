@@ -1,6 +1,6 @@
 defaults:
   - obs_manager: next_point_obs.yaml
-  - reward_manager:   race_finished_rewards.yaml
+  - reward_manager: next_point_rewards.yaml
   - termination_manager: no_progress.yaml
 
 env:
@@ -12,6 +12,8 @@ env:
   reset_mode : "respawn"
   position_buffer_size : 20
   position_moved_threshold : 0.8
+
+  normalize_rewards : True
 
   game_speed : 70
   countdown_speed : 70
