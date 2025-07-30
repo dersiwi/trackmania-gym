@@ -20,9 +20,12 @@ from neuronal_networks.vision_encoder.conv_NNs import VisionModelSix
 # NOTE ray passes its own config object which is no longer a hydra conf object
 def make_env(env_config):
     cfg_dict = env_config["cfg_dict"]
-    
+    worker_index = env_config.worker_index
+
     # Reconstruct the Hydra DictConfig object from the dictionary
     cfg = OmegaConf.create(cfg_dict)
+    cfg.gmi.port = cfg.gmi.port + worker_index
+
     tmi_process, control_queue, response_queue = start_process_and_wait_for_startsignal(
         cfg, cfg.rl_env.obs_manager.img_width, cfg.rl_env.obs_manager.img_height
     )
@@ -84,7 +87,7 @@ def main(cfg):
             grad_clip=0.5,
         )
         .env_runners(
-            num_env_runners=1,
+            num_env_runners=2,
         )
         .resources(
             num_gpus=0
@@ -96,7 +99,6 @@ def main(cfg):
     print("Starting PPO training with custom RLModule...")
     for i in range(1000):
         result = algo.train()
-        print(f"Iter {i}: reward {result['episode_reward_mean']:.2f}, episodes_this_iter={result['episodes_this_iter']}")
         
         # Save checkpoint
         if i % 50 == 0:

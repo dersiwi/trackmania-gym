@@ -23,7 +23,7 @@ class GameInstanceManager:
 
 
     @staticmethod
-    def get_instance(TMLoader_path : str, path_to_plugin : str, TMLoader_profile_name : str = "default", linux : bool = False, headless : bool = False) -> GameInstanceManager:
+    def get_instance(TMLoader_path : str, path_to_plugin : str, TMLoader_profile_name : str = "default", linux : bool = False, headless : bool = False,tmi_port:int = 8775) -> GameInstanceManager:
         """
         The GameInstanceManager launches the game from the operating systems side via a system command (launch_game() and close_game() start and end tmnf processes.)
         To get an instance of the GameInstanceManager use this method and specify the operating system by setting linux accordingly.
@@ -43,19 +43,19 @@ class GameInstanceManager:
 
         if linux:
             # TODO get Lock.
-            return GameInstanceMangerLinux(TMLoader_path, TMLoader_profile_name, path_to_plugin, Lock(), headless)
+            return GameInstanceMangerLinux(TMLoader_path, TMLoader_profile_name, path_to_plugin, Lock(), headless,tmi_port)
         else:
-            return GameInstanceManagerWindows(TMLoader_path, TMLoader_profile_name, path_to_plugin, headless)
+            return GameInstanceManagerWindows(TMLoader_path, TMLoader_profile_name, path_to_plugin, headless,tmi_port)
 
 
-    def __init__(self, TMLoader_path : str, TMLoader_profile_name : str, path_to_plugin : str, headless : bool):
+    def __init__(self, TMLoader_path : str, TMLoader_profile_name : str, path_to_plugin : str, headless : bool,tmi_port:int):
         """Do not use this class directly. Instanciate via GameInstanceManager.get_instance()."""
 
         self.TMLoader_path : str = TMLoader_path
         self.TMLoader_profile_name : str= TMLoader_profile_name
         self.path_to_plugin : str = path_to_plugin
         self.headless : bool = headless
-        self.tmi_port = 8775
+        self.tmi_port = tmi_port
         self.tm_process_id = None
         self.tm_window_id  = None
         self.tminterface = TMInterface(self.tmi_port)
@@ -100,8 +100,8 @@ class GameInstanceManager:
 
 class GameInstanceManagerWindows(GameInstanceManager):
 
-    def __init__(self, TMLoader_path, TMLoader_profile_name, path_to_plugin, headless):
-        super().__init__(TMLoader_path, TMLoader_profile_name, path_to_plugin, headless)
+    def __init__(self, TMLoader_path, TMLoader_profile_name, path_to_plugin, headless,tmi_port):
+        super().__init__(TMLoader_path, TMLoader_profile_name, path_to_plugin, headless,tmi_port)
 
     def __get_launch_string(self) -> str:
         launch_string = (
@@ -228,8 +228,8 @@ class GameInstanceMangerLinux(GameInstanceManager):
 
 
 
-    def __init__(self, TMLoader_path, TMLoader_profile_name, path_to_plugin, game_spawning_lock : Lock, headless : bool):
-        super().__init__(TMLoader_path, TMLoader_profile_name, path_to_plugin, headless)
+    def __init__(self, TMLoader_path, TMLoader_profile_name, path_to_plugin, game_spawning_lock : Lock, headless : bool,tmi_port:int):
+        super().__init__(TMLoader_path, TMLoader_profile_name, path_to_plugin, headless,tmi_port)
         self.game_spawning_lock : Lock = game_spawning_lock
 
     def _get_tm_window_id(self):

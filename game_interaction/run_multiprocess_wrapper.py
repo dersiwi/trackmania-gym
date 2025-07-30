@@ -44,7 +44,8 @@ def start_process_and_wait_for_startsignal(train_config : TrainConfig, image_wid
         path_to_plugin = train_config.platforms.plugin,
         TMLoader_profile_name= train_config.gmi.tm_loader_profile_name,
         linux = train_config.platforms.os == "linux",
-        headless= train_config.gmi.headless)
+        headless= train_config.gmi.headless,
+        tmi_port= train_config.gmi.port)
 
     control_queue = Queue() # queue for commands to send to TMIProcessWrapper
     response_queue = Queue() # answers (payload) from TMIProcess Wrapper
