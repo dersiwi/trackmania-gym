@@ -418,6 +418,7 @@ class TMIProcessWrapper:
             elif msgtype == int(MessageType.SC_REQUESTED_FRAME_SYNC):
                 frame_and_state = self.__receive_frame()
                 self.iface._respond_to_call(msgtype)
+                self.gim._set_window_focus()
 
             elif msgtype == int(MessageType.C_SHUTDOWN):
 

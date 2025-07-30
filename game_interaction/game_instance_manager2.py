@@ -13,7 +13,11 @@ import psutil
 if os.name == 'nt': 
     import win32process
     import win32gui 
+    import win32.lib.win32con as win32con
+    import win32com.client
 from pathlib import Path
+from xdo import Xdo
+
 #from multiprocessing.synchronize import Lock
 from torch.multiprocessing import Lock
 from game_interaction.tminterface2 import TMInterface
@@ -59,6 +63,7 @@ class GameInstanceManager:
         self.tm_process_id = None
         self.tm_window_id  = None
         self.tminterface = TMInterface(self.tmi_port)
+        self.game_activated = False
 
         assert os.path.exists(self.path_to_plugin), f"Python_Link.as was not found at '{self.path_to_plugin}'."
 
@@ -97,6 +102,9 @@ class GameInstanceManager:
         while self.is_game_running():
             time.sleep(0.1)
     
+    def _set_window_focus(self):
+        """Sets focus on the specified game window ."""
+        raise NotImplementedError()
 
 class GameInstanceManagerWindows(GameInstanceManager):
 
@@ -196,7 +204,14 @@ class GameInstanceManagerWindows(GameInstanceManager):
             self.max_allowable_distance_to_real_checkpoint,
         ) = map_loader.sync_virtual_and_real_checkpoints(zone_centers, map_path)"""
 
+    def _set_window_focus(self):
+        if not self.game_activated:
+            shell = win32com.client.Dispatch("WScript.Shell")
+            shell.SendKeys("%")
+            win32gui.SetForegroundWindow(self.tm_window_id)
+            self.game_activated = True
 
+    
 class GameInstanceMangerLinux(GameInstanceManager):
 
     
@@ -305,10 +320,18 @@ class GameInstanceMangerLinux(GameInstanceManager):
                 process = subprocess.Popen(launch_cmds)
 
             self.__get_tmnf_process_id(timeout, pid_before)
+            self._get_tm_window_id()
             return self.tm_process_id
 
     def _get_gameprocess_killcommand(self) -> str:
         return "kill -9 " + str(self.tm_process_id)
+    
+    def _set_window_focus(self):
+        if not self.game_activated:
+            print(f"DEBUG: tm_window_id type: {type(self.tm_window_id)}")
+            print(f"DEBUG: tm_window_id value: {self.tm_window_id}")
+            Xdo().activate_window(self.tm_window_id)
+            self.game_activated= True
 
 if __name__ == "__main__":
 
