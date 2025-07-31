@@ -9,6 +9,7 @@ from __future__ import annotations
 import subprocess
 import os
 import time 
+from filelock import FileLock
 import psutil
 if os.name == 'nt': 
     import win32process
@@ -19,7 +20,6 @@ from pathlib import Path
 from xdo import Xdo
 
 #from multiprocessing.synchronize import Lock
-from torch.multiprocessing import Lock
 from game_interaction.tminterface2 import TMInterface
 
 class GameInstanceManager:
@@ -27,7 +27,7 @@ class GameInstanceManager:
 
 
     @staticmethod
-    def get_instance(TMLoader_path : str, path_to_plugin : str, TMLoader_profile_name : str = "default", linux : bool = False, headless : bool = False,tmi_port:int = 8775) -> GameInstanceManager:
+    def get_instance(TMLoader_path : str, path_to_plugin : str, TMLoader_profile_name : str = "default", linux : bool = False, headless : bool = False,tmi_port:int = 8775,lock = None) -> GameInstanceManager:
         """
         The GameInstanceManager launches the game from the operating systems side via a system command (launch_game() and close_game() start and end tmnf processes.)
         To get an instance of the GameInstanceManager use this method and specify the operating system by setting linux accordingly.
@@ -47,7 +47,7 @@ class GameInstanceManager:
 
         if linux:
             # TODO get Lock.
-            return GameInstanceMangerLinux(TMLoader_path, TMLoader_profile_name, path_to_plugin, Lock(), headless,tmi_port)
+            return GameInstanceMangerLinux(TMLoader_path, TMLoader_profile_name, path_to_plugin, lock, headless,tmi_port)
         else:
             return GameInstanceManagerWindows(TMLoader_path, TMLoader_profile_name, path_to_plugin, headless,tmi_port)
 
@@ -211,10 +211,9 @@ class GameInstanceManagerWindows(GameInstanceManager):
             win32gui.SetForegroundWindow(self.tm_window_id)
             self.game_activated = True
 
-    
+
 class GameInstanceMangerLinux(GameInstanceManager):
 
-    
     launched_xvfb : bool = False
     xvfb_launch_dict : dict[str, str] = None
 
@@ -239,13 +238,15 @@ class GameInstanceMangerLinux(GameInstanceManager):
         print("Launched xvfb-process.")
 
 
-
-
-
-
-    def __init__(self, TMLoader_path, TMLoader_profile_name, path_to_plugin, game_spawning_lock : Lock, headless : bool,tmi_port:int):
+    def __init__(self, TMLoader_path, TMLoader_profile_name, path_to_plugin, game_spawning_lock : str | None, headless : bool,tmi_port:int):
         super().__init__(TMLoader_path, TMLoader_profile_name, path_to_plugin, headless,tmi_port)
-        self.game_spawning_lock : Lock = game_spawning_lock
+
+        self.game_spawning_lock : str = game_spawning_lock
+        if self.game_spawning_lock:
+            self._global_game_lock_path = os.path.join("/tmp", f"{self.game_spawning_lock}.global.lock")
+            self._global_game_lock = FileLock(self._global_game_lock_path, timeout=60)
+            self._lock_acquired_by_this_instance : bool = False # Tracks if this specific instance holds the lock
+
 
     def _get_tm_window_id(self):
         from xdo import Xdo
@@ -310,28 +311,49 @@ class GameInstanceMangerLinux(GameInstanceManager):
         
     def launch_game(self, timeout=10):
         """Launches the game with timeout 10s to find process ids."""
-        with self.game_spawning_lock:
-            pid_before = set(self._get_tm_pids())
-            launch_cmds = self.__get_launch_cmds()
-            if self.headless:
-                GameInstanceMangerLinux.launch_xvfb()
-                process = subprocess.Popen(launch_cmds, env=GameInstanceMangerLinux.xvfb_launch_dict)
-            else:
-                process = subprocess.Popen(launch_cmds)
+        #with self.game_spawning_lock:
+        #with FileLock(self.game_spawning_lock + ".game_launch.lock", timeout=60):
+        self._acquire_lock()
 
-            self.__get_tmnf_process_id(timeout, pid_before)
-            self._get_tm_window_id()
-            return self.tm_process_id
+        pid_before = set(self._get_tm_pids())
+        launch_cmds = self.__get_launch_cmds()
+        if self.headless:
+            GameInstanceMangerLinux.launch_xvfb()
+            process = subprocess.Popen(launch_cmds, env=GameInstanceMangerLinux.xvfb_launch_dict)
+        else:
+            process = subprocess.Popen(launch_cmds)
+        self.__get_tmnf_process_id(timeout, pid_before)
+        self._get_tm_window_id()
+
+        self._release_lock()
+        return self.tm_process_id
 
     def _get_gameprocess_killcommand(self) -> str:
         return "kill -9 " + str(self.tm_process_id)
     
     def _set_window_focus(self):
         if not self.game_activated:
+            #with FileLock(self.game_spawning_lock + ".focus_activate.lock", timeout=60):
+            #time.sleep(2)
+            xdo_instance = Xdo() 
+            self._acquire_lock()
             print(f"DEBUG: tm_window_id type: {type(self.tm_window_id)}")
             print(f"DEBUG: tm_window_id value: {self.tm_window_id}")
-            Xdo().activate_window(self.tm_window_id)
+            xdo_instance.activate_window(self.tm_window_id)
             self.game_activated= True
+            self._release_lock()
+
+    def _acquire_lock(self):
+        if self.game_spawning_lock:
+            self._global_game_lock.acquire() 
+            self._lock_acquired_by_this_instance = True
+            print(f"[{os.getpid()}] Global game lock acquired: {self._global_game_lock_path}")
+    
+    def _release_lock(self):
+        if self.game_spawning_lock:
+            self._global_game_lock.release()
+            self._lock_acquired_by_this_instance = False
+            print(f"[{os.getpid()}] Released global game lock: {self._global_game_lock_path}")
 
 if __name__ == "__main__":
 

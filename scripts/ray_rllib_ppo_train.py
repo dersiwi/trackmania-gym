@@ -17,6 +17,9 @@ from ray.rllib.core.rl_module.rl_module import RLModuleSpec
 from neuronal_networks.ray_rllib.modules import TMNFActorCriticModule
 from neuronal_networks.vision_encoder.conv_NNs import VisionModelSix
 
+# Create a global lock instance that will be inherited by workers 
+LOCK_FILE_PATH = "rllib_window_focus"
+
 # NOTE ray passes its own config object which is no longer a hydra conf object
 def make_env(env_config):
     cfg_dict = env_config["cfg_dict"]
@@ -27,7 +30,7 @@ def make_env(env_config):
     cfg.gmi.port = cfg.gmi.port + worker_index
 
     tmi_process, control_queue, response_queue = start_process_and_wait_for_startsignal(
-        cfg, cfg.rl_env.obs_manager.img_width, cfg.rl_env.obs_manager.img_height
+        cfg, cfg.rl_env.obs_manager.img_width, cfg.rl_env.obs_manager.img_height, env_config["focus_lock_file_path"]
     )
     tm_env = get_environment(cfg, control_queue, response_queue)
     return tm_env
@@ -55,6 +58,7 @@ def main(cfg):
             "trackmania_env", 
             env_config={
                 "cfg_dict": cfg_dict_for_env,
+                "focus_lock_file_path": LOCK_FILE_PATH
             }
         )
         .framework("torch")
@@ -87,7 +91,7 @@ def main(cfg):
             grad_clip=0.5,
         )
         .env_runners(
-            num_env_runners=2,
+            num_env_runners=4,
         )
         .resources(
             num_gpus=0
