@@ -18,6 +18,7 @@ if os.name == 'nt':
     import win32com.client
 from pathlib import Path
 from xdo import Xdo
+from Xlib import X
 
 #from multiprocessing.synchronize import Lock
 from game_interaction.tminterface2 import TMInterface
@@ -336,10 +337,14 @@ class GameInstanceMangerLinux(GameInstanceManager):
             #with FileLock(self.game_spawning_lock + ".focus_activate.lock", timeout=60):
             #time.sleep(2)
             xdo_instance = Xdo() 
+            print(f"[{os.getpid()}] Waiting for window {self.tm_window_id} to be viewable...")
+            xdo_instance.wait_for_window_map_state(self.tm_window_id, X.IsViewable)
+            print(f"[{os.getpid()}] Window {self.tm_window_id} is now viewable.")
             self._acquire_lock()
             print(f"DEBUG: tm_window_id type: {type(self.tm_window_id)}")
             print(f"DEBUG: tm_window_id value: {self.tm_window_id}")
             xdo_instance.activate_window(self.tm_window_id)
+            xdo_instance.raise_window(self.tm_window_id)
             self.game_activated= True
             self._release_lock()
 
