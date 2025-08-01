@@ -1,14 +1,24 @@
+from typing import Any, Dict, Optional
 import gymnasium as gym
 import torch
 from torch import nn
+
+from ray.rllib.core.rl_module.apis import (
+    TargetNetworkAPI,
+    ValueFunctionAPI,
+    TARGET_NETWORK_ACTION_DIST_INPUTS,
+)
 
 from ray.rllib.algorithms.ppo import PPOConfig
 from ray.rllib.core.rl_module.torch import TorchRLModule
 from ray.rllib.utils.annotations import override
 from ray.rllib.core.columns import Columns
 
+from ray.rllib.core.learner.utils import make_target_network
+from ray.rllib.utils.typing import TensorType
+
 from neuronal_networks.custom_extractor import TMN_Extractor
-class TMNFActorCriticModule(TorchRLModule):
+class TMNFActorCriticModule(TorchRLModule,ValueFunctionAPI,TargetNetworkAPI):
     """
     Implements a customizable Actor-Critic neural network module for use with Ray RLlib's
     Actor-Critic style algorithms (e.g., PPO, A2C).
@@ -156,3 +166,57 @@ class TMNFActorCriticModule(TorchRLModule):
             "latent_policy_features": policy_features,
             "latent_value_features": value_features,
         }
+    # The ValueFunctionAPI override
+    @override(ValueFunctionAPI)
+    def compute_values(
+        self,
+        batch: Dict[str, Any],
+        embeddings: Optional[Any] = None):
+        # If embeddings are not provided, we need to compute them
+        if embeddings is None:
+            obs = batch[Columns.OBS]
+            value_features = self.vf_features_extractor(obs)
+        else:
+            # If embeddings are provided, use them.
+            value_features = embeddings
+
+        # Use the value head to compute the final value predictions
+        return self.value_head(value_features).squeeze(-1)
+    
+    # The TargetNetworkAPI overrides
+    @override(TargetNetworkAPI)
+    def make_target_networks(self) -> None:
+        # Create target networks for the policy head and feature extractor.
+        self._target_pi_features_extractor = make_target_network(self.pi_features_extractor)
+
+        if isinstance(self.action_space, gym.spaces.Discrete):
+            self._target_policy_head = make_target_network(self.policy_head)
+        elif isinstance(self.action_space, gym.spaces.Box):
+            self._target_policy_mean = make_target_network(self.policy_mean)
+
+    @override(TargetNetworkAPI)
+    def get_target_network_pairs(self):
+        pairs = [(self.pi_features_extractor, self._target_pi_features_extractor)]
+
+        if isinstance(self.action_space, gym.spaces.Discrete):
+            pairs.append((self.policy_head, self._target_policy_head))
+        elif isinstance(self.action_space, gym.spaces.Box):
+            pairs.append((self.policy_mean, self._target_policy_mean))
+
+        return pairs
+
+    @override(TargetNetworkAPI)
+    def forward_target(self, batch, **kwargs):
+        obs = batch[Columns.OBS]
+        # Use the target feature extractor
+        policy_features = self._target_pi_features_extractor(obs)
+
+        # Use the target policy head
+        if isinstance(self.action_space, gym.spaces.Discrete):
+            action_logits = self._target_policy_head(policy_features)
+        elif isinstance(self.action_space, gym.spaces.Box):
+            action_mean = self._target_policy_mean(policy_features)
+            action_log_std = self.policy_log_std.expand_as(action_mean)
+            action_logits = (action_mean, action_log_std)
+
+        return {TARGET_NETWORK_ACTION_DIST_INPUTS: action_logits}

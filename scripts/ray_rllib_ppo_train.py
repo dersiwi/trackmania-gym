@@ -74,7 +74,7 @@ def main(cfg):
                     "last_activation_fn": nn.Identity,
                     "normalized_image": True,
                     "vision_model_params": {},
-                    "device": "cpu"#cfg.platforms.device,
+                    "device": cfg.platforms.device,
                 },
             )
         )
@@ -86,15 +86,22 @@ def main(cfg):
             clip_param=0.2, 
             vf_loss_coeff=1.0, 
             entropy_coeff=0.01,
-            num_sgd_iter=5, 
-            train_batch_size=2048,
+            num_sgd_iter=1, 
+            train_batch_size=1024,
+            minibatch_size = 512,
             grad_clip=0.5,
         )
         .env_runners(
-            num_env_runners=4,
+            sample_timeout_s=None,
+            num_env_runners=1,
         )
         .resources(
-            num_gpus=0
+            num_gpus=1,
+            num_gpus_per_worker = 1
+        )
+        .api_stack(
+            enable_rl_module_and_learner=True,
+            enable_env_runner_and_connector_v2=True
         )
     )
     
@@ -107,7 +114,7 @@ def main(cfg):
         # Save checkpoint
         if i % 50 == 0:
             checkpoint_path = algo.save(os.path.join(os.getcwd(), "checkpoints", "trackmania"))
-            print(f"Checkpoint saved at: {checkpoint_path}")
+            #print(f"Checkpoint saved at: {checkpoint_path}")
     
     algo.stop()
     ray.shutdown() # Ensure Ray resources are properly released
