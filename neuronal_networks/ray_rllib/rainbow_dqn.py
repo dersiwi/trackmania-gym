@@ -1,4 +1,4 @@
-from typing import Any, Dict, Optional
+from typing import Any, Dict, List, Optional, Tuple
 import gymnasium as gym
 import torch
 from torch import nn
@@ -154,6 +154,46 @@ class TMNFDistDQNModule(TorchRLModule,QNetAPI,TargetNetworkAPI):
         DQN learner.
         """
         return self.compute_q_values(batch)
+
+    @override(TargetNetworkAPI)
+    def make_target_networks(self) -> None:
+        self.target_feature_extractor = make_target_network(self.feature_extractor)
+        self.target_value_net = make_target_network(self.value_net)
+        self.target_advantage_net = make_target_network(self.advantage_net)
+    
+    @override(TargetNetworkAPI)
+    def get_target_network_pairs(self) -> List[Tuple[nn.Module, nn.Module]]:
+        return [
+            (self.feature_extractor, self.target_feature_extractor),
+            (self.value_net, self.target_value_net),
+            (self.advantage_net, self.target_advantage_net),
+        ]
+
+    @override(TargetNetworkAPI)
+    def forward_target(self, batch: Dict[str, Any]) -> Dict[str, Any]:
+        # This forward pass is identical to compute_q_values, but uses the target networks.
+        obs = batch[Columns.NEXT_OBS] 
+        features = self.target_feature_extractor(obs)
+
+        value_logits = self.target_value_net(features)
+        value_logits = value_logits.unsqueeze(dim=1) 
+
+        advantage_logits = self.target_advantage_net(features)
+        advantage_logits = advantage_logits.view(-1, self.action_space.n, self.num_atoms)
+
+        mean_advantage_logits = torch.mean(advantage_logits, dim=1, keepdim=True)
+        q_logits_per_atom = value_logits + advantage_logits - mean_advantage_logits
+
+        q_probs_per_atom = nn.functional.softmax(q_logits_per_atom, dim=-1)
+        atoms = torch.linspace(self.v_min, self.v_max, self.num_atoms, device=self.device)
+        q_values = torch.sum(q_probs_per_atom * atoms, dim=-1)
+
+        return {
+            "qf_preds": q_values,
+            "qf_logits": q_logits_per_atom,
+            "qf_probs": q_probs_per_atom,
+            "atoms": atoms,
+        }
     
     def sanity_check(self):
         print(f"  Verifying parameters after TMNFActorCriticModule setup:")
