@@ -21,6 +21,23 @@ from ray.rllib.utils.typing import TensorType
 from neuronal_networks.custom_extractor import TMN_Extractor    
 
 class TMNFDistDQNModule(TorchRLModule,QNetAPI,TargetNetworkAPI):
+
+    def _build_mlp_with_noisy_heads(self, in_dim: int, hidden_layers: list, out_dim: int, activation_fn: nn.Module) -> nn.Sequential:
+        """
+        A helper method to build an MLP with NoisyLinear layers and a final output layer.
+        """
+        layers = []
+        current_in_dim = in_dim
+        for out_dim_mlp in hidden_layers:
+            layers.append(NoisyLinear(current_in_dim, out_dim_mlp))
+            layers.append(activation_fn())
+            current_in_dim = out_dim_mlp
+        
+        # Add the final output layer, which is also a NoisyLinear layer
+        layers.append(NoisyLinear(current_in_dim, out_dim))
+        
+        return nn.Sequential(*layers)
+      
     @override(TorchRLModule)
     def setup(self):
 
@@ -60,29 +77,85 @@ class TMNFDistDQNModule(TorchRLModule,QNetAPI,TargetNetworkAPI):
         final_feature_dim = self.feature_extractor._features_dim 
 
         ### Q-Network related things ###
-        
-        # dueling dqn 
-        self.value = NoisyLinear(final_feature_dim,1)
-        self.advantages = NoisyLinear(final_feature_dim,self.action_space.n)
-
-        # distributional q-learning 
         self.num_atoms = self.model_config.get("num_atoms", 51)
         self.v_min = self.model_config.get("v_min", -10.0)
         self.v_max = self.model_config.get("v_max", 10.0)
         
-        q_model_layers = self.model_config.get("q_model_layers", [256, 256]) 
-        layers = []
-        in_dim = final_feature_dim
-        for out_dim in q_model_layers:
-            layers.append(NoisyLinear(in_dim, out_dim))
-            layers.append(self.activation_fn())
-            in_dim = out_dim
-        # Add the final output layer
-        layers.append(NoisyLinear(in_dim, self.action_space.n * self.num_atoms))
-        
-        self.qnet = nn.Sequential(*layers).to(self.device)
+        # dueling dqn 
+        value_head_layers = self.model_config.get("value_head_layers", [256])
+        advantage_head_layers = self.model_config.get("advantage_head_layers", [256])
+
+        self.value_net = self._build_mlp_with_noisy_heads(
+            in_dim=final_feature_dim,
+            hidden_layers=value_head_layers,
+            out_dim=self.num_atoms,
+            activation_fn=self.activation_fn
+        ).to(self.device)
+
+        self.advantage_net = self._build_mlp_with_noisy_heads(
+            in_dim=final_feature_dim,
+            hidden_layers=advantage_head_layers,
+            out_dim=self.action_space.n * self.num_atoms,
+            activation_fn=self.activation_fn
+        ).to(self.device)
 
         # Sanity check / verification: Check for parameters after setup 
+        self.sanity_check()
+
+    @override(QNetAPI)
+    def compute_q_values(self, batch: Dict[str, TensorType]) -> Dict[str, TensorType]:
+        """
+        Computes Q-value distributions using a Dueling, Distributional architecture.
+
+        This implementation combines the outputs of the value and advantage heads
+        to form a final Q-value distribution, as required by the QNetAPI.
+        """
+        obs = batch[Columns.OBS]
+        features = self.feature_extractor(obs)
+
+        # Compute value stream distribution logits.
+        value_logits = self.value_net(features)
+        # Reshape to (batch_size, 1, num_atoms) for broadcasting.
+        value_logits = value_logits.unsqueeze(dim=1) 
+
+        # Compute advantage stream distribution logits.
+        advantage_logits = self.advantage_net(features)
+        # Reshape to (batch_size, num_actions, num_atoms).
+        advantage_logits = advantage_logits.view(-1, self.action_space.n, self.num_atoms)
+        
+        # Dueling Aggregation: Combine value and advantage distributions.
+        mean_advantage_logits = torch.mean(advantage_logits, dim=1, keepdim=True)
+        q_logits_per_atom = value_logits + advantage_logits - mean_advantage_logits
+
+        # Compute probabilities from logits.
+        q_probs_per_atom = nn.functional.softmax(q_logits_per_atom, dim=-1)
+        
+        # Compute the mean Q-value as the sum of (probability * atom_value).
+        atoms = torch.linspace(self.v_min, self.v_max, self.num_atoms, device=self.device)
+        q_values = torch.sum(q_probs_per_atom * atoms, dim=-1)
+        
+        return {
+            "qf_preds": q_values,
+            "qf_logits": q_logits_per_atom,
+            "qf_probs": q_probs_per_atom,
+            "atoms": atoms,
+        }
+
+    @override(QNetAPI)
+    def compute_advantage_distribution(
+        self,
+        batch: Dict[str, TensorType],
+    ) -> Dict[str, TensorType]:
+        """
+        Computes the advantage distribution.
+
+        For a Dueling Distributional Q-network, this implementation directly
+        returns the Q-distribution by default, which is sufficient for the
+        DQN learner.
+        """
+        return self.compute_q_values(batch)
+    
+    def sanity_check(self):
         print(f"  Verifying parameters after TMNFActorCriticModule setup:")
         has_params = False
         for name, param in self.named_parameters():
@@ -94,49 +167,3 @@ class TMNFDistDQNModule(TorchRLModule,QNetAPI,TargetNetworkAPI):
             raise RuntimeError("TMNFActorCriticModule failed to register any trainable parameters. Optimizer cannot be created.")
         else:
             print(f"    SUCCESS: Trainable parameters found in TMNFActorCriticModule.")
-
-    # ... (Your existing setup method)
-    # You would need to add num_atoms, v_min, and v_max to your setup here.
-    # For example:
-    # self.num_atoms = self.model_config.get("num_atoms", 51)
-    # self.v_min = self.model_config.get("v_min", -10.0)
-    # self.v_max = self.model_config.get("v_max", 10.0)
-
-    # In your Q-network setup, the final layer must output num_atoms * num_actions
-    # self.qnet = NoisyLinear(in_dim, self.action_space.n * self.num_atoms)
-    # and then reshape it later.
-
-    @override(QNetAPI)
-    def compute_q_values(self, batch: Dict[str, TensorType]) -> Dict[str, TensorType]:
-        """
-        Computes Q-value distributions (logits, probabilities) and mean Q-values.
-        """
-        obs = batch[Columns.OBS]
-        
-        # Pass the observation through the feature extractor
-        features = self.feature_extractor(obs)
-        
-        # Pass features through the Q-network
-        q_logits_per_atom = self.qnet(features)
-        
-        # Reshape the logits to (batch_size, num_actions, num_atoms)
-        q_logits_per_atom = q_logits_per_atom.view(
-            -1, self.action_space.n, self.num_atoms
-        )
-        
-        # Compute probabilities from logits (softmax over the atoms dimension)
-        q_probs_per_atom = nn.functional.softmax(q_logits_per_atom, dim=-1)
-        
-        # Compute the Q-value predictions (mean of the distribution)
-        # This requires creating the tensor of atoms (the support of the distribution)
-        atoms = torch.linspace(self.v_min, self.v_max, self.num_atoms, device=self.device)
-        
-        # Compute the mean Q-value as the sum of (probability * atom_value)
-        q_values = torch.sum(q_probs_per_atom * atoms, dim=-1)
-        
-        return {
-            "qf_preds": q_values,
-            "qf_logits": q_logits_per_atom,
-            "qf_probs": q_probs_per_atom,
-            "atoms": atoms,
-        }
