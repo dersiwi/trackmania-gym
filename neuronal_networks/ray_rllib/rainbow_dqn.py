@@ -21,22 +21,6 @@ from ray.rllib.utils.typing import TensorType
 from neuronal_networks.custom_extractor import TMN_Extractor    
 
 class TMNFDistDQNModule(TorchRLModule,QNetAPI,TargetNetworkAPI):
-
-    def _build_mlp_with_noisy_heads(self, in_dim: int, hidden_layers: list, out_dim: int, activation_fn: nn.Module) -> nn.Sequential:
-        """
-        A helper method to build an MLP with NoisyLinear layers and a final output layer.
-        """
-        layers = []
-        current_in_dim = in_dim
-        for out_dim_mlp in hidden_layers:
-            layers.append(NoisyLinear(current_in_dim, out_dim_mlp))
-            layers.append(activation_fn())
-            current_in_dim = out_dim_mlp
-        
-        # Add the final output layer, which is also a NoisyLinear layer
-        layers.append(NoisyLinear(current_in_dim, out_dim))
-        
-        return nn.Sequential(*layers)
       
     @override(TorchRLModule)
     def setup(self):
@@ -194,6 +178,48 @@ class TMNFDistDQNModule(TorchRLModule,QNetAPI,TargetNetworkAPI):
             "qf_probs": q_probs_per_atom,
             "atoms": atoms,
         }
+    
+    @override(TorchRLModule)
+    def _forward_inference(self, batch: Dict[str, Any], **kwargs) -> Dict[str, Any]:
+        """The forward pass for inference (action selection). Outputs Q-values."""
+        fwd_out = self.compute_q_values(batch)
+        return {
+            Columns.ACTION_DIST_INPUTS: fwd_out["qf_preds"],
+        }
+        
+    @override(TorchRLModule)
+    def _forward_exploration(self, batch: Dict[str, Any], **kwargs) -> Dict[str, Any]:
+        """The forward pass for exploration. Outputs Q-values."""
+        fwd_out = self.compute_q_values(batch)
+        return {
+            Columns.ACTION_DIST_INPUTS: fwd_out["qf_preds"],
+        }
+    
+    @override(TorchRLModule)
+    def _forward_train(self, batch: Dict[str, Any], **kwargs) -> Dict[str, Any]:
+        """The forward pass for training. Outputs Q-value predictions and logits."""
+        fwd_out = self.compute_q_values(batch)
+        
+        return {
+            Columns.VF_PREDS: fwd_out["qf_preds"],
+            Columns.ACTION_DIST_INPUTS: fwd_out["qf_logits"],
+        }
+    
+    def _build_mlp_with_noisy_heads(self, in_dim: int, hidden_layers: list, out_dim: int, activation_fn: nn.Module) -> nn.Sequential:
+        """
+        A helper method to build an MLP with NoisyLinear layers and a final output layer.
+        """
+        layers = []
+        current_in_dim = in_dim
+        for out_dim_mlp in hidden_layers:
+            layers.append(NoisyLinear(current_in_dim, out_dim_mlp))
+            layers.append(activation_fn())
+            current_in_dim = out_dim_mlp
+        
+        # Add the final output layer, which is also a NoisyLinear layer
+        layers.append(NoisyLinear(current_in_dim, out_dim))
+        
+        return nn.Sequential(*layers)
     
     def sanity_check(self):
         print(f"  Verifying parameters after TMNFActorCriticModule setup:")
