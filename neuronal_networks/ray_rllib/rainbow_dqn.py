@@ -233,3 +233,86 @@ class TMNFDistDQNModule(TorchRLModule,QNetAPI,TargetNetworkAPI):
             raise RuntimeError("TMNFActorCriticModule failed to register any trainable parameters. Optimizer cannot be created.")
         else:
             print(f"    SUCCESS: Trainable parameters found in TMNFActorCriticModule.")
+    
+from ray.rllib.algorithms.dqn.torch.default_dqn_torch_rl_module import DefaultDQNTorchRLModule
+from ray.rllib.algorithms.dqn.default_dqn_rl_module import DefaultDQNRLModule
+
+
+class TMNDQNTorchModule(DefaultDQNRLModule):
+
+    @override
+    def setup(self):
+        super().setup()
+         # Retrieve parameters from model_config
+        self.vision_model_class = self.model_config.get("vision_model_class", None)
+        self.extractor_per_component_dim = self.model_config.get("extractor_per_component_dim", 64)
+        self.float_model_layers = self.model_config.get("float_model_layers", [64, 32]) 
+        self.activation_fn = self.model_config.get("activation_fn", nn.ReLU)
+        self.last_activation_fn = self.model_config.get("last_activation_fn", nn.Tanh)
+        self.normalized_image = self.model_config.get("normalized_image", False)
+        self.vision_model_params = self.model_config.get("vision_model_params", {})
+        self.device =  self.model_config.get("device", "cuda")
+
+        ### Building the feature extractor ###
+        vision_model_instance = None
+        if "image" in self.observation_space.spaces:
+            if self.vision_model_class is None:
+                raise ValueError("`vision_model_class` must be provided in `model_config` "
+                                 "if 'image' is in the observation space.")
+            
+            vision_model_instance = self.vision_model_class(
+                out_dim=self.extractor_per_component_dim,
+                img_shape=self.observation_space.spaces["image"].shape,
+                **self.vision_model_params
+            ).to(self.device) 
+
+        self.encoder = TMN_Extractor(
+            observation_space=self.observation_space,
+            vision_model=vision_model_instance, 
+            out_dim=self.extractor_per_component_dim,
+            device=self.device, 
+            normalized_image=self.normalized_image,
+            float_model=self.float_model_layers,
+            activation_fn=self.activation_fn,
+            last_activation_fn=self.last_activation_fn
+        )
+
+        final_feature_dim = self.encoder._features_dim 
+
+        # Build heads.
+        advantage_head_layers = self.model_config.get("advantage_head_layers", [256])
+        self.af = self._build_mlp_with_noisy_heads(
+            in_dim=final_feature_dim,
+            hidden_layers=advantage_head_layers,
+            out_dim=self.action_space.n * self.num_atoms,
+            activation_fn=self.activation_fn
+        ).to(self.device)
+
+        if self.uses_dueling:
+            value_head_layers = self.model_config.get("value_head_layers", [256])
+            # If in a dueling setting setup the value function head.
+            self.vf = self._build_mlp_with_noisy_heads(
+                in_dim=final_feature_dim,
+                hidden_layers=value_head_layers,
+                out_dim=self.num_atoms,
+                activation_fn=self.activation_fn
+            ).to(self.device)
+
+        # Sanity check / verification: Check for parameters after setup 
+        self.sanity_check()
+    
+    def _build_mlp_with_noisy_heads(self, in_dim: int, hidden_layers: list, out_dim: int, activation_fn: nn.Module) -> nn.Sequential:
+        """
+        A helper method to build an MLP with NoisyLinear layers and a final output layer.
+        """
+        layers = []
+        current_in_dim = in_dim
+        for out_dim_mlp in hidden_layers:
+            layers.append(NoisyLinear(current_in_dim, out_dim_mlp))
+            layers.append(activation_fn())
+            current_in_dim = out_dim_mlp
+        
+        # Add the final output layer, which is also a NoisyLinear layer
+        layers.append(NoisyLinear(current_in_dim, out_dim))
+        
+        return nn.Sequential(*layers)

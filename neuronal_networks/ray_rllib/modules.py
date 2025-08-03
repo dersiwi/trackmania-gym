@@ -6,6 +6,7 @@ from torch import nn
 from ray.rllib.core.rl_module.apis import (
     TargetNetworkAPI,
     ValueFunctionAPI,
+    QNetAPI,
     TARGET_NETWORK_ACTION_DIST_INPUTS,
 )
 
