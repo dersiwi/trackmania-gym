@@ -24,7 +24,7 @@ class ListbasedObs(ObservationManager):
         statevector_dim = get_flattened_dict_dim([simstate_space_dict[obsname] for obsname in self.observation_list])
 
         return spaces.Dict({
-                "image": spaces.Box(low=0, high=1.0, shape=(self.n_channels, self.img_height, self.img_width), dtype=np.float32),
+                "image": spaces.Box(low=0, high=255, shape=(self.n_channels, self.img_height, self.img_width), dtype=np.uint8),
                 "state": spaces.Box(low=-np.inf, high=np.inf, shape=(statevector_dim,), dtype=np.float32),
             })
     

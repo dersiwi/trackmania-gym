@@ -1,4 +1,5 @@
 name: "async_actor_critic"
+normalize_images: True
 
 actor:
    extractors_out_dim: 64

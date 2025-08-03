@@ -56,7 +56,7 @@ class SophyObsManager(ObservationManager):
     def get_observation_dict(self):
 
         return spaces.Dict({
-                "image": spaces.Box(low=0, high=1.0, shape=(self.n_channels, self.img_height, self.img_width), dtype=np.uint8),
+                "image": spaces.Box(low=0, high=255, shape=(self.n_channels, self.img_height, self.img_width), dtype=np.uint8),
                 "propriocentric_features": spaces.Box(low=-np.inf, high=np.inf, shape=(self.propriocentric_features_dim,), dtype=np.float32),
                 "global_features": spaces.Box(low=-np.inf, high=np.inf, shape=(self.global_features_dim,), dtype=np.float32),
             })
