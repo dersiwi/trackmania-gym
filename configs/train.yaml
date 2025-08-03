@@ -1,7 +1,7 @@
 defaults:
   - platforms: linux.yaml  # or platforms/windows
   - rl_env: single_agent_env.yaml
-  - sb3: ppo.yaml
+  - sb3: qr_dqn.yaml
   - wandb_callbacks : sb3_callback.yaml
   - models: visionmodelsix.yaml
   - lr_scheduler: no_scheduling.yaml
@@ -30,4 +30,4 @@ wandb:
   entity : tmnf-practical-ss25
   project : tmnf_ppo
   checkpoint_freq : 500000 # after how many steps should the model be saved automatically
-  eval_freq : 1000000 # after how many steps should we check if there is a new better mode
+  eval_freq : 3000000 # after how many steps should we check if there is a new better mode

@@ -6,7 +6,7 @@ constructor:
 
 algorithm_params:
   learning_rate: 0.00025             # The learning rate, can be a function of progress remaining (from 1 to 0)
-  buffer_size: 500000              # Size of the replay buffer
+  buffer_size: 750000              # Size of the replay buffer
   learning_starts: 100               # Steps before learning starts (collecting transitions)
   batch_size: 32                     # Minibatch size for each gradient update
   tau: 1.0                           # Soft update coefficient ("Polyak update", 1.0 = hard update)
@@ -16,7 +16,7 @@ algorithm_params:
   replay_buffer_class: null         # Replay buffer class to use (e.g. HerReplayBuffer), null for default
   replay_buffer_kwargs: null         # Extra arguments for the replay buffer
   optimize_memory_usage: false       # Use memory-efficient replay buffer (adds complexity)
-#  n_steps: 100                        # Use n-step return when > 1 (with NStepReplayBuffer)
+ # n_steps: 3                        # Use n-step return when > 1 (with NStepReplayBuffer)
   target_update_interval: 10000      # Update the target network every N environment steps
   exploration_fraction: 0.005        # Fraction of training to anneal epsilon
   exploration_initial_eps: 1.0       # Initial epsilon for random actions
