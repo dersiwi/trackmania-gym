@@ -11,9 +11,9 @@ env:
 
   reset_mode : "respawn"
   position_buffer_size : 20
-  position_moved_threshold : 0.8
+  position_moved_threshold : 0.2
 
-  normalize_rewards : True
+  normalize_rewards : False
 
   game_speed : 70
   countdown_speed : 70

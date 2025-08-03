@@ -18,6 +18,8 @@ from neuronal_networks.get_policy import get_policy
 from neuronal_networks.custom_extractor import AsyncActorCriticPolicy
 import os
 
+from sb3_contrib.qrdqn.qrdqn import QRDQN
+
 def print_model_params(model : BaseAlgorithm):
     """"Prints parametrs of the given model"""
     print("\nExtractor, Policy and Critic architecturs:\n" + "-"*30)
@@ -33,14 +35,18 @@ def print_model_params(model : BaseAlgorithm):
             model.policy.value_features_extractor.named_parameters(),
             model.policy.mlp_extractor.named_parameters()):
             print(name, param.shape)
+    elif isinstance(model,QRDQN):
+        for name, param in model.quantile_net.features_extractor.named_parameters():
+            print(f"{name}: requires_grad = {param.requires_grad}")
     else:
         for name, param in chain(model.policy.features_extractor.named_parameters(),model.policy.mlp_extractor.named_parameters()):
             print(f"{name}: requires_grad = {param.requires_grad}")
-    print("\nActor- and Value-Networks Parameters:\n" + "-"*30)
-    for name, param in chain(model.policy.action_net.named_parameters(),model.policy.value_net.named_parameters()):
-        print(f"{name}: requires_grad = {param.requires_grad}")
+
     
     if isinstance(model.policy, ActorCriticPolicy):
+        print("\nActor- and Value-Networks Parameters:\n" + "-"*30)
+        for name, param in chain(model.policy.action_net.named_parameters(),model.policy.value_net.named_parameters()):
+            print(f"{name}: requires_grad = {param.requires_grad}")
         print("\n[INFO] Checking whether the actor and critic are using the same feature extractor:\n" + "-"*30)
         if isinstance(model.policy,AsyncActorCriticPolicy):
             actor_id = id(model.policy.policy_features_extractor)

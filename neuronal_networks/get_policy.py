@@ -55,7 +55,8 @@ def get_policy(
                 features_extractor_kwargs= dict( 
                     vision_model = vision_model,
                     device= device,
-                    out_dim =  policy_cfg.extractors_out_dim)
+                    out_dim =  policy_cfg.extractors_out_dim),
+                normalize_images = policy_cfg.normalize_images
                 )
         case "async_actor_critic":
             actor_obs = OmegaConf.to_object(ListConfig(policy_cfg.actor.observations))
@@ -90,7 +91,18 @@ def get_policy(
                 policy_features_extractor= policy_features_extractor,
                 value_features_extractor= value_features_extractor,
                 net_arch=net_arch,
-                activation_fn=act_fn
+                activation_fn=act_fn,
+                normalize_images = policy_cfg.normalize_images
             )
+        case "dqn":
+              return policy_cfg.type ,dict(
+                features_extractor_class=TMN_Extractor,
+                features_extractor_kwargs= dict( 
+                    vision_model = vision_model,
+                    device= device,
+                    out_dim =  policy_cfg.extractors_out_dim,),
+                normalize_images = policy_cfg.normalize_images
+                )
+
         case _ :
             raise ValueError(f"Policy type {policy_cfg.name} not known.") 
