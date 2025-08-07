@@ -114,6 +114,36 @@ class DropoffScheduler(LR_Scheduler):
             
         return schedule
 
+class TriangleScheduler(LR_Scheduler):
+    """
+    A learning rate scheduler that follows a triangular policy.
+
+    The learning rate first increases linearly from 0 to its peak value,
+    and then decreases linearly back down to 0 for the remainder of the training.
+    The peak of the triangle is controlled by the `peak` parameter.
+    """
+     
+    def __init__(self, initial_learning_rate, peak:float = 0.1):
+        assert 0 <= peak <1 
+        super().__init__(initial_learning_rate)
+        self.peak = peak
+    
+    def get_scheduler(self) -> Callable[[float], float]:
+        """
+    
+        """
+        def schedule(progress_remaining: float) -> float:
+            """
+            Progress will decrease from 1 (beginning) to 0.
+            """
+            progress_remaining = 1 - progress_remaining #make it go from 0 to 1
+            if progress_remaining <= self.peak:
+                return progress_remaining * self.initial_value / self.peak 
+    
+            return (self.initial_value  / (1-self.peak) ) * (1 - progress_remaining)
+
+        return schedule
+    
     
 
 if __name__ ==  "__main__":
