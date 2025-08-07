@@ -20,6 +20,10 @@ import os
 
 from sb3_contrib.qrdqn.qrdqn import QRDQN
 
+from stable_baselines3.common.off_policy_algorithm import OffPolicyAlgorithm
+from stable_baselines3.common.on_policy_algorithm import OnPolicyAlgorithm
+
+
 def print_model_params(model : BaseAlgorithm):
     """"Prints parametrs of the given model"""
     print("\nExtractor, Policy and Critic architecturs:\n" + "-"*30)
@@ -77,7 +81,14 @@ def get_vision_model(cfg : TrainConfig, img_shape, extractor_out_dim : int) -> n
     
     return vision_model
 
-def get_models(cfg : TrainConfig, tm_env : TMNF_Single_Agent_Env, print_params : bool = False,run_id:str = "test",load_model_path: str | None = None) -> tuple[nn.Module, BaseAlgorithm | PPO]:
+def get_models(
+        cfg : TrainConfig,
+        tm_env : TMNF_Single_Agent_Env,
+        print_params : bool = False,
+        run_id:str = "test",
+        load_model_path: str | None = None,
+        load_replay_buffer_path: str | None = None
+        ) -> tuple[nn.Module, BaseAlgorithm | PPO]:
 
     """instanciates vision-model as well as sb3 algorithm according to parameters
     
@@ -109,13 +120,13 @@ def get_models(cfg : TrainConfig, tm_env : TMNF_Single_Agent_Env, print_params :
     lr : LR_Scheduler = hydra.utils.instantiate(cfg.lr_scheduler)
     model_args["learning_rate"] = lr.get_scheduler()
 
-    if not (load_model_path is None):
-        # TODO remove the PPO and make this modular so it can be used with different algos
-        model = PPO(**model_args)
+    model_constructor = hydra.utils.instantiate(cfg.sb3.constructor)
+    model : BaseAlgorithm = model_constructor(**model_args)
+
+    if load_model_path is not None: 
         model.set_parameters(load_model_path)
-    else:
-        model_constructor = hydra.utils.instantiate(cfg.sb3.constructor)
-        model : BaseAlgorithm | PPO | SAC | DQN = model_constructor(**model_args)
+        if isinstance(model,OffPolicyAlgorithm) and load_replay_buffer_path:
+            model.load_replay_buffer(load_replay_buffer_path)
     
     if print_params:
         print_model_params(model)

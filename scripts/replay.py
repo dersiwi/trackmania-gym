@@ -30,21 +30,21 @@ _HYDRA_PARAMS = {
 
 @hydra.main(**_HYDRA_PARAMS)
 def main(cfg : TrainConfig):
-
-    tmi_process, control_queue, response_queue = start_process_and_wait_for_startsignal(cfg, cfg.image.width, cfg.image.height)
+    tmi_process, control_queue, response_queue = start_process_and_wait_for_startsignal(cfg, cfg.rl_env.obs_manager.img_width, cfg.rl_env.obs_manager.img_height)
 
     try:
         tm_env = get_environment(cfg, control_queue, response_queue)
         
         # get algorithm and start learning process
         vision_model, model = get_models(cfg, tm_env, print_params = True,load_model_path= model_path)
-        model.policy.features_extractor.eval()
-        model.policy.eval()
+        #model.policy.features_extractor.eval()
+        # this should be sufficient 
+        eval_policy = model.policy.eval()
         
         terminated = False
         observations, info = tm_env.reset()
         while True:
-            action, state = model.predict(observations, deterministic=True)
+            action, state = eval_policy.predict(observations, deterministic=True)
             observations, reward, terminated, truncated, info = tm_env.step(action)
             if terminated or truncated: tm_env.reset()
     except Exception as e:
