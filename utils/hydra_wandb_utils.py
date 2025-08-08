@@ -123,10 +123,15 @@ def get_models(
     model_constructor = hydra.utils.instantiate(cfg.sb3.constructor)
     model : BaseAlgorithm = model_constructor(**model_args)
 
-    if load_model_path is not None: 
+    if load_model_path: 
+        # set_parameters() operates in in-place. If we would use model.load() we would 
+        # need to reassign it to the model variable since the method doesn't work in-place
         model.set_parameters(load_model_path)
+        print(f"Loading model from {load_model_path}...")
+
         if isinstance(model,OffPolicyAlgorithm) and load_replay_buffer_path:
             model.load_replay_buffer(load_replay_buffer_path)
+            print(f"Loading replay buffer from {load_replay_buffer_path}...")
     
     if print_params:
         print_model_params(model)
@@ -134,12 +139,18 @@ def get_models(
     return vision_model, model
 
 
-def init_and_login_wandb(cfg : TrainConfig, wandbdir : str = "wandb") -> tuple[Run | None, str]:
+def init_and_login_wandb(cfg : TrainConfig, wandbdir : str = "wandb",run_id = None, resume = None ) -> tuple[Run | None, str]:
     """Instanciates and logs into weights and biases (wandb), if specified in configuration (cfg.wandb.use).
     After login, returns tuple of Run-instance and run-id 
     
-    If cfg.wandb.use is False, the returned Run is None."""
-    run_id = ""
+    If cfg.wandb.use is False, the returned Run is None.
+
+    :param cfg: The configuration object containing wandb settings.
+    :param wandbdir: The directory where wandb run data will be stored.
+    :param run_id: The ID of a previous run to resume.
+    :param resume: The resume behavior for the wandb run (e.g., "allow", "must", "never")
+    """
+    #run_id = run_id or ""
     if cfg.wandb.use:
         wandb.login()
         wandb_conf = OmegaConf.to_container(cfg, resolve=True,throw_on_missing=True)
@@ -151,11 +162,13 @@ def init_and_login_wandb(cfg : TrainConfig, wandbdir : str = "wandb") -> tuple[R
             monitor_gym=True,  
             save_code=True,
             dir = wandbdir,
-            config=wandb_conf)
+            config=wandb_conf,
+            id = run_id,
+            resume= resume)
         run_id = run.id
         return run, run_id
     else:
-        return None, run_id
+        return None, ""
     
 
 from stable_baselines3.common.callbacks import EvalCallback, CheckpointCallback, CallbackList
@@ -165,9 +178,11 @@ import glob
 
 class BeforeAndAfterTraining:
 
-    def __init__(self, hydra_run_dir : str, cfg : TrainConfig):
+    def __init__(self, hydra_run_dir : str, cfg : TrainConfig, run_id = None, resume = None ):
         self.hydra_run_dir = hydra_run_dir
         self.cfg = cfg
+        self.run_id = run_id
+        self.resume = resume
 
 
     def before_training(self) -> None:
@@ -179,8 +194,8 @@ class BeforeAndAfterTraining:
         os.makedirs(self.checkpoint_path, exist_ok=True)
 
         # Start Weights and Biases login
-        self.run, run_id = init_and_login_wandb(self.cfg, wandbdir=self.hydra_run_dir)
-        self.run_id_in_hydra_log_dir = os.path.join(self.hydra_run_dir, run_id)
+        self.run, self.run_id = init_and_login_wandb(self.cfg, wandbdir=self.hydra_run_dir,run_id= self.run_id,resume= self.resume)
+        self.run_id_in_hydra_log_dir = os.path.join(self.hydra_run_dir, self.run_id)
 
 
     def get_tensorboard_login_identifier(self) -> str:
