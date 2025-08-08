@@ -127,6 +127,7 @@ def main(cfg : TrainConfig):
                 break
     
             cfg.learn_args.total_timesteps = cfg.learn_args.total_timesteps - steps_trained
+            cfg.learn_args.progress_bar = False # when not set to false another progess bar tries to get created eventhough only one can exist
             result = train_agent(
                 cfg=cfg,
                 model_save_path=model_path,

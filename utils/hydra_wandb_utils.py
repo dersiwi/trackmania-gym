@@ -154,7 +154,6 @@ def init_and_login_wandb(cfg : TrainConfig, wandbdir : str = "wandb",run_id = No
     if cfg.wandb.use:
         wandb.login()
         wandb_conf = OmegaConf.to_container(cfg, resolve=True,throw_on_missing=True)
-        wandb.config = wandb_conf
         run = wandb.init(
             entity=cfg.wandb.entity, 
             project=cfg.wandb.project,
@@ -166,6 +165,7 @@ def init_and_login_wandb(cfg : TrainConfig, wandbdir : str = "wandb",run_id = No
             id = run_id,
             resume= resume)
         run_id = run.id
+        wandb.config.update(wandb_conf,allow_val_change=True) # if run gets resumed then this has to updated and not overriden via wandb.config = wandbn_conf
         return run, run_id
     else:
         return None, ""
