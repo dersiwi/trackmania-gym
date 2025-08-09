@@ -8,7 +8,7 @@ from trackmania_env.observations.linesight_obs_wrapper import get_linesight_obs_
 from trackmania_env.observations.nextpoint_obs import NextPointObsManager
 from trackmania_env.observations.sophy_obs import SophyObsManager
 
-def get_observation_manager(cfg : TrainConfig, wrap_obs_in_test : bool = False) -> ObservationManager:
+def get_observation_manager(cfg : TrainConfig, wrap_obs_in_test : bool = False, normalize : bool = False) -> ObservationManager:
     """Instanciate Configuration manager according to confguration.
         - wrap_obs_in_test : If True, Instanciates ObservationTest() with given instanciated observation wrapper."""
     
@@ -28,7 +28,8 @@ def get_observation_manager(cfg : TrainConfig, wrap_obs_in_test : bool = False) 
             obs_manager = NextPointObsManager(colorspace=obs_manager_cfg.colorspace,
                                         convert_torch=obs_manager_cfg.convert_torch,
                                         img_width=obs_manager_cfg.img_width, 
-                                        img_height=obs_manager_cfg.img_height)
+                                        img_height=obs_manager_cfg.img_height,
+                                        normalize_obs = normalize)
         
         case "sophy": 
             obs_manager = SophyObsManager(colorspace=obs_manager_cfg.colorspace,
@@ -48,5 +49,6 @@ def get_observation_manager(cfg : TrainConfig, wrap_obs_in_test : bool = False) 
                                         convert_torch=obs_manager_cfg.convert_torch,
                                         img_width=obs_manager_cfg.img_width, 
                                         img_height=obs_manager_cfg.img_height,
+                                        normalize_obs = normalize,
                                         log_directory="logs/observations", log_frequency=1)
     return obs_manager

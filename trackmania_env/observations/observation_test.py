@@ -11,8 +11,8 @@ from PIL import Image
 
 class ObservationTest(ObservationManager):
 
-    def __init__(self, obs_mangager : ObservationManager, colorspace, convert_torch, img_width, img_height, log_directory : str, log_frequency : int = 10, log_images : bool = True, max_logs = 50):
-        super().__init__(colorspace, convert_torch, img_width, img_height)
+    def __init__(self, obs_mangager : ObservationManager, colorspace, convert_torch, img_width, img_height, log_directory : str, normalize_obs : bool = False, log_frequency : int = 10, log_images : bool = True, max_logs = 50):
+        super().__init__(colorspace, convert_torch, img_width, img_height, normalize_obs=normalize_obs)
         self.log_directory = log_directory
         self.log_frequency = log_frequency
         self.step = 0

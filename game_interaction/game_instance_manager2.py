@@ -16,9 +16,11 @@ if os.name == 'nt':
     import win32gui 
     import win32.lib.win32con as win32con
     import win32com.client
+else:
+    from xdo import Xdo
+    from Xlib import X
 from pathlib import Path
-from xdo import Xdo
-from Xlib import X
+
 
 #from multiprocessing.synchronize import Lock
 from game_interaction.tminterface2 import TMInterface

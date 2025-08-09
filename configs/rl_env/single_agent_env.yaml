@@ -14,6 +14,7 @@ env:
   position_moved_threshold : 0.2
 
   normalize_rewards : False
+  normalize_obs : True
 
   game_speed : 70
   countdown_speed : 70

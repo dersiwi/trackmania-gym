@@ -18,7 +18,7 @@ class ObservationManager:
 
         REV_DICT = {"grayscale" : 0, "rgb" : 1, "rgba" : 2} #this is somewhat ugly but this way the config contains a readable string
 
-    def __init__(self, colorspace : str, convert_torch : bool, img_width : int, img_height : int, obs_have_img: bool = True, img_dump_freq : int = 1000000, n_dump_imgs : int= 20):
+    def __init__(self, colorspace : str, convert_torch : bool, img_width : int, img_height : int, obs_have_img: bool = True, img_dump_freq : int = 1000000, n_dump_imgs : int= 20, normalize_obs : bool = False):
         """
         Parameters
         ---------
@@ -36,6 +36,8 @@ class ObservationManager:
         self.convert_torch : bool = convert_torch
         self.img_width = img_width
         self.img_height = img_height
+
+        self.normalize_state_vec : bool = normalize_obs
 
         self.env = None
         self.n_channels = 1 if self.colorspace == ObservationManager.Colorspace.GRAYSCALE else 3
@@ -63,6 +65,15 @@ class ObservationManager:
         -------
         Vector of shape [N,] where N is the amount of non-image observation-fields."""
         raise NotImplementedError("Do not use this method directly, use on of the implementations of this method.")
+    
+    def normalize_state_vector(self, obs : np.ndarray) -> np.ndarray:
+        """Normalizes unnormaliezd (@param : obs) state vector.
+        This method has to be overwritten by subclass, otherwise it returns the identity.
+
+        Returns
+        -------
+        Normalized observations. """
+        return obs
 
     def cnvt_imgs(self, images : np.ndarray) -> np.ndarray | torch.Tensor:
         """Converts image given by simulation into specified colortype and normalizes them into [0,1]."""
@@ -103,9 +114,22 @@ class ObservationManager:
     
     def get_observation(self, raw_observation : dict[str, np.ndarray | SimStateData]) -> tuple[np.ndarray | dict[str, np.ndarray] | torch.Tensor | dict[str, torch.Tensor],dict[str,any]]:
         """
-        Takes raw observations from TMInterface and dissects them into image
+        Takes raw observations from TMInterface and dissects them into image.
+
+        - Uses self.get_values_from_state_dict() to convert SimStateData into a state-observation vector
+        - Uses self.normalize_state_vector() to normalize state vector observations, if specified
+        - Uses self.cvt_igms() to convert the images into correct format, normalization and torch, if specified.
+
+        Returns
+        -------
+            - dictionary ["img", "state"], if self.obs_have_img; otherwise it returns only a state-vector
+            1) It converts both tensors to pytorch, if self.convert_torch, otherwise they are returned as numpy arrays.
+            2) If self.normalize_state_vec it uses self.normalize_state_vector() to normalize the observations
         """
         state_observation_vector = self.get_values_from_state_dict(raw_observation[IPCFields.SIMSTATE])
+        if self.normalize_state_vec:
+            state_observation_vector = self.normalize_state_vector(state_observation_vector)
+            
         if self.convert_torch:
             state_observation_vector = torch.from_numpy(state_observation_vector)
 

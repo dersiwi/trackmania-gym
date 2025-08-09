@@ -1,5 +1,5 @@
 defaults:
-  - platforms: linux.yaml  # or platforms/windows
+  - platforms: windows2.yaml  # or platforms/windows
   - rl_env: single_agent_env.yaml
   - sb3: qr_dqn.yaml
   - wandb_callbacks : sb3_callback.yaml

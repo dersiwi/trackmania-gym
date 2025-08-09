@@ -17,17 +17,49 @@ from tminterface.structs import (
     Engine)
 from trackmania_env.utils.contact_materials import physics_behavior_fromint,NUM_SURFACE_CATEGORIES
 
+class OSV:
+   """Utility calss for indexes in statevector of Nextpoint obs manager."""
+   def __init__(self, n_refline_points : int):
+        #TODO : fix?
+        self.drel_idx = 0
+        self.speed_idx = 1
+        self.lateral_dist_idx = 2
+        self.refline_idxs = np.array([3, 3 + n_refline_points * 3])
+        
+        self.sliding_idxs = np.array([self.refline_idxs[1], self.refline_idxs[1] + 4])
+        self.ground_contact_idxs = np.array([self.sliding_idxs[1], self.sliding_idxs[1] + 4])
+        self.damper_asorb_idx  = np.array([self.ground_contact_idxs[1], self.ground_contact_idxs[1] + 4])
+        self.gearbox_state_idx = self.damper_asorb_idx[1] + 1
+        self.gear_idx = self.gearbox_state_idx + 1
+        self.actual_rpm_idx = self.gear_idx + 1
+        self.is_freewheeling_idx = self.actual_rpm_idx + 1
+        self.zero_to_surfaces_idxs = self.is_freewheeling_idx
+
+
 
 class NextPointObsManager(ObservationManager):
-    def __init__(self, colorspace, convert_torch, img_width, img_height):
-        super().__init__(colorspace, convert_torch, img_width, img_height)
+    def __init__(self, colorspace, convert_torch, img_width, img_height, normalize_obs):
+        super().__init__(colorspace, convert_torch, img_width, img_height, normalize_obs=normalize_obs)
         self.reference_line_points_lookahead = 10
         self.refeence_line_stride = 10
         assert self.reference_line_points_lookahead % self.refeence_line_stride == 0
         self.last_obs : SimStateData = None
 
         self.statevector_dim = 0
-        
+        self.idxs = OSV(self.reference_line_points_lookahead)
+
+    def normalize_state_vector(self, obs):
+        obs[self.idxs.speed_idx] = obs[self.idxs.speed_idx] / 1000 # speed
+        obs[self.idxs.refline_idxs[0] : self.idxs.refline_idxs[1]] = obs[self.idxs.refline_idxs[0] : self.idxs.refline_idxs[1]] / 100 # coming refline points, theoretically the max-value is 1000, but this is never reached realistically.
+        obs[self.idxs.gearbox_state_idx] = obs[self.idxs.gearbox_state_idx] / 5 # gearbox
+        obs[self.idxs.actual_rpm_idx] = obs[self.idxs.actual_rpm_idx] / 10000 # rpm
+        obs[self.idxs.damper_asorb_idx[0] : self.idxs.damper_asorb_idx[1]] = obs[self.idxs.damper_asorb_idx[0] : self.idxs.damper_asorb_idx[1]] / 0.15 
+        assert all(obs[:self.idxs.zero_to_surfaces_idxs]) <= 1.0, "Expected observations to be normalized between [0,1] but got unnormalized obs."
+        assert obs[self.idxs.refline_idxs[0] : self.idxs.refline_idxs[1]].shape[0] == self.reference_line_points_lookahead * 3, f"Expected to have 40 points, but got {obs[self.idxs.refline_idxs[0] : self.idxs.refline_idxs[1]].shape[0]}"
+        print(obs[self.idxs.refline_idxs[0] : self.idxs.refline_idxs[1]])
+        return obs
+
+
     def get_observation_dict(self) -> spaces.Dict:
         """Returns observation dict for environment according to initialization."""
         self.statevector_dim = (

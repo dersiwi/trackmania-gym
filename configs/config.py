@@ -143,6 +143,7 @@ class EnvConfig:
     camera_id : int
 
     normalize_rewards : bool
+    normalize_obs : bool
 
     ignore_stuck_for_n_steps_after_reset : int
     increase_timeout_intervals : list[int]

@@ -46,8 +46,8 @@ def main(cfg : TrainConfig):
     tm_env = TestEnvironment(
         command_queue=control_queue,
         response_queue=response_queue,
-        obs_manager=get_observation_manager(cfg), 
-        reward_calculator=get_reward_calculator(cfg),
+        obs_manager=get_observation_manager(cfg, normalize=cfg.rl_env.env.normalize_obs), 
+        reward_calculator=get_reward_calculator(cfg, normalize=cfg.rl_env.env.normalize_rewards),
         env_cfg=cfg.rl_env.env,
         platform=cfg.platforms.os)
     
