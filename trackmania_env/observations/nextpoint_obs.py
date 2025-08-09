@@ -81,7 +81,7 @@ class OSV:
     @property
     def surface_categories(self) -> slice:
         start = self.is_freewheeling_idx + 1
-        stop  = start + 4 * NUM_SURFACE_CATEGORIES
+        stop  = start + 4
         return slice(start, stop)
 
     @property
@@ -150,14 +150,14 @@ class NextPointObsManager(ObservationManager):
         obs[self.idxs.refline]   /= 500.0                         # refline points (this should actually normalize by 1000)
         obs[self.idxs.gearbox_state_idx] /= 5.0                   # gearbox
         obs[self.idxs.actual_rpm_idx]   /= 12000.0                # rpm (dont know what the correct max-value is)
-        obs[self.idxs.damper_absorb]    /= 0.15                   # damper absorb
-        obs[self.idxs.lateral_dist_idx] /= 15                     # lateral distance.
+        #obs[self.idxs.damper_absorb]    /= 0.15                   # damper absorb
+        obs[self.idxs.lateral_dist_idx] /= 18                     # lateral distance.
 
         # Sanity checks <- i like the name of this
         gonetol = 1.0 + 1e-4
-        goneidxs = np.nonzero(obs[self.idxs.zero_to_surfaces] >= gonetol)
-        gonelabels = [self.label_block(i) for i in goneidxs[0]]
-        assert np.all(obs[self.idxs.zero_to_surfaces] <= gonetol), f"Expected observations to be normalized to [0,1] before surface categories. \
+        goneidxs = np.nonzero(obs >= gonetol)[0]
+        gonelabels = [self.label_block(i) for i in goneidxs]
+        assert np.all(obs <= gonetol), f"Expected observations to be normalized to [0,1] before surface categories. \
               Got unnormalized values : {goneidxs, obs[goneidxs]}. These are in the {gonelabels}"
 
         ref_block = obs[self.idxs.refline]
@@ -174,7 +174,7 @@ class NextPointObsManager(ObservationManager):
         """Returns observation dict for environment according to initialization."""
         self.statevector_dim = (
             #mobile states 
-            4*NUM_SURFACE_CATEGORIES
+            4
             + 3*4
             + 4*1
             # refline points
@@ -245,6 +245,23 @@ class NextPointObsManager(ObservationManager):
         #comming_refline_points_rel_to_car_flattened = comming_refline_points_rel_to_car.ravel()
         return comming_refline_points_rel_to_car
 
+    def get_surface_float(self, wheels_states : list[RealTimeState]):
+        """# linesight (from tminterface discord): TODO : Big refactor!!
+                #    n_contact_material_physics_behavior_types (here NUM_SURFACE_CATEGORIES) is the number of possible 
+                #    materials a wheel can touch, we added this thinking it would help the agent understand the different
+                #    behaviors of the car on different surfaces by having the info more than visually, again we are not sure 
+                #    if this input is useful we did not do proper ablation tests because each test is very long.
+                # 
+        This method just transforms this one-hot-encoded vector [1. 0. 0. 0. 1. 0. 0. 0. 1. 0. 0. 0. 1. 0. 0. 0.] into [0.2 0.2 0.2 0.2]"""
+        wsm = []
+        for ws in wheels_states:
+            # Doing & 0xFFFF masks the value, keeping only the lowest 16 bits and discarding any higher bits.
+            scidx = np.nonzero([i == physics_behavior_fromint[ws.contact_material_id & 0xFFFF] for i in range(NUM_SURFACE_CATEGORIES)])[0]
+            if len(scidx) == 0: wsm.append(0)
+            else:
+                assert len(scidx)  == 1, scidx
+                wsm.append(scidx[0] + 1 / (NUM_SURFACE_CATEGORIES + 1)) # +1 because sometimes its just no surface category (wheel is in the air.)
+        return np.array(wsm, dtype = np.float32)
 
     def get_mobil_states(self, game_states:SimStateData):
         # =======================================
@@ -267,16 +284,6 @@ class NextPointObsManager(ObservationManager):
                 engine.gear,  # 0 -> 5 approx                                                       size: 1
                 engine.actual_rpm,  # 0-10000 approx                                                size: 1
                 mobil.is_freewheeling, # Bool                                                       size: 1
-                # linesight (from tminterface discord):
-                #    n_contact_material_physics_behavior_types (here NUM_SURFACE_CATEGORIES) is the number of possible 
-                #    materials a wheel can touch, we added this thinking it would help the agent understand the different
-                #    behaviors of the car on different surfaces by having the info more than visually, again we are not sure 
-                #    if this input is useful we did not do proper ablation tests because each test is very long.
-                # TODO: Could we only store 4 values saying on which surface each wheel is instead of 4*NUM_SURFACE_CATEGORIES values
-                *(
-                    i == physics_behavior_fromint[ws.contact_material_id & 0xFFFF] # Doing & 0xFFFF masks the value, keeping only the lowest 16 bits and discarding any higher bits.
-                    for ws in wheels_states
-                    for i in range(NUM_SURFACE_CATEGORIES)
-                ),                                                                              #    size: 4*NUM_SURFACE_CATEGORIES
+                *self.get_surface_float(wheels_states)                                              #size: 4
             ],dtype=np.float32,)
         return car_gear_and_wheels
