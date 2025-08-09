@@ -17,25 +17,108 @@ from tminterface.structs import (
     Engine)
 from trackmania_env.utils.contact_materials import physics_behavior_fromint,NUM_SURFACE_CATEGORIES
 
+from dataclasses import dataclass
+
+@dataclass(frozen=True)
 class OSV:
-   """Utility calss for indexes in statevector of Nextpoint obs manager."""
-   def __init__(self, n_refline_points : int):
-        #TODO : fix?
-        self.drel_idx = 0
-        self.speed_idx = 1
-        self.lateral_dist_idx = 2
-        self.refline_idxs = np.array([3, 3 + n_refline_points * 3])
-        
-        self.sliding_idxs = np.array([self.refline_idxs[1], self.refline_idxs[1] + 4])
-        self.ground_contact_idxs = np.array([self.sliding_idxs[1], self.sliding_idxs[1] + 4])
-        self.damper_asorb_idx  = np.array([self.ground_contact_idxs[1], self.ground_contact_idxs[1] + 4])
-        self.gearbox_state_idx = self.damper_asorb_idx[1] + 1
-        self.gear_idx = self.gearbox_state_idx + 1
-        self.actual_rpm_idx = self.gear_idx + 1
-        self.is_freewheeling_idx = self.actual_rpm_idx + 1
-        self.zero_to_surfaces_idxs = self.is_freewheeling_idx
+    """Utility class for indexes in statevector of Nextpoint obs manager."""
+    n_refline_points: int
 
+    @property
+    def drel_idx(self) -> int:
+        return 0
 
+    @property
+    def speed_idx(self) -> int:
+        return 1
+
+    @property
+    def lateral_dist_idx(self) -> int:
+        return 2
+
+    # Ranges as slices (half-open)
+    @property
+    def refline(self) -> slice:
+        start = 3
+        stop = 3 + self.n_refline_points * 3
+        return slice(start, stop) 
+
+    @property
+    def sliding(self) -> slice:
+        start = self.refline.stop
+        stop = start + 4
+        return slice(start, stop)
+
+    @property
+    def ground_contact(self) -> slice:
+        start = self.sliding.stop
+        stop = start + 4
+        return slice(start, stop)
+
+    @property
+    def damper_absorb(self) -> slice:
+        start = self.ground_contact.stop
+        stop = start + 4
+        return slice(start, stop)
+
+    # Scalars that follow the ranges
+    @property
+    def gearbox_state_idx(self) -> int:
+        return self.damper_absorb.stop
+
+    @property
+    def gear_idx(self) -> int:
+        return self.gearbox_state_idx + 1
+
+    @property
+    def actual_rpm_idx(self) -> int:
+        return self.gear_idx + 1
+
+    @property
+    def is_freewheeling_idx(self) -> int:
+        return self.actual_rpm_idx + 1
+
+    @property
+    def surface_categories(self) -> slice:
+        start = self.is_freewheeling_idx + 1
+        stop  = start + 4 * NUM_SURFACE_CATEGORIES
+        return slice(start, stop)
+
+    @property
+    def zero_to_surfaces(self) -> slice:
+        # everything from 0 up to end of surface categories
+        return slice(0, self.surface_categories.start)
+
+    def validate(self, length: int | None = None) -> None:
+        prev = -1
+        for s in [slice(self.drel_idx, self.drel_idx+1),
+                  slice(self.speed_idx, self.speed_idx+1),
+                  slice(self.lateral_dist_idx, self.lateral_dist_idx+1),
+                  self.refline, self.sliding, self.ground_contact, self.damper_absorb,
+                  slice(self.gearbox_state_idx, self.gearbox_state_idx+1),
+                  slice(self.gear_idx, self.gear_idx+1),
+                  slice(self.actual_rpm_idx, self.actual_rpm_idx+1),
+                  slice(self.is_freewheeling_idx, self.is_freewheeling_idx+1),
+                  self.surface_categories]:
+            assert prev <= s.start <= s.stop, "Non-monotonic indexes"
+            prev = s.stop
+        if length is not None:
+            assert self.surface_categories.stop <= length, "Statevector too short"
+"""
+    def label_block(idx):
+        if idx in range(self.idxs.refline.start, self.idxs.refline.stop): return "refline"
+        if idx in range(self.idxs.sliding.start, self.idxs.sliding.stop): return "sliding"
+        if idx in range(self.idxs.ground_contact.start, self.idxs.ground_contact.stop): return "ground_contact"
+        if idx in range(self.idxs.damper_absorb.start, self.idxs.damper_absorb.stop): return "damper_absorb"
+        if idx == self.idxs.speed_idx: return "speed"
+        if idx == self.idxs.gear_idx: return "gear"
+        if idx == self.idxs.gearbox_state_idx: return "gearbox_state"
+        if idx == self.idxs.actual_rpm_idx: return "rpm"
+        if idx == self.idxs.is_freewheeling_idx: return "is_freewheeling"
+        return "unknown"
+labels = [label_block(i) for i in bad_abs]
+print(list(zip(bad_abs, labels, bad_vals)))
+"""
 
 class NextPointObsManager(ObservationManager):
     def __init__(self, colorspace, convert_torch, img_width, img_height, normalize_obs):
@@ -48,16 +131,43 @@ class NextPointObsManager(ObservationManager):
         self.statevector_dim = 0
         self.idxs = OSV(self.reference_line_points_lookahead)
 
-    def normalize_state_vector(self, obs):
-        obs[self.idxs.speed_idx] = obs[self.idxs.speed_idx] / 1000 # speed
-        obs[self.idxs.refline_idxs[0] : self.idxs.refline_idxs[1]] = obs[self.idxs.refline_idxs[0] : self.idxs.refline_idxs[1]] / 100 # coming refline points, theoretically the max-value is 1000, but this is never reached realistically.
-        obs[self.idxs.gearbox_state_idx] = obs[self.idxs.gearbox_state_idx] / 5 # gearbox
-        obs[self.idxs.actual_rpm_idx] = obs[self.idxs.actual_rpm_idx] / 10000 # rpm
-        obs[self.idxs.damper_asorb_idx[0] : self.idxs.damper_asorb_idx[1]] = obs[self.idxs.damper_asorb_idx[0] : self.idxs.damper_asorb_idx[1]] / 0.15 
-        assert all(obs[:self.idxs.zero_to_surfaces_idxs]) <= 1.0, "Expected observations to be normalized between [0,1] but got unnormalized obs."
-        assert obs[self.idxs.refline_idxs[0] : self.idxs.refline_idxs[1]].shape[0] == self.reference_line_points_lookahead * 3, f"Expected to have 40 points, but got {obs[self.idxs.refline_idxs[0] : self.idxs.refline_idxs[1]].shape[0]}"
-        print(obs[self.idxs.refline_idxs[0] : self.idxs.refline_idxs[1]])
+    def label_block(self, idx):
+        if idx in range(self.idxs.refline.start, self.idxs.refline.stop): return "refline"
+        if idx in range(self.idxs.sliding.start, self.idxs.sliding.stop): return "sliding"
+        if idx in range(self.idxs.ground_contact.start, self.idxs.ground_contact.stop): return "ground_contact"
+        if idx in range(self.idxs.damper_absorb.start, self.idxs.damper_absorb.stop): return "damper_absorb"
+        if idx == self.idxs.speed_idx: return "speed"
+        if idx == self.idxs.gear_idx: return "gear"
+        if idx == self.idxs.gearbox_state_idx: return "gearbox_state"
+        if idx == self.idxs.actual_rpm_idx: return "rpm"
+        if idx == self.idxs.is_freewheeling_idx: return "is_freewheeling"
+        if idx == self.idxs.lateral_dist_idx: return "lateral distance"
+        return "unknown"
+
+    def normalize_state_vector(self, obs: np.ndarray) -> np.ndarray:
+
+        obs[self.idxs.speed_idx] /= 1000.0                        # speed
+        obs[self.idxs.refline]   /= 500.0                         # refline points (this should actually normalize by 1000)
+        obs[self.idxs.gearbox_state_idx] /= 5.0                   # gearbox
+        obs[self.idxs.actual_rpm_idx]   /= 12000.0                # rpm (dont know what the correct max-value is)
+        obs[self.idxs.damper_absorb]    /= 0.15                   # damper absorb
+        obs[self.idxs.lateral_dist_idx] /= 15                     # lateral distance.
+
+        # Sanity checks <- i like the name of this
+        gonetol = 1.0 + 1e-4
+        goneidxs = np.nonzero(obs[self.idxs.zero_to_surfaces] >= gonetol)
+        gonelabels = [self.label_block(i) for i in goneidxs[0]]
+        assert np.all(obs[self.idxs.zero_to_surfaces] <= gonetol), f"Expected observations to be normalized to [0,1] before surface categories. \
+              Got unnormalized values : {goneidxs, obs[goneidxs]}. These are in the {gonelabels}"
+
+        ref_block = obs[self.idxs.refline]
+        expected_ref_len = self.idxs.n_refline_points * 3
+        assert ref_block.shape[0] == expected_ref_len, f"Expected {expected_ref_len} refline values, got {ref_block.shape[0]}."
+
+        # surface_categories is half-open [start, stop), so stop should equal total length
+        assert self.idxs.surface_categories.stop == obs.shape[0], f"Last index should be {obs.shape[0]-1}, but it's {self.idxs.surface_categories.stop-1}."
         return obs
+
 
 
     def get_observation_dict(self) -> spaces.Dict:
