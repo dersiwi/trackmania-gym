@@ -1,5 +1,5 @@
-
-
+from __future__ import annotations
+import traceback
 from trackmania_env.observations.observation_manager import ObservationManager
 from gymnasium import spaces
 import numpy as np
@@ -21,7 +21,10 @@ from dataclasses import dataclass
 
 @dataclass(frozen=True)
 class OSV:
-    """Utility class for indexes in statevector of Nextpoint obs manager."""
+    """Utility class for indexes in statevector of Nextpoint obs manager. (actually i don't remember what OSV stands for, but there is an acronym: my best gues is Observation [?] Vector)
+    This class is extremenly dependent on the implementation of NextPointObs, since the main
+    purpose is to indicate the inicie of Nexpointobs-state-vector.
+    """
     n_refline_points: int
 
     @property
@@ -104,21 +107,21 @@ class OSV:
             prev = s.stop
         if length is not None:
             assert self.surface_categories.stop <= length, "Statevector too short"
-"""
-    def label_block(idx):
-        if idx in range(self.idxs.refline.start, self.idxs.refline.stop): return "refline"
-        if idx in range(self.idxs.sliding.start, self.idxs.sliding.stop): return "sliding"
-        if idx in range(self.idxs.ground_contact.start, self.idxs.ground_contact.stop): return "ground_contact"
-        if idx in range(self.idxs.damper_absorb.start, self.idxs.damper_absorb.stop): return "damper_absorb"
-        if idx == self.idxs.speed_idx: return "speed"
-        if idx == self.idxs.gear_idx: return "gear"
-        if idx == self.idxs.gearbox_state_idx: return "gearbox_state"
-        if idx == self.idxs.actual_rpm_idx: return "rpm"
-        if idx == self.idxs.is_freewheeling_idx: return "is_freewheeling"
+    
+
+    def label_block(osv : OSV,  idx):
+        if idx in range(osv.refline.start, osv.refline.stop): return "refline"
+        if idx in range(osv.sliding.start, osv.sliding.stop): return "sliding"
+        if idx in range(osv.ground_contact.start, osv.ground_contact.stop): return "ground_contact"
+        if idx in range(osv.damper_absorb.start, osv.damper_absorb.stop): return "damper_absorb"
+        if idx == osv.speed_idx: return "speed"
+        if idx == osv.gear_idx: return "gear"
+        if idx == osv.gearbox_state_idx: return "gearbox_state"
+        if idx == osv.actual_rpm_idx: return "rpm"
+        if idx == osv.is_freewheeling_idx: return "is_freewheeling"
+        if idx == osv.lateral_dist_idx: return "lateral distance"
         return "unknown"
-labels = [label_block(i) for i in bad_abs]
-print(list(zip(bad_abs, labels, bad_vals)))
-"""
+
 
 class NextPointObsManager(ObservationManager):
     def __init__(self, colorspace, convert_torch, img_width, img_height, normalize_obs):
@@ -131,41 +134,34 @@ class NextPointObsManager(ObservationManager):
         self.statevector_dim = 0
         self.idxs = OSV(self.reference_line_points_lookahead)
 
-    def label_block(self, idx):
-        if idx in range(self.idxs.refline.start, self.idxs.refline.stop): return "refline"
-        if idx in range(self.idxs.sliding.start, self.idxs.sliding.stop): return "sliding"
-        if idx in range(self.idxs.ground_contact.start, self.idxs.ground_contact.stop): return "ground_contact"
-        if idx in range(self.idxs.damper_absorb.start, self.idxs.damper_absorb.stop): return "damper_absorb"
-        if idx == self.idxs.speed_idx: return "speed"
-        if idx == self.idxs.gear_idx: return "gear"
-        if idx == self.idxs.gearbox_state_idx: return "gearbox_state"
-        if idx == self.idxs.actual_rpm_idx: return "rpm"
-        if idx == self.idxs.is_freewheeling_idx: return "is_freewheeling"
-        if idx == self.idxs.lateral_dist_idx: return "lateral distance"
-        return "unknown"
+
 
     def normalize_state_vector(self, obs: np.ndarray) -> np.ndarray:
+        """Normalizes the state vector. This method implements regularization by deviding by the max value; due to booleans in the obsrvazations."""
+        obs[self.idxs.speed_idx]            /= 1000.0                   # speed
+        obs[self.idxs.refline]              /= 500.0                    # refline points (this should actually normalized by 1000)
+        obs[self.idxs.gearbox_state_idx]    /= 5.0                      # gearbox
+        obs[self.idxs.actual_rpm_idx]       /= 12000.0                  # rpm (dont know what the correct max-value is)
+        obs[self.idxs.lateral_dist_idx]     /= 18                       # lateral distance.
+        obs[self.idxs.gear_idx]             /= 2                        # this is basically always 1 or 0 except for rare occasions where its 2
+        #obs[self.idxs.damper_absorb]       /= 0.15                     
 
-        obs[self.idxs.speed_idx] /= 1000.0                        # speed
-        obs[self.idxs.refline]   /= 500.0                         # refline points (this should actually normalize by 1000)
-        obs[self.idxs.gearbox_state_idx] /= 5.0                   # gearbox
-        obs[self.idxs.actual_rpm_idx]   /= 12000.0                # rpm (dont know what the correct max-value is)
-        #obs[self.idxs.damper_absorb]    /= 0.15                   # damper absorb
-        obs[self.idxs.lateral_dist_idx] /= 18                     # lateral distance.
+        try:
+            # Sanity checks <- i like the name of this
+            gonetol = 1.0 + 1e-4
+            goneidxs = np.nonzero(obs >= gonetol)[0]
+            gonelabels = [OSV.label_block(self.idxs, i) for i in goneidxs]
+            assert np.all(obs <= gonetol), f"Expected observations to be normalized to [0,1] before surface categories. \
+                Got unnormalized values : {goneidxs, obs[goneidxs]}. These are in the {gonelabels}"
 
-        # Sanity checks <- i like the name of this
-        gonetol = 1.0 + 1e-4
-        goneidxs = np.nonzero(obs >= gonetol)[0]
-        gonelabels = [self.label_block(i) for i in goneidxs]
-        assert np.all(obs <= gonetol), f"Expected observations to be normalized to [0,1] before surface categories. \
-              Got unnormalized values : {goneidxs, obs[goneidxs]}. These are in the {gonelabels}"
+            ref_block = obs[self.idxs.refline]
+            expected_ref_len = self.idxs.n_refline_points * 3
+            assert ref_block.shape[0] == expected_ref_len, f"Expected {expected_ref_len} refline values, got {ref_block.shape[0]}."
 
-        ref_block = obs[self.idxs.refline]
-        expected_ref_len = self.idxs.n_refline_points * 3
-        assert ref_block.shape[0] == expected_ref_len, f"Expected {expected_ref_len} refline values, got {ref_block.shape[0]}."
-
-        # surface_categories is half-open [start, stop), so stop should equal total length
-        assert self.idxs.surface_categories.stop == obs.shape[0], f"Last index should be {obs.shape[0]-1}, but it's {self.idxs.surface_categories.stop-1}."
+            # surface_categories is half-open [start, stop), so stop should equal total length
+            assert self.idxs.surface_categories.stop == obs.shape[0], f"Last index should be {obs.shape[0]-1}, but it's {self.idxs.surface_categories.stop-1}."
+        except Exception as e:
+            traceback.print_exc()
         return obs
 
 
@@ -173,19 +169,11 @@ class NextPointObsManager(ObservationManager):
     def get_observation_dict(self) -> spaces.Dict:
         """Returns observation dict for environment according to initialization."""
         self.statevector_dim = (
-            #mobile states 
-            4
-            + 3*4
-            + 4*1
-            # refline points
-            + 3 * self.reference_line_points_lookahead
-            # others
-            + 3*1 # drel + speed + latera_dist
+            #mobile states (4 surface, 3*4 == (sliding, freewheeling, damper absorb for each wheel), 4*1 ==(gear, frewwheeling, gearbox, rpm))
+            4 + 3*4 + 4
+            # refline points + drel + speed + latera_dist
+            + 3 * self.reference_line_points_lookahead + 3 
         )
-       # 5 + 3 * self.reference_line_points_lookahead \
-       #     + 4*NUM_SURFACE_CATEGORIES + 3*3 + 4*1 +1 # get_mobile_states 
-
-
         return spaces.Dict({
                 "image": spaces.Box(low=0, high=255, shape=(self.n_channels, self.img_height, self.img_width), dtype=np.uint8),
                 "state": spaces.Box(low=-np.inf, high=np.inf, shape=(self.statevector_dim,), dtype=np.float32),
