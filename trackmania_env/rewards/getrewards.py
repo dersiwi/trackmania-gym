@@ -2,7 +2,7 @@
 from trackmania_env.rewards.reward_calculation import RewradCalculator
 from trackmania_env.rewards.basic_rewards import BasicRewardCalculation
 from trackmania_env.rewards.linesight_rewards import LinesightRewardCalculator
-from trackmania_env.rewards.nextpointrewards import NextPointRewards,NextPointRewards2, RaceFinishedRewards
+from trackmania_env.rewards.nextpointrewards import NextPointRewards,NextPointRewards2,NextPointRewards3 ,RaceFinishedRewards
 from trackmania_env.rewards.sophy_rewards import SophyRewards
 from configs.config import RewardManagerCfg
 
@@ -20,6 +20,8 @@ def get_reward_calculator(reward_calculator_cfg: RewardManagerCfg, normalize: bo
             return NextPointRewards(**reward_calculator_cfg.args, normalize=normalize)
         case "nextpoint2":
             return NextPointRewards2(**reward_calculator_cfg.args, normalize=normalize)
+        case "nextpoint3":
+            return NextPointRewards3(**reward_calculator_cfg.args, normalize=normalize)
         case "sophy":
             return SophyRewards(**reward_calculator_cfg.args, normalize=normalize)
         case "race_finished":
