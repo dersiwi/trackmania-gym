@@ -30,6 +30,13 @@ from trackmania_env.utils.orientationless_random_respawn_manager import Orientat
 import time
 from queue import Empty
 
+class TMICommunicationFaildException(Exception):
+    def __init__(self, n_tries: str, message: str = None):
+        if message is None:
+            message = f"Process Wrapper did not handle command correctly. Tried {n_tries} times."
+        super().__init__(message)
+
+
 class TMNF_Single_Agent_Env(gym.Env):
     """The reinforcement learning environment for Trackmania Nations Forever"""
 
@@ -141,7 +148,7 @@ class TMNF_Single_Agent_Env(gym.Env):
 
     def __send_command_to_process_wrapper(self, command : dict[str, any], timeout = 10) -> dict[str, any]:
         """Sends a command to the process wrapper, asserts answer matches command and returns answer from process wrapper"""
-        max_commnd_sending_attempts = 10
+        max_commnd_sending_attempts = 1
         attempt = 0
         while attempt <= max_commnd_sending_attempts:
             attempt += 1
@@ -163,7 +170,7 @@ class TMNF_Single_Agent_Env(gym.Env):
 
             time.sleep(0.5) #<- waiting period between command-sends.
 
-        raise RuntimeError("Were not able to send command even after multiple tries.") # <- If this happens; the responding end most likely crashed.
+        raise TMICommunicationFaildException(n_tries=attempt, message="Were not able to send command even after multiple tries.") # <- If this happens; the responding end most likely crashed.
 
 
     
