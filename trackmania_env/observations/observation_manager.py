@@ -84,9 +84,7 @@ class ObservationManager:
         
         if self.convert_torch:
             imgs = torch.from_numpy(imgs)
-
-        # Dont normalize here since they will be stored as floats 
-        return imgs
+        return imgs / 255.0
 
     def get_observation_dict(self) -> spaces.Dict:
         """Returns observation dict for environment according to initialization.
