@@ -18,7 +18,9 @@ class ObservationManager:
 
         REV_DICT = {"grayscale" : 0, "rgb" : 1, "rgba" : 2} #this is somewhat ugly but this way the config contains a readable string
 
-    def __init__(self, colorspace : str, convert_torch : bool, img_width : int, img_height : int, obs_have_img: bool = True, img_dump_freq : int = 1000000, n_dump_imgs : int= 20, normalize_obs : bool = False):
+    def __init__(self, colorspace : str, convert_torch : bool, img_width : int, 
+                 img_height : int, obs_have_img: bool = True, 
+                 img_dump_freq : int = 1000000, n_dump_imgs : int= 20, normalize_obs : bool = False):
         """
         Parameters
         ---------
@@ -26,7 +28,7 @@ class ObservationManager:
             - convert_torch : if true, observations are converted from numpy to torch-tensor    
             - img_width     : width of image
             - img_height    : height of image
-            - obs_have_img  : If True, image is passed along with state-vector, if false, only state vector is returned by get_observation(). If set to -1, no images are dumped.
+            - obs_have_img  : If True, image is passed along with state-vector, if false, only state vector is returned by get_observation(). If set to -1, no images are dumped.7
             - img_dump_freq : Specifies a frequency in which n_dump_imgs are dumped in logs/observations/. The idea behind this is to manually control, if the states produced by
             the environment match the expected. 
             - n_dump_imgs   : Amount of images that are dumped
@@ -44,6 +46,8 @@ class ObservationManager:
 
         self.info = {}
 
+        self.convert_grayscale_to_uint8 = False
+
         self.img_dump_freq = img_dump_freq
         self.n_dump_imgs = n_dump_imgs
         self.n_imgs_dumped = 0
@@ -51,6 +55,9 @@ class ObservationManager:
         if self.img_dump_freq > -1:
             os.makedirs(self.img_dir, exist_ok=True)
 
+    def grayscaleimgs_as_uint8(self, val : bool):
+        """Sets self.convert_grayscale_to_uint8 to given value."""
+        self.convert_grayscale_to_uint8 = val
 
     def set_env(self, environment):
         from trackmania_env.envs.single_agent_env2 import TMNF_Single_Agent_Env
@@ -80,11 +87,16 @@ class ObservationManager:
         if self.colorspace == ObservationManager.Colorspace.RGB:
             imgs = ImageConverter.bgra_to_rgb(images)
         elif self.colorspace == ObservationManager.Colorspace.GRAYSCALE:
-            imgs = ImageConverter.bgra_to_graysacle(images)
+            imgs = ImageConverter.bgra_to_graysacle(images, self.convert_grayscale_to_uint8)
         
         if self.convert_torch:
             imgs = torch.from_numpy(imgs)
-        return imgs / 255.0
+
+        # only normlalize if not conversion, otherwiese it'll be stored as float again.
+        if self.colorspace == ObservationManager.Colorspace.GRAYSCALE and self.convert_grayscale_to_uint8:
+            return imgs
+        else:
+            return imgs / 255.0
 
     def get_observation_dict(self) -> spaces.Dict:
         """Returns observation dict for environment according to initialization.

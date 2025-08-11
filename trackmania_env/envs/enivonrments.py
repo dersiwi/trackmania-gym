@@ -32,7 +32,8 @@ def get_environment(cfg : TrainConfig, control_queue : Queue, response_queue : Q
         - test (Default : Falsee): In addition to setting test in config, setting this true always returns a test environment and does not apply any wrappers to the environment.
     """
 
-    obs_manager = get_observation_manager(cfg = cfg, wrap_obs_in_test = cfg.rl_env.env.wrap_obs_in_test, normalize=cfg.rl_env.env.normalize_obs)
+    obs_manager = get_observation_manager(cfg = cfg, wrap_obs_in_test = cfg.rl_env.env.wrap_obs_in_test, normalize=cfg.rl_env.env.normalize_obs, 
+                                          grayscale_imgs_as_uint8=cfg.rl_env.env.store_imgs_as_uint8)
     reward_calculator = get_reward_calculator(reward_calculator_cfg = cfg.rl_env.reward_manager, normalize=cfg.rl_env.env.normalize_rewards)
     termination_manger = get_termination_manager(termination_cfg= cfg.rl_env.termination_manager)
 

@@ -8,9 +8,10 @@ from trackmania_env.observations.linesight_obs_wrapper import get_linesight_obs_
 from trackmania_env.observations.nextpoint_obs import NextPointObsManager
 from trackmania_env.observations.sophy_obs import SophyObsManager
 
-def get_observation_manager(cfg : TrainConfig, wrap_obs_in_test : bool = False, normalize : bool = False) -> ObservationManager:
+def get_observation_manager(cfg : TrainConfig, wrap_obs_in_test : bool = False, normalize : bool = False, grayscale_imgs_as_uint8 : bool = False) -> ObservationManager:
     """Instanciate Configuration manager according to confguration.
-        - wrap_obs_in_test : If True, Instanciates ObservationTest() with given instanciated observation wrapper."""
+        - wrap_obs_in_test : If True, Instanciates ObservationTest() with given instanciated observation wrapper
+        - grayscale_imgs_as_uint8 : If True and images are grayscale, observation wrapper returns [0,255] value images as uint8, instead of [0,1] as float."""
     
     obs_manager_cfg : ObservationManagerConfig = cfg.rl_env.obs_manager
     name = obs_manager_cfg.name 
@@ -51,4 +52,6 @@ def get_observation_manager(cfg : TrainConfig, wrap_obs_in_test : bool = False, 
                                         img_height=obs_manager_cfg.img_height,
                                         normalize_obs = normalize,
                                         log_directory="logs/observations", log_frequency=1)
+        
+    obs_manager.grayscaleimgs_as_uint8(grayscale_imgs_as_uint8)
     return obs_manager

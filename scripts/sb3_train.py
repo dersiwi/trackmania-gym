@@ -35,7 +35,7 @@ _HYDRA_PARAMS = {
 from utils.hydra_wandb_utils import get_models, init_and_login_wandb, BeforeAndAfterTraining
 
 def train_agent(
-    cfg,
+    cfg : TrainConfig,
     model_save_path: Optional[str] = None,
     replay_buffer_save_path: Optional[str] = None,
     run_id : Optional[str] = None

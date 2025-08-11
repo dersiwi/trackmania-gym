@@ -13,12 +13,14 @@ class ImageConverter:
         #return image_bgra[:, :, :3][:, :, ::-1].copy() #copy necessary because otherwise it has negative stride (aka memory accessed backwards) which is not supported by pytorch.
     
     @staticmethod
-    def bgra_to_graysacle(image_bgra : np.ndarray) -> np.ndarray:
+    def bgra_to_graysacle(image_bgra : np.ndarray, uint8 : bool = False) -> np.ndarray:
         """Converts bgra image to grayscale. Reuturns image as 8-bit-integer."""
         b, g, r = image_bgra[:, :, 0], image_bgra[:, :, 1], image_bgra[:, :, 2]
         gray : np.ndarray = 0.114 * b + 0.587 * g + 0.299 * r
         gray = np.round(gray).clip(0, 255)
         gray = gray[np.newaxis, :, :]
+        if uint8:
+            gray = gray.astype(np.uint8)
         return gray
     
 
