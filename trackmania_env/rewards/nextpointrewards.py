@@ -36,27 +36,26 @@ class NextPointRewards(RewradCalculator):
         Initializes the reward manager with explicit reward weights and parameters
         for modeling centerline distance reward using a Gaussian function.
 
-        Parameters:
-        -----------
-            - accum_distance_weight (float):        Weight for accumulated distance reward.
-            - race_not_finished_weight (float):     Penalty weight for not finishing the race.
-            - race_finished_reward_weight (float):  Bonus reward for finishing the race.
-            - other_termination_punishment (float): Penalty for other termination conditions.
-            - velocity_reward_weight (float):       Weight for maintaining or increasing velocity.
-            - backward_weight (float): Penalty      weight for moving backward.
-            - distance_to_center_weight (float):    Weight for staying close to the centerline.
-            - velocity_change_reward_weight (float):Weight for smooth velocity changes.
-            - speed_reward_weight (float):          General reward for maintaining speed.
-            - lateral_distance_mode (str):          Mode used to calculate lateral distance.
+        Args:
+            accum_distance_weight (float):        Weight for accumulated distance reward.
+            race_not_finished_weight (float):     Penalty weight for not finishing the race.
+            race_finished_reward_weight (float):  Bonus reward for finishing the race.
+            other_termination_punishment (float): Penalty for other termination conditions.
+            velocity_reward_weight (float):       Weight for maintaining or increasing velocity.
+            backward_weight (float): Penalty      weight for moving backward.
+            distance_to_center_weight (float):    Weight for staying close to the centerline.
+            velocity_change_reward_weight (float):Weight for smooth velocity changes.
+            speed_reward_weight (float):          General reward for maintaining speed.
+            lateral_distance_mode (str):          Mode used to calculate lateral distance.
 
-            - mean (float)  : Mean of the Gaussian function used for distance-to-centerline reward. (Only active if literal_distance_mode = "Gauss")
+            mean (float)  : Mean of the Gaussian function used for distance-to-centerline reward. (Only active if literal_distance_mode = "Gauss")
                          Represents the ideal centerline offset (typically 0).
-            - sigma (float) : Standard deviation of the Gaussian, controlling the reward falloff 
+            sigma (float) : Standard deviation of the Gaussian, controlling the reward falloff 
                            as the vehicle deviates from the centerline. (Only active if literal_distance_mode = "Gauss")
 
-            - yshift (float)        : Vertical shift applied to the Gaussian curve to shape the baseline reward.
-            - multiplicator (float) : Scales the Gaussian's amplitude; higher values amplify the reward.
-            - dist_scale (float)    : Scaling factor for the input distance before applying the Gaussian.
+            yshift (float)        : Vertical shift applied to the Gaussian curve to shape the baseline reward.
+            multiplicator (float) : Scales the Gaussian's amplitude; higher values amplify the reward.
+            dist_scale (float)    : Scaling factor for the input distance before applying the Gaussian.
     """
         
         super().__init__(normalize)
@@ -185,6 +184,7 @@ class NextPointRewards2(NextPointRewards):
     """Similar to NextPointRewards, but it scales the distance to center in relation to the accumulated distance."""
     def __init__(self, sf1: float = 0.4,sf2: float = 1.0, normalize : bool = False, **kwargs):
         """
+        Args:
             sf1 (float): Scale factor for how large the distance-to-center reward can be
                          relative to the accumulated distance reward (default: 0.4).
             sf2 (float): Additional scaling for distance-to-center reward (default: 1.0).
@@ -225,6 +225,13 @@ class NextPointRewards2(NextPointRewards):
 class RaceFinishedRewards(NextPointRewards):
     """Similar to NextPointRewards, but it scales the distance to center in relation to the accumulated distance."""
     def __init__(self, steps_without_progress_until_punishment : int, use_punishment : bool, normalize : bool = False, **kwargs):
+        """
+        Args:
+            steps_without_progress_until_punishment (int) : Amount of steps the agent can do without achieving any progress (progress is measured by accumulated distance)
+                until the reward manager punishes the agent
+            use_punishment (bool)   : If False, it never punishes the agent for not making any progress. If True, it uses steps_without_progress_until_punishment.
+            noramlize (bool)        : Propagated to parent-class (IF set, normalizes returns using running mean)
+            """
         super().__init__(normalize=normalize, **kwargs)
         self.env_timeout = 0
         """After how many (env)-steps the environment times out"""

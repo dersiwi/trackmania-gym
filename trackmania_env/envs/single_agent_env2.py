@@ -31,6 +31,7 @@ import time
 from queue import Empty
 
 class TMICommunicationFaildException(Exception):
+    """Custom exception for the error repeatedely encountered during training."""
     def __init__(self, n_tries: str, message: str = None):
         if message is None:
             message = f"Process Wrapper did not handle command correctly. Tried {n_tries} times."
@@ -51,27 +52,27 @@ class TMNF_Single_Agent_Env(gym.Env):
             reward_calculator : RewradCalculator,
             termination_manger : TerminationManager,
             reference_line: ReferenceLineManager,
-            env_cfg : EnvConfig,
-            platform:str):
+            env_cfg : EnvConfig):
         
         """
         Initializes the custom Gymnasium environment.
         This constructor sets up the basic structure of the environment.
         As required by Gymnasium environments, it defines the action and observation spaces.
+        -- [WARNING] -- may be depricated; look at configuration in configs/rl_env/single_agent_env/env
 
-        Parameters  -- [WARNING] -- may be depricated; look at configuration in configs/rl_env/single_agent_env/env:
-        ----------
-        - coommand_queue            : Command-Queue used for sending commands to TMInterface process
-        - response_queue            : Used for getting responsees from TMInterface process
-        - obs_manager               : Processes raw-Observations aquired from TMInterface process, returns Observations given to Policy/FeatureExtractor
-        - position_buffer_size      : Amount of positions that are tracked and from which the moved-distance is specified 
-        - position_moved_threshold  : If position_buffer_size = n, it takes n steps in which the change in position has 
+        Args:
+            coommand_queue (Queue)  : Command-Queue used for sending commands to TMInterface process
+            response_queue (Queue)  : Used for getting responsees from TMInterface process
+            obs_manager (ObservationManager)    : Processes raw-Observations aquired from TMInterface process, returns Observations given to Policy/FeatureExtractor
+            reward_calculator (RewradCalculator): Instance of reward calcualtor used to calculate rewards in environment.
+
+            position_buffer_size (int)          : Amount of positions that are tracked and from which the moved-distance is specified 
+            position_moved_threshold (float)    : If position_buffer_size = n, it takes n steps in which the change in position has 
                 to be less than position_moved_threshold for the environment to trigger a reset
-        - reset_mode                : Specifies the mode how reset is execued. "respawn" uses game-respawn mechanic, "position" uses teleportation mode; ignores rotation
-        - reward_calculator         : Instance of reward calcualtor used to calculate rewards in environment.
-        - n_previous_actions        : tracks actions for this many steps. 
-        - ignore_stuck_for_n_steps_after_reset : Ignores the position-buffer-reset-trigger for this many steps after reset. (Set to 1 if you dont want to use this)
-        - game_speed                : sets speed of game, as defined in https://donadigo.com/tminterface/variables
+            reset_mode  (str)       : Specifies the mode how reset is execued. "respawn" uses game-respawn mechanic, "position" uses teleportation mode; ignores rotation
+            n_previous_actions (int): tracks actions for this many steps. 
+            ignore_stuck_for_n_steps_after_reset (int): Ignores the position-buffer-reset-trigger for this many steps after reset. (Set to 1 if you dont want to use this)
+            game_speed (int)        : sets speed of game, as defined in https://donadigo.com/tminterface/variables
 
         """
         self.n_prev_actions = env_cfg.n_previous_actions
@@ -207,16 +208,16 @@ class TMNF_Single_Agent_Env(gym.Env):
         This method applies the specified action to the environment, updates the 
         internal state accordingly, and returns the results of that action.
 
-        Parameters:
+        Args:
             action (int): The action that should be performed
 
         Returns:
-        observation (gym.spaces.Dict): The initial observation of the environment.
-        reward (float): The scalar reward signal for the agent's action.
-        terminated (bool): Whether the episode has ended because the task is successfully 
-                           completed (e.g., agent reached the goal).
-        truncated (bool): Whether the episode ended due to a time limit or other external cutoff.
-        info (dict): A dictionary with additional information (e.g. for debugging or logging).
+            Tuple (gym.spaces.Dict,float,bool,bool,Dict[str,Any]) : As per gymnasium-interface specified.
+                - observation (gym.spaces.Dict): The initial observation of the environment
+                - reward (float)      : The scalar reward signal for the agent's action
+                - terminated (bool)   : Whether the episode has ended because the task is successfully completed (e.g., agent reached the goal)
+                - truncated (bool)    : Whether the episode ended due to a time limit or other external cutoff
+                - info (dict)         : A dictionary with additional information (e.g. for debugging or logging).
         """
         
         #store action internally and send via TMInterface
@@ -255,20 +256,20 @@ class TMNF_Single_Agent_Env(gym.Env):
     
     def reset(self, seed = None, options = None)-> Tuple[gym.spaces.Dict,Dict[str,Any]]:
         """
-        Resets the environment to start a new episode.
+        Resets the environment to start a new episode. This method is required by the Gymnasium API and is called at the beginning of each new episode.
+        It ensures the environment starts in a consistent and valid state.
 
-        Parameters:
+        Args:
             seed (int, optional): Seed for the random number generator to ensure 
                               deterministic behavior. Used by calling `super().reset(seed=seed)`.
             options (dict, optional): Additional options for resetting the environment. 
                                     These can be used to modify behavior at reset time.
 
         Returns:
-            observation (gym.spaces.Dict): The initial observation of the environment.
-            info (dict): Additional information that may be useful for debugging or analysis.
-    
-        This method is required by the Gymnasium API and is called at the beginning of each new episode.
-        It ensures the environment starts in a consistent and valid state.
+            Tuple (gym.spaces.Dict,Dict[str,Any]) : As per gymnasium-interface specified.
+            
+                - observation (gym.spaces.Dict): The initial observation of the environment.
+                - info (dict): Additional information that may be useful for debugging or analysis.
         """
         super().reset(seed=seed, options=options)
         

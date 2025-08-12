@@ -24,12 +24,13 @@ import gymnasium as gym
 
 def get_environment(cfg : TrainConfig, control_queue : Queue, response_queue : Queue, test : bool = False) -> gym.Env:
     """Initializes environment according to given configuration file and applies wrappers, if specified in conifg.
-    Parameters
-    ----------
-        - cfg : Train-Configuration
-        - control_queue : Queue used by environment to send controls to Process-Wrapper
-        - response_queue : Response Queue used by environment to get responses by ProcessWrapper
-        - test (Default : Falsee): In addition to setting test in config, setting this true always returns a test environment and does not apply any wrappers to the environment.
+    Args:
+        cfg (TrainConfig)       : Configuration used to initialize environment
+        control_queue (Queue)   :  used by environment to send controls to Process-Wrapper
+        response_queue (Response) :  Queue used by environment to get responses by ProcessWrapper
+        test (bool == False)    : In addition to setting test in config, setting this true always returns a test environment and does not apply any wrappers to the environment.
+    Returns:
+        TMNF_Single_Agent_Env (gym.Env) : Environment implementing a gym-interface to interact with trackmania
     """
 
     obs_manager = get_observation_manager(cfg = cfg, wrap_obs_in_test = cfg.rl_env.env.wrap_obs_in_test, normalize=cfg.rl_env.env.normalize_obs, 
