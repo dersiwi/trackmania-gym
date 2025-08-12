@@ -171,12 +171,46 @@ def init_and_login_wandb(cfg : TrainConfig, wandbdir : str = "wandb",run_id = No
         return None, ""
     
 
+def save_model(model : BaseAlgorithm, run_dir : str) -> None:
+    """Saves given model in given run-directory. Also saves replay buffer if the model has one."""
+    steps_trained = model.num_timesteps
+
+    savepoint_dir = os.path.join(run_dir, "savepoint")
+    os.makedirs(savepoint_dir, exist_ok=True)
+
+    model_save_path = model_save_path or os.path.join(savepoint_dir, "model.zip")
+    model.save(model_save_path)
+    print(f"Model saved to {model_save_path}")
+
+        # Save the replay buffer if it exists
+    if hasattr(model, 'save_replay_buffer'):
+        replay_buffer_save_path = replay_buffer_save_path or os.path.join(savepoint_dir, "replay_buffer.pkl")
+        model.save_replay_buffer(replay_buffer_save_path)
+        print(f"Replay buffer saved to {replay_buffer_save_path}")
+
+    return steps_trained, model_save_path, replay_buffer_save_path
+
 from stable_baselines3.common.callbacks import EvalCallback, CheckpointCallback, CallbackList
 from trackmania_env.rewards.reward_calculation import RewardLogCallback, AccumRewardLogCallback
 import glob
 
 
 class BeforeAndAfterTraining:
+    """
+    General
+    --------
+    This is a utility class, which contains methods and code that is executed before and after a training.
+    Its main purpose is to perform hydra initailizations and wandb login etc. Usage : 
+        1) baaf.before_training()
+        2) do the training 
+        3) baaf.after_training()
+
+    Utilities
+    ---------
+    This class also provides variables and utilities used by hydra or wanbd
+        1) get_callbacks_for_training()
+        2) get_tensorboard_login_identifier()
+    """
 
     def __init__(self, hydra_run_dir : str, cfg : TrainConfig, run_id = None, resume = None ):
         self.hydra_run_dir = hydra_run_dir
