@@ -124,7 +124,7 @@ class OSV:
 
 
 class NextPointObsManager(ObservationManager):
-    def __init__(self, colorspace, convert_torch, img_width, img_height, normalize_obs):
+    def __init__(self, colorspace, convert_torch, img_width, img_height, normalize_obs,normalize_sanity_check = False):
         super().__init__(colorspace, convert_torch, img_width, img_height, normalize_obs=normalize_obs)
         self.reference_line_points_lookahead = 10
         self.refeence_line_stride = 10
@@ -134,7 +134,7 @@ class NextPointObsManager(ObservationManager):
         self.statevector_dim = 0
         self.idxs = OSV(self.reference_line_points_lookahead)
 
-
+        self.normalize_sanity_check = normalize_sanity_check
 
     def normalize_state_vector(self, obs: np.ndarray) -> np.ndarray:
         """Normalizes the state vector. This method implements regularization by deviding by the max value; due to booleans in the obsrvazations."""
@@ -145,23 +145,24 @@ class NextPointObsManager(ObservationManager):
         obs[self.idxs.lateral_dist_idx]     /= 18                       # lateral distance.
         obs[self.idxs.gear_idx]             /= 2                        # this is basically always 1 or 0 except for rare occasions where its 2
         #obs[self.idxs.damper_absorb]       /= 0.15                     
+        
+        if self.normalize_sanity_check:
+            try:
+                # Sanity checks <- i like the name of this
+                gonetol = 1.0 + 1e-4
+                goneidxs = np.nonzero(obs >= gonetol)[0]
+                gonelabels = [OSV.label_block(self.idxs, i) for i in goneidxs]
+                assert np.all(obs <= gonetol), f"Expected observations to be normalized to [0,1] before surface categories. \
+                    Got unnormalized values : {goneidxs, obs[goneidxs]}. These are in the {gonelabels}"
 
-        try:
-            # Sanity checks <- i like the name of this
-            gonetol = 1.0 + 1e-4
-            goneidxs = np.nonzero(obs >= gonetol)[0]
-            gonelabels = [OSV.label_block(self.idxs, i) for i in goneidxs]
-            assert np.all(obs <= gonetol), f"Expected observations to be normalized to [0,1] before surface categories. \
-                Got unnormalized values : {goneidxs, obs[goneidxs]}. These are in the {gonelabels}"
+                ref_block = obs[self.idxs.refline]
+                expected_ref_len = self.idxs.n_refline_points * 3
+                assert ref_block.shape[0] == expected_ref_len, f"Expected {expected_ref_len} refline values, got {ref_block.shape[0]}."
 
-            ref_block = obs[self.idxs.refline]
-            expected_ref_len = self.idxs.n_refline_points * 3
-            assert ref_block.shape[0] == expected_ref_len, f"Expected {expected_ref_len} refline values, got {ref_block.shape[0]}."
-
-            # surface_categories is half-open [start, stop), so stop should equal total length
-            assert self.idxs.surface_categories.stop == obs.shape[0], f"Last index should be {obs.shape[0]-1}, but it's {self.idxs.surface_categories.stop-1}."
-        except Exception as e:
-            traceback.print_exc()
+                # surface_categories is half-open [start, stop), so stop should equal total length
+                assert self.idxs.surface_categories.stop == obs.shape[0], f"Last index should be {obs.shape[0]-1}, but it's {self.idxs.surface_categories.stop-1}."
+            except Exception as e:
+                traceback.print_exc()
         return obs
 
 
