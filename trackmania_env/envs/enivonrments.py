@@ -38,19 +38,23 @@ def get_environment(cfg : TrainConfig, control_queue : Queue, response_queue : Q
     reward_calculator = get_reward_calculator(reward_calculator_cfg = cfg.rl_env.reward_manager, normalize=cfg.rl_env.env.normalize_rewards)
     termination_manger = get_termination_manager(termination_cfg= cfg.rl_env.termination_manager)
 
+    constructor_kwargs = {
+    "command_queue": control_queue,
+    "response_queue": response_queue,
+    "obs_manager": obs_manager,
+    "reward_calculator": reward_calculator,
+    "termination_manger": termination_manger,
+    "reference_line": ReferenceLineManager(cfg.gmi.reference_line),
+    "env_cfg": cfg.rl_env.env,
+    }
+
     if cfg.rl_env.env.test or test:
         TM_ENV_CLASS = TestEnvironment
+        constructor_kwargs["platform"] = cfg.platforms.device
     else:
         TM_ENV_CLASS = TMNF_Single_Agent_Env
 
-    tm_env = TM_ENV_CLASS(command_queue=control_queue,
-                                    response_queue=response_queue, 
-                                    obs_manager=obs_manager,
-                                    reward_calculator=reward_calculator,
-                                    termination_manger=termination_manger,
-                                    reference_line = ReferenceLineManager(cfg.gmi.reference_line),
-                                    env_cfg=cfg.rl_env.env
-                                    )
+    tm_env = TM_ENV_CLASS(**constructor_kwargs)
     tm_env.orientationless_respawn_manager = OrientationlessRespawnManager(respawn_coordinates=OrientationlessRespawnManager.get_respawns_for_very_long_checkpoints())
     
     reward_calculator.set_env(tm_env)
