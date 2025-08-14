@@ -195,7 +195,7 @@ class NextPointObsManager(ObservationManager):
         speed = obs.display_speed
         
         orientation = np.array(dyna_current.rotation.to_numpy(), dtype=float).T
-        comming_refline_points = self.get_next_refline_points(next_idx, obs.position, orientation)
+        comming_refline_points = self.get_next_refline_points(next_idx, obs.position, orientation,obs=obs)
 
 
         self.last_obs = obs
@@ -221,7 +221,7 @@ class NextPointObsManager(ObservationManager):
         return floatvec
 
 
-    def get_next_refline_points(self, next_refline_idx : int, car_position : np.ndarray, car_orientation : np.ndarray) -> np.ndarray:
+    def get_next_refline_points(self, next_refline_idx : int, car_position : np.ndarray, car_orientation : np.ndarray,obs:SimStateData=None) -> np.ndarray:
         comming_refline_points = self.env.reference_line.get_reference_line_points(begin_idx=next_refline_idx,
                                                                 end_idx= next_refline_idx + self.reference_line_points_lookahead * self.refeence_line_stride, 
                                                                 extrapolate= True, 

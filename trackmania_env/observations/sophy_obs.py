@@ -67,7 +67,7 @@ class SophyObsManager(ObservationManager):
         """
         game_states = raw_observation[IPCFields.SIMSTATE]
         propriocentric_features = self.get_propriocentric_features(game_states)
-        global_features = self.get_global_features(game_states)
+        global_features = self.get_global_features(game_states).ravel()
         img = self.cnvt_imgs(raw_observation[IPCFields.IMG])
         
         assert img.shape == (self.n_channels, self.img_height, self.img_width), f"Expected shape to be ({self.n_channels},{self.img_height}, {self.img_width}) but got {img.shape}"
@@ -203,16 +203,17 @@ class SophyObsManager(ObservationManager):
                     stride= 1)
         
         assert points.shape[0] != 0
-        comming_refline_points = np.repeat(points, self.n_points, axis=0) if points.shape[0] == 1 else self.interpolate_points(points)
+        comming_refline_points = np.repeat(points, self.n_points, axis=0) if points.shape[0] == 1 else SophyObsManager.interpolate_points(n_points= self.n_points,points=points)
         comming_refline_points : np.ndarray = np.array(orientation).dot((comming_refline_points - np.array(position)).T).T
 
         self.info["comming_refline_points"] = comming_refline_points
         self.info["orientation"] = orientation
         self.info["position"] = position
      
-        return comming_refline_points.ravel()
+        return comming_refline_points
     
-    def interpolate_points(self,points:np.ndarray):
+    @staticmethod
+    def interpolate_points(n_points:int,points:np.ndarray):
         """
         Interpolates a sequence of 3D points to produce a uniform set of `n_points` sampled along the curve.
 
@@ -237,7 +238,7 @@ class SophyObsManager(ObservationManager):
         fz = CubicSpline(lengths, points[:, 2])
 
         # Sample equidistant points along lengths
-        uniform_s = np.linspace(0, total_length, self.n_points)
+        uniform_s = np.linspace(0, total_length, n_points)
         x_sampled = fx(uniform_s)
         y_sampled = fy(uniform_s)
         z_sampled = fz(uniform_s)

@@ -7,6 +7,7 @@ from configs.config import TrainConfig, ObservationManagerConfig
 from trackmania_env.observations.linesight_obs_wrapper import get_linesight_obs_instance
 from trackmania_env.observations.nextpoint_obs import NextPointObsManager
 from trackmania_env.observations.sophy_obs import SophyObsManager
+from trackmania_env.observations.dyn_nextpoint_obs import DynamicNextPointObsManager
 
 def get_observation_manager(cfg : TrainConfig, wrap_obs_in_test : bool = False, normalize : bool = False, grayscale_imgs_as_uint8 : bool = False) -> ObservationManager:
     """Instanciate Configuration manager according to confguration.
@@ -40,6 +41,15 @@ def get_observation_manager(cfg : TrainConfig, wrap_obs_in_test : bool = False, 
                                         maxlen_history= obs_manager_cfg.maxlen_history,
                                         lookahead_sec = obs_manager_cfg.lookahead_sec,
                                         n_points = obs_manager_cfg.n_points)
+        case "dyna_nextpoint":
+            obs_manager = DynamicNextPointObsManager(colorspace=obs_manager_cfg.colorspace,
+                                        convert_torch=obs_manager_cfg.convert_torch,
+                                        img_width=obs_manager_cfg.img_width, 
+                                        img_height=obs_manager_cfg.img_height,
+                                        normalize_obs = normalize,
+                                        lookahead_sec =  obs_manager_cfg.lookahead_sec,
+                                        n_points=  obs_manager_cfg.n_points
+            )
             
         case _: # This is the default (equivalent to 'else')
             raise ValueError(f"Observationmanager {name} not known.")    
