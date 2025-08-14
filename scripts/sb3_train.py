@@ -57,7 +57,7 @@ def main(cfg : TrainConfig, run_id : Optional[str] = None):
 
     finally:
         # Finalize training and close game all processes.
-        tm_env.finalize_process(possible_reinit=False)
+        tm_env.finalize_process(reinit=False)
 
 if __name__ == "__main__": 
     main()
