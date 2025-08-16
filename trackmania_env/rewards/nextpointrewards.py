@@ -374,7 +374,7 @@ class NextPointRewards3(NextPointRewards):
         else:
             self.total_off_course_time = 0
             
-
+        ro = max(ro,-20.0)
         info["off-course"] = ro
 
         # wall
@@ -392,6 +392,8 @@ class NextPointRewards3(NextPointRewards):
         else: 
             self.continuous_wall_contact_time = 0.0 # Reset timer if contact is lost
         info["wall"] = rw
+
+        rw = max(rw,-20.0)
 
         reward += rw+ro
 
