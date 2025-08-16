@@ -108,19 +108,22 @@ class OSV:
         if length is not None:
             assert self.surface_categories.stop <= length, "Statevector too short"
     
-
-    def label_block(osv : OSV,  idx):
+    @staticmethod
+    def label_block(osv: OSV, idx: int) -> str:
+        if idx == osv.drel_idx: return "drel"
+        if idx == osv.speed_idx: return "speed"
+        if idx == osv.lateral_dist_idx: return "lateral_dist"
         if idx in range(osv.refline.start, osv.refline.stop): return "refline"
         if idx in range(osv.sliding.start, osv.sliding.stop): return "sliding"
         if idx in range(osv.ground_contact.start, osv.ground_contact.stop): return "ground_contact"
         if idx in range(osv.damper_absorb.start, osv.damper_absorb.stop): return "damper_absorb"
-        if idx == osv.speed_idx: return "speed"
-        if idx == osv.gear_idx: return "gear"
         if idx == osv.gearbox_state_idx: return "gearbox_state"
-        if idx == osv.actual_rpm_idx: return "rpm"
+        if idx == osv.gear_idx: return "gear"
+        if idx == osv.actual_rpm_idx: return "actual_rpm"
         if idx == osv.is_freewheeling_idx: return "is_freewheeling"
-        if idx == osv.lateral_dist_idx: return "lateral distance"
+        if idx in range(osv.surface_categories.start, osv.surface_categories.stop): return "surface_category"
         return "unknown"
+
 
 
 class NextPointObsManager(ObservationManager):
