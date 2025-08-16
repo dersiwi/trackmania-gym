@@ -139,14 +139,21 @@ class NextPointObsManager(ObservationManager):
 
         self.normalize_sanity_check = normalize_sanity_check
 
+        self.speed_norm = 1000.0
+        self.refline_norm = 500.0
+        self.gearbox_norm = 5.0
+        self.rpm_norm = 12000.0
+        self.lateral_dist_norm = 18
+        self.gear_norm = 2
+
     def normalize_state_vector(self, obs: np.ndarray) -> np.ndarray:
         """Normalizes the state vector. This method implements regularization by deviding by the max value; due to booleans in the obsrvazations."""
-        obs[self.idxs.speed_idx]            /= 1000.0                   # speed
-        obs[self.idxs.refline]              /= 500.0                    # refline points (this should actually normalized by 1000)
-        obs[self.idxs.gearbox_state_idx]    /= 5.0                      # gearbox
-        obs[self.idxs.actual_rpm_idx]       /= 12000.0                  # rpm (dont know what the correct max-value is)
-        obs[self.idxs.lateral_dist_idx]     /= 18                       # lateral distance.
-        obs[self.idxs.gear_idx]             /= 2                        # this is basically always 1 or 0 except for rare occasions where its 2
+        obs[self.idxs.speed_idx]            /= self.speed_norm                   # speed
+        obs[self.idxs.refline]              /= self.refline_norm                    # refline points (this should actually normalized by 1000)
+        obs[self.idxs.gearbox_state_idx]    /= self.gearbox_norm                      # gearbox
+        obs[self.idxs.actual_rpm_idx]       /= self.rpm_norm                  # rpm (dont know what the correct max-value is)
+        obs[self.idxs.lateral_dist_idx]     /= self.lateral_dist_norm                       # lateral distance.
+        obs[self.idxs.gear_idx]             /= self.gear_norm                        # this is basically always 1 or 0 except for rare occasions where its 2
         #obs[self.idxs.damper_absorb]       /= 0.15                     
         
         if self.normalize_sanity_check:
