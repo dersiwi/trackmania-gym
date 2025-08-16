@@ -74,8 +74,9 @@ class Live3dPlotEnvironmentCallback(TestEnvironmentCallback):
 class TestEnvironment(TMNF_Single_Agent_Env):
 
     def __init__(self, command_queue, response_queue, obs_manager, reward_calculator,termination_manger, reference_line, env_cfg,platform =  "windows"):
-        super().__init__(command_queue, response_queue, obs_manager, reward_calculator, termination_manger, reference_line ,env_cfg=env_cfg,platform=platform)
+        super().__init__(command_queue, response_queue, obs_manager, reward_calculator, termination_manger, reference_line ,env_cfg=env_cfg)
 
+        self.platform = platform
         self.action_modifier : Callable = None
         self.step_while_doing_nothing = False
         """Variable for setp_with_manual_input. If not input was given, no (environment)-step is executed."""

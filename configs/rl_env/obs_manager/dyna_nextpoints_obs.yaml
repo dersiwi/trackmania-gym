@@ -1,0 +1,14 @@
+name: "dyna_nextpoint"
+
+# image related
+img_width: 128
+img_height: 128
+colorspace: "grayscale"
+camera_id: 2
+
+# other 
+convert_torch: True
+
+# reference line related 
+n_points: 60
+lookahead_sec: 6
