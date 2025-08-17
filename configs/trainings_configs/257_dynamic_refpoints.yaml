@@ -109,7 +109,7 @@ policy:
 extractors_out_dim: 64
 share_features_extractor: true
 learn_args:
-  total_timesteps: 10000000
+  total_timesteps: 12000000
   log_interval: 1
   reset_num_timesteps: true
   progress_bar: true
