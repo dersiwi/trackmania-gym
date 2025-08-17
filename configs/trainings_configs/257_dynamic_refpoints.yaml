@@ -24,7 +24,7 @@ rl_env:
       other_termination_punishment: 20
       velocity_reward_weight: 1
       backward_weight: 0
-      distance_to_center_weight: 1
+      distance_to_center_weight: 0
       velocity_change_reward_weight: 30
       speed_reward_weight: 1
       lateral_distance_mode: gauss
