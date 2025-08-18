@@ -1,0 +1,5 @@
+_target_: neuronal_networks.lr_schedulers.TriangleScheduler
+initial_learning_rate: 2.5e-4
+max_value  : 0.275e-4
+min_value : 0.1e-6
+progress_at_peak : 0.1

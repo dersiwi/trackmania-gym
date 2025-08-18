@@ -118,15 +118,35 @@ class TriangleScheduler(LR_Scheduler):
     """
     A learning rate scheduler that follows a triangular policy.
 
-    The learning rate first increases linearly from 0 to its peak value,
-    and then decreases linearly back down to 0 for the remainder of the training.
-    The peak of the triangle is controlled by the `peak` parameter.
+    The learning rate starts off at a specified value, then increases linearly until it reaches its peak, 
+    then it decreases until it reaches its lowpoint
     """
      
-    def __init__(self, initial_learning_rate, peak:float = 0.1):
-        assert 0 <= peak <1 
+    def __init__(self, initial_learning_rate : float, max_value : float = 0.0004, min_value : float = 0, progress_at_peak : float = 0.1):
+        """
+        Args:
+            initial_learning_rate (float)   : Starting value of the learning rate
+            max_value (float)               : Maximal value of the learning rate (is reached once progress == progress_at_peak)
+            min_value (float)               : Minimal value of the learning rate (is reached once progress == 1 aka. training is done)
+            progress_at_peak (float) €[0,1] : Specifies the amount of progress at which the scheduler schould reach its peak
+
+                                LR
+                    max_value   |  /\
+                                | /  \ 
+        initial_learning_rate   |/    \
+                                |      \
+                    min value   |       \
+                                ----|-----> progress
+                                    |
+                                progress_at_peak
+        """
+        assert 0 <= progress_at_peak <1 
         super().__init__(initial_learning_rate)
-        self.peak = peak
+        self.progress_at_peak = progress_at_peak
+        self.max_value = max_value
+        self.min_value = min_value
+
+        self.current_lr = self.initial_value
     
     def get_scheduler(self) -> Callable[[float], float]:
         """
@@ -137,10 +157,13 @@ class TriangleScheduler(LR_Scheduler):
             Progress will decrease from 1 (beginning) to 0.
             """
             progress_remaining = 1 - progress_remaining #make it go from 0 to 1
-            if progress_remaining <= self.peak:
-                return progress_remaining * self.initial_value / self.peak 
+            if progress_remaining <= self.progress_at_peak:
+                self.current_lr = self.initial_value + (self.max_value - self.initial_value) * (progress_remaining / self.progress_at_peak)
+            else:
+                factor = (progress_remaining - self.progress_at_peak) / (1 - self.progress_at_peak)
+                self.current_lr = self.max_value - (self.max_value - self.min_value) * factor
     
-            return (self.initial_value  / (1-self.peak) ) * (1 - progress_remaining)
+            return self.current_lr
 
         return schedule
     
@@ -148,8 +171,8 @@ class TriangleScheduler(LR_Scheduler):
 
 if __name__ ==  "__main__":
     from matplotlib import pyplot as plt
-    
-    lr = DropoffScheduler(2.5*10e-4, 0.5, "linear",propagate_progress = True)
+
+    lr = TriangleScheduler(initial_learning_rate=2.5e-4, max_value  = 2.75e-4, min_value = 1e-6,progress_at_peak = 0.1)
     f = lr.get_scheduler()
     r = []
     total_steps = 500
