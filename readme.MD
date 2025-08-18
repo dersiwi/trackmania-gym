@@ -40,9 +40,11 @@ trackmania_env
 │   └── testenv_single_agent.py
 ├── observations
 │    └── observation_manager.py
+|    └── implementations (contains all implemented observation-managers)
 │        ...
 ├── rewards
 │   └── reward_calculation.py
+|   └── implementations (contains all implemented reward-managers)
 │       ...
 └── utils
     ├── position_buffer.py

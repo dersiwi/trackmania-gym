@@ -1,5 +1,5 @@
-from trackmania_env.observations.nextpoint_obs import NextPointObsManager,OSV
-from trackmania_env.observations.sophy_obs import SophyObsManager,IMAGE_SIZE
+from trackmania_env.observations.implementations.nextpoint_obs import NextPointObsManager,OSV
+from trackmania_env.observations.implementations.sophy_obs import SophyObsManager,IMAGE_SIZE
 
 class DynamicNextPointObsManager(NextPointObsManager):
 

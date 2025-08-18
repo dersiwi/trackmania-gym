@@ -1,13 +1,13 @@
 from trackmania_env.observations.observation_manager import ObservationManager
-from trackmania_env.observations.listbased_state_obs import ListbasedObs
 from trackmania_env.observations.observation_test import ObservationTest
  
 from configs.config import TrainConfig, ObservationManagerConfig
 
-from trackmania_env.observations.linesight_obs_wrapper import get_linesight_obs_instance
-from trackmania_env.observations.nextpoint_obs import NextPointObsManager
-from trackmania_env.observations.sophy_obs import SophyObsManager
-from trackmania_env.observations.dyn_nextpoint_obs import DynamicNextPointObsManager
+from trackmania_env.observations.implementations.linesight_obs_wrapper import get_linesight_obs_instance
+from trackmania_env.observations.implementations.nextpoint_obs import NextPointObsManager
+from trackmania_env.observations.implementations.sophy_obs import SophyObsManager
+from trackmania_env.observations.implementations.dyn_nextpoint_obs import DynamicNextPointObsManager
+from trackmania_env.observations.implementations.listbased_state_obs import ListbasedObs
 
 def get_observation_manager(cfg : TrainConfig, wrap_obs_in_test : bool = False, normalize : bool = False, grayscale_imgs_as_uint8 : bool = False) -> ObservationManager:
     """Instanciate Configuration manager according to confguration.
