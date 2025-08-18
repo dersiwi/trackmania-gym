@@ -22,7 +22,7 @@ rl_env:
         other_termination_punishment : 20
         velocity_reward_weight : 1
         backward_weight : 0
-        distance_to_center_weight : 1
+        distance_to_center_weight : 0
         velocity_change_reward_weight : 30
         speed_reward_weight: 1
         lateral_distance_mode : "gauss"
@@ -111,7 +111,7 @@ policy:
 extractors_out_dim: 64
 share_features_extractor: true
 learn_args:
-  total_timesteps: 10000000
+  total_timesteps: 12000000
   log_interval: 1
   reset_num_timesteps: true
   progress_bar: true
