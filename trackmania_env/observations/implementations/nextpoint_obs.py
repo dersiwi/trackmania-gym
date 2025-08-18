@@ -1,9 +1,7 @@
 from __future__ import annotations
 import traceback
-from trackmania_env.observations.observation_manager import ObservationManager
 from gymnasium import spaces
 import numpy as np
-from configs.config import LinesightObsCfg
 
 from tminterface.structs import (
     CheckpointData, 
@@ -15,7 +13,10 @@ from tminterface.structs import (
     SimulationWheel,
     RealTimeState,
     Engine)
-from trackmania_env.utils.contact_materials import physics_behavior_fromint,NUM_SURFACE_CATEGORIES
+
+from trackmania_env.observations.implementations.independent_obs import IndependentObservationManager
+from trackmania_env.utils.contact_materials import get_normalized_surface_float
+from trackmania_env.utils.constants import NormalizationFactors
 
 from dataclasses import dataclass
 
@@ -126,7 +127,7 @@ class OSV:
 
 
 
-class NextPointObsManager(ObservationManager):
+class NextPointObsManager(IndependentObservationManager):
     def __init__(self, colorspace, convert_torch, img_width, img_height, normalize_obs,normalize_sanity_check = False):
         super().__init__(colorspace, convert_torch, img_width, img_height, normalize_obs=normalize_obs)
         self.reference_line_points_lookahead = 10
@@ -139,21 +140,15 @@ class NextPointObsManager(ObservationManager):
 
         self.normalize_sanity_check = normalize_sanity_check
 
-        self.speed_norm = 1000.0
-        self.refline_norm = 500.0
-        self.gearbox_norm = 5.0
-        self.rpm_norm = 12000.0
-        self.lateral_dist_norm = 18
-        self.gear_norm = 2
 
     def normalize_state_vector(self, obs: np.ndarray) -> np.ndarray:
         """Normalizes the state vector. This method implements regularization by deviding by the max value; due to booleans in the obsrvazations."""
-        obs[self.idxs.speed_idx]            /= self.speed_norm                   # speed
-        obs[self.idxs.refline]              /= self.refline_norm                    # refline points (this should actually normalized by 1000)
-        obs[self.idxs.gearbox_state_idx]    /= self.gearbox_norm                      # gearbox
-        obs[self.idxs.actual_rpm_idx]       /= self.rpm_norm                  # rpm (dont know what the correct max-value is)
-        obs[self.idxs.lateral_dist_idx]     /= self.lateral_dist_norm                       # lateral distance.
-        obs[self.idxs.gear_idx]             /= self.gear_norm                        # this is basically always 1 or 0 except for rare occasions where its 2
+        obs[self.idxs.speed_idx]            /= NormalizationFactors.speed_norm                  
+        obs[self.idxs.refline]              /= NormalizationFactors.refline_norm                   
+        obs[self.idxs.gearbox_state_idx]    /= NormalizationFactors.gearbox_norm                      
+        obs[self.idxs.actual_rpm_idx]       /= NormalizationFactors.rpm_norm                 
+        obs[self.idxs.lateral_dist_idx]     /= NormalizationFactors.lateral_dist_norm                       
+        obs[self.idxs.gear_idx]             /= NormalizationFactors.gear_norm                        
         #obs[self.idxs.damper_absorb]       /= 0.15                     
         
         if self.normalize_sanity_check:
@@ -180,10 +175,8 @@ class NextPointObsManager(ObservationManager):
     def get_observation_dict(self) -> spaces.Dict:
         """Returns observation dict for environment according to initialization."""
         self.statevector_dim = (
-            #mobile states (4 surface, 3*4 == (sliding, freewheeling, damper absorb for each wheel), 4*1 ==(gear, frewwheeling, gearbox, rpm))
-            4 + 3*4 + 4
             # refline points + drel + speed + latera_dist
-            + 3 * self.reference_line_points_lookahead + 3 
+            self.mobile_states_dim + 3 * self.reference_line_points_lookahead + 3 
         )
         return spaces.Dict({
                 "image": spaces.Box(low=0, high=255, shape=(self.n_channels, self.img_height, self.img_width), dtype=np.uint8),
@@ -243,46 +236,3 @@ class NextPointObsManager(ObservationManager):
         comming_refline_points_rel_to_car : np.ndarray = np.array(car_orientation).dot((comming_refline_points - np.array(car_position)).T).T # (n,3)
         #comming_refline_points_rel_to_car_flattened = comming_refline_points_rel_to_car.ravel()
         return comming_refline_points_rel_to_car
-
-    def get_surface_float(self, wheels_states : list[RealTimeState]):
-        """# linesight (from tminterface discord): TODO : Big refactor!!
-                #    n_contact_material_physics_behavior_types (here NUM_SURFACE_CATEGORIES) is the number of possible 
-                #    materials a wheel can touch, we added this thinking it would help the agent understand the different
-                #    behaviors of the car on different surfaces by having the info more than visually, again we are not sure 
-                #    if this input is useful we did not do proper ablation tests because each test is very long.
-                # 
-        This method just transforms this one-hot-encoded vector [1. 0. 0. 0. 1. 0. 0. 0. 1. 0. 0. 0. 1. 0. 0. 0.] into [0.2 0.2 0.2 0.2]"""
-        wsm = []
-        for ws in wheels_states:
-            # Doing & 0xFFFF masks the value, keeping only the lowest 16 bits and discarding any higher bits.
-            scidx = np.nonzero([i == physics_behavior_fromint[ws.contact_material_id & 0xFFFF] for i in range(NUM_SURFACE_CATEGORIES)])[0]
-            if len(scidx) == 0: wsm.append(0)
-            else:
-                assert len(scidx)  == 1, scidx
-                wsm.append(scidx[0] + 1 / (NUM_SURFACE_CATEGORIES + 1)) # +1 because sometimes its just no surface category (wheel is in the air.)
-        return np.array(wsm, dtype = np.float32)
-
-    def get_mobil_states(self, game_states:SimStateData):
-        # =======================================
-        # Wheel States,Engine and Gearbox State
-        # =======================================
-        # gather all relevant information which describe the engine and the wheels states and pack them into a single array
-        mobil:SceneVehicleCar = game_states.scene_mobil
-        engine:Engine = mobil.engine
-        gearbox_state = mobil.gearbox_state
-
-        wheels: np.ndarray[SimulationWheel] = game_states.simulation_wheels
-        wheels_states: list[RealTimeState] = [wheels[i].real_time_state for i in range(wheels.shape[0])]
-
-        car_gear_and_wheels = np.array(
-            [
-                *(ws.is_sliding for ws in wheels_states),  # Bool (* is for unpacking)              size: 4
-                *(ws.has_ground_contact for ws in wheels_states),  # Bool                           size: 4
-                *(ws.damper_absorb for ws in wheels_states),  # 0.005 min, 0.15 max, 0.01 typically size: 4
-                gearbox_state,  # Bool, except 2 at startup                                         size: 1
-                engine.gear,  # 0 -> 5 approx                                                       size: 1
-                engine.actual_rpm,  # 0-10000 approx                                                size: 1
-                mobil.is_freewheeling, # Bool                                                       size: 1
-                *self.get_surface_float(wheels_states)                                              #size: 4
-            ],dtype=np.float32,)
-        return car_gear_and_wheels

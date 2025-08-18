@@ -107,3 +107,28 @@ which is an integer refering to the contact material enum.
 physics_behavior_fromint = {
     ContactMaterial[material_string].value: physics_group for material_string, physics_group in physics_group_fromstr.items()
 }
+
+from tminterface.structs import RealTimeState
+import numpy as np
+
+@staticmethod
+def get_normalized_surface_float(wheels_states : list[RealTimeState]) -> np.ndarray:
+        """
+        This method just transforms this one-hot-encoded vector [1. 0. 0. 0. 1. 0. 0. 0. 1. 0. 0. 0. 1. 0. 0. 0.] into [0.2 0.2 0.2 0.2].
+        n_contact_material_physics_behavior_types (here NUM_SURFACE_CATEGORIES) is the number of possible.
+        
+        Args:
+            wheel_states (list[RealTimeState]) : List of RealTimeStates with length 4 (for each wheel). 
+        Returns:
+            nsf (np.ndarray) : Normalized surface float-array of length 4, containing the surface-category of the current
+                wheel (normalization factor is NUM_SURFACE_CATEGORIES + 1, because 0 is air.)
+        """
+        wsm = []
+        for ws in wheels_states:
+            # Doing & 0xFFFF masks the value, keeping only the lowest 16 bits and discarding any higher bits.
+            scidx = np.nonzero([i == physics_behavior_fromint[ws.contact_material_id & 0xFFFF] for i in range(NUM_SURFACE_CATEGORIES)])[0]
+            if len(scidx) == 0: wsm.append(0)
+            else:
+                assert len(scidx)  == 1, scidx
+                wsm.append(scidx[0] + 1 / (NUM_SURFACE_CATEGORIES + 1)) # +1 because sometimes its just no surface category (wheel is in the air.)
+        return np.array(wsm, dtype = np.float32)

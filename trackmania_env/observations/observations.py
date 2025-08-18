@@ -8,6 +8,7 @@ from trackmania_env.observations.implementations.nextpoint_obs import NextPointO
 from trackmania_env.observations.implementations.sophy_obs import SophyObsManager
 from trackmania_env.observations.implementations.dyn_nextpoint_obs import DynamicNextPointObsManager
 from trackmania_env.observations.implementations.listbased_state_obs import ListbasedObs
+from trackmania_env.observations.implementations.independent_obs import IndependentObservationManager
 
 def get_observation_manager(cfg : TrainConfig, wrap_obs_in_test : bool = False, normalize : bool = False, grayscale_imgs_as_uint8 : bool = False) -> ObservationManager:
     """Instanciate Configuration manager according to confguration.
@@ -48,8 +49,14 @@ def get_observation_manager(cfg : TrainConfig, wrap_obs_in_test : bool = False, 
                                         img_height=obs_manager_cfg.img_height,
                                         normalize_obs = normalize,
                                         lookahead_sec =  obs_manager_cfg.lookahead_sec,
-                                        n_points=  obs_manager_cfg.n_points
-            )
+                                        n_points=  obs_manager_cfg.n_points)
+            
+        case "independent":
+            obs_manager = IndependentObservationManager(colorspace=obs_manager_cfg.colorspace,
+                                        convert_torch=obs_manager_cfg.convert_torch,
+                                        img_width=obs_manager_cfg.img_width, 
+                                        img_height=obs_manager_cfg.img_height,
+                                        normalize_obs = normalize,)
             
         case _: # This is the default (equivalent to 'else')
             raise ValueError(f"Observationmanager {name} not known.")    
