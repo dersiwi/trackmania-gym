@@ -1,5 +1,5 @@
 """
-Custom Gymnasium Environment 
+Custom Gymnasium Environment for TMNF using InterprocessCommunication to talk to TMIProcessWrapper.
 https://gymnasium.farama.org/tutorials/gymnasium_basics/environment_creation/
 """
 from typing import Any,Dict,Tuple,Optional,List
@@ -7,28 +7,29 @@ from typing import Any,Dict,Tuple,Optional,List
 import gymnasium as gym
 import numpy as np
 import logging
+import time
+
 from collections import deque
 
-from gymnasium import spaces
-from queue import Queue
-from tminterface.structs import CheckpointData, SimStateData, CheckpointTime
+from queue import Queue, Empty
+
+from tminterface.structs import SimStateData
 
 from game_interaction.ipc_fields import IPCCommands
 from game_interaction.tminterface_commands import TMInterfaceCommands
 from game_interaction.ipc_fields import IPCFields
 
-from trackmania_env.utils.position_buffer import PositionBuffer
-from trackmania_env.utils.actionmap import ACTION_MAP
 from trackmania_env.observations.observation_manager import ObservationManager
 from trackmania_env.rewards.reward_calculation import RewradCalculator
 from trackmania_env.terminations.termination_manager import TerminationManager
 from trackmania_env.utils.reference_line_manager import ReferenceLineManager
 from trackmania_env.utils.random_respawn_manager import RandomRespawnManager
+from trackmania_env.utils.orientationless_random_respawn_manager import OrientationlessRespawnManager
+from trackmania_env.utils.return_tracker import ReturnTracker
+from trackmania_env.utils.position_buffer import PositionBuffer
+from trackmania_env.utils.actionmap import ACTION_MAP
 
 from configs.config import EnvConfig
-from trackmania_env.utils.orientationless_random_respawn_manager import OrientationlessRespawnManager
-import time
-from queue import Empty
 
 class TMICommunicationFaildException(Exception):
     """Custom exception for the error repeatedely encountered during training."""
@@ -52,7 +53,9 @@ class TMNF_Single_Agent_Env(gym.Env):
             reward_calculator : RewradCalculator,
             termination_manger : TerminationManager,
             reference_line: ReferenceLineManager,
-            env_cfg : EnvConfig):
+            env_cfg : EnvConfig,
+            gamma : float = 0.99,
+            **kwargs):
         
         """
         Initializes the custom Gymnasium environment.
@@ -108,6 +111,8 @@ class TMNF_Single_Agent_Env(gym.Env):
 
         self.n_steps : int = 0
         self.total_steps : int = 0
+
+        self.rt = ReturnTracker(length = self.termination_manager.timeout, gamma = gamma)
 
 
         # define observation and action space for gym
@@ -246,10 +251,16 @@ class TMNF_Single_Agent_Env(gym.Env):
         processed_obs, obs_info = self.obs_manager.get_observation(raw_obs)
         reward, reward_info = self.rew_calculator.calculate_reward(raw_obs, processed_obs, race_finished, terminated_info)
 
+        self.rt.add_reward(reward)
+        
+
         info.update(obs_info)
         info["rewards"] = reward_info
         info["terminated"] = terminated
         info["truncated"] = truncated
+        if terminated or truncated:
+            info[ReturnTracker.LOG_NAME] = self.rt.get_return()
+
         self.n_steps += 1
         self.total_steps += 1
         return processed_obs, reward, terminated, truncated, info
@@ -280,6 +291,7 @@ class TMNF_Single_Agent_Env(gym.Env):
         self.rew_calculator.reset()
         self.reference_line.reset()
         self.termination_manager.reset()
+        self.rt.reset()
         self.n_steps = 0
 
         # reset_car hsa to be done before! raw_obs is queried. 

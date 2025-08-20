@@ -1,27 +1,28 @@
 
 import torch.nn as nn
-from configs.config import TrainConfig
-from neuronal_networks.lr_schedulers import LR_Scheduler
-from trackmania_env.envs.single_agent_env2 import TMNF_Single_Agent_Env
-from stable_baselines3 import PPO, SAC, DQN
-from stable_baselines3.common.base_class import BaseAlgorithm
+import os
 import hydra
-
-from neuronal_networks.custom_extractor import TMN_Extractor
-from omegaconf import DictConfig, OmegaConf
 import wandb
 from wandb.wandb_run import Run
+
+from omegaconf import DictConfig, OmegaConf
 from itertools import chain
-from stable_baselines3 import PPO
-from stable_baselines3.common.policies import ActorCriticPolicy,BasePolicy
+
 from neuronal_networks.get_policy import get_policy
 from neuronal_networks.custom_extractor import AsyncActorCriticPolicy
-import os
+from neuronal_networks.lr_schedulers import LR_Scheduler
 
 from sb3_contrib.qrdqn.qrdqn import QRDQN
 
+from stable_baselines3 import PPO
+from stable_baselines3.common.base_class import BaseAlgorithm
+from stable_baselines3.common.policies import ActorCriticPolicy,BasePolicy
 from stable_baselines3.common.off_policy_algorithm import OffPolicyAlgorithm
-from stable_baselines3.common.on_policy_algorithm import OnPolicyAlgorithm
+
+from trackmania_env.utils.return_tracker import ReturnLogCallback
+from trackmania_env.envs.single_agent_env2 import TMNF_Single_Agent_Env
+
+from configs.config import TrainConfig
 
 
 def print_model_params(model : BaseAlgorithm):
@@ -237,8 +238,9 @@ class BeforeAndAfterTraining:
         return self.run_id_in_hydra_log_dir
 
 
-    def get_callbacks_for_training(self, tm_env) -> CallbackList:
-        """Create callbacks for model to create logs"""
+    def get_callbacks_for_training(self, tm_env : TMNF_Single_Agent_Env) -> CallbackList:
+        """Create wandb-callbacks for the RL-model to log custom metrics.
+        Args : tm_env (gym.Env)"""
         # Eval Callback – save best model based on reward
         eval_callback = EvalCallback(
             tm_env,
@@ -264,7 +266,7 @@ class BeforeAndAfterTraining:
             
         callback : CallbackList= CallbackList(callbacklist)
         if self.cfg.wandb.use:
-            callback.callbacks.extend([hydra.utils.instantiate(self.cfg.wandb_callbacks)(model_save_path=self.run_id_in_hydra_log_dir), AccumRewardLogCallback()])
+            callback.callbacks.extend([hydra.utils.instantiate(self.cfg.wandb_callbacks)(model_save_path=self.run_id_in_hydra_log_dir), AccumRewardLogCallback(), ReturnLogCallback()])
 
         return callback
     
