@@ -1,0 +1,34 @@
+constructor:
+  _partial_: true
+  _target_: dtrpl.Discrete_TRPL.DTRPL
+  verbose: 1
+
+algorithm_params:
+  learning_rate: 0.00025          # Learning rate
+  n_steps: 2048                  # Steps per update
+  batch_size: 512                 # Minibatch size
+  n_epochs: 5                   # Epochs per update
+  gamma: 0.99                    # Discount factor
+  gae_lambda: 0.95               # GAE lambda
+  clip_range_vf: null            # Value function clip
+  normalize_advantage: true      # Normalize advantage
+  ent_coef: 0.01                 # Entropy coefficient
+  vf_coef: 1                     # Value function loss weight
+  max_grad_norm: 0.5             # Gradient clipping
+  use_sde: false                 # Use SDE
+  sde_sample_freq: -1            # SDE frequency
+  rollout_buffer_class: null     # Custom buffer class
+  rollout_buffer_kwargs: null    # Buffer kwargs
+  stats_window_size: 100         # Stats window
+  seed: null                     # Random seed
+  _init_setup_model: true        # Init model immediately
+
+  # DTRPL-specific parameters
+  kl_bound: 0.05                 # KL divergence bound for TRPL
+  alpha: 0.1                     # Scaling factor for TRPL projection loss
+  dtrpl_check_valid: true        # Whether to check TRPL projection validity
+  dtrpl_max_steps: 30            # Max iterations for TRPL projection
+  dtrpl_num_points: 128          # Number of points for TRPL projection
+  dtrpl_threshold: 1e-6          # Convergence threshold for TRPL
+  dtrpl_lower: 1e-6              # Lower bound for TRPL projection
+  dtrpl_upper: 1e6               # Upper bound for TRPL projection
