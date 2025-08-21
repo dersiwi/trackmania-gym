@@ -1,3 +1,1 @@
-configs/trainings_configs/curvy_normalized.yaml
-configs/trainings_configs/nextpoint_normalized.yaml
-configs/trainings_configs/sophy_train.yaml
+257_modified_reward.yaml
