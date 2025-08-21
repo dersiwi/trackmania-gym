@@ -66,7 +66,7 @@ class LinesightRewardCalculator(RewradCalculator):
         self.last_zone_centers = None
 
 
-    def calculate_reward(self, observations, processed_obs : dict[str, any], race_finished, other_terminations):
+    def get_sum_of_weighted_rewards(self, observations, processed_obs, race_finished, other_terminations):      
         ssD : SimStateData = observations[IPCFields.SIMSTATE]
         ssD.simulation_wheels[0]
         wheel_state = [ssD.simulation_wheels[i].real_time_state for i in range(4)]

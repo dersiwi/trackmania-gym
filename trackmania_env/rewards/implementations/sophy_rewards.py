@@ -70,7 +70,7 @@ class SophyRewards(RewradCalculator):
     #self.last_off_course_time = 0
 
     
-  def calculate_reward(self, observations, processed_obs, race_finished, other_terminations):
+  def get_sum_of_weighted_rewards(self, observations, processed_obs, race_finished, other_terminations):      
         """
         https://arxiv.org/pdf/2406.12563v1
 

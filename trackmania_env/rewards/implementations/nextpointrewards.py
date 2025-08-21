@@ -138,8 +138,8 @@ class NextPointRewards(RewradCalculator):
 
         other_term_reward = (-1) * ot * self.other_termination_punishment
         return other_term_reward
-        
-    def calculate_reward(self, observations, processed_obs : dict[str, any], race_finished, other_terminations : dict[str, bool]):
+    
+    def get_sum_of_weighted_rewards(self, observations, processed_obs, race_finished, other_terminations):      
         ssD : SimStateData = observations[IPCFields.SIMSTATE]
         reward = 0
         
@@ -195,7 +195,7 @@ class NextPointRewards2(NextPointRewards):
         self.sf2 = 1.0
         """Scale factor of how large distance-to-center reward can be in relation to accum distance reward.""" 
 
-    def calculate_reward(self, observations, processed_obs, race_finished, other_terminations):
+    def get_sum_of_weighted_rewards(self, observations, processed_obs, race_finished, other_terminations):      
         ssD : SimStateData = observations[IPCFields.SIMSTATE]
         reward = 0
         
@@ -251,7 +251,7 @@ class RaceFinishedRewards(NextPointRewards):
         return super().reset()
 
 
-    def calculate_reward(self, observations, processed_obs, race_finished, other_terminations):
+    def get_sum_of_weighted_rewards(self, observations, processed_obs, race_finished, other_terminations):      
         reward = 0
         
         next_refline_index, d, drel = self.refline_manager.get_distance_to_next_point()
@@ -337,9 +337,7 @@ class NextPointRewards3(NextPointRewards):
 
         self.w_off_course = off_course_penalty_weight
         self.w_wall = wall_penalty_weight
-        
-        self.og_normalize = normalize
-
+    
     def reset(self):
         super().reset()
         self.last_time = 0
@@ -348,9 +346,8 @@ class NextPointRewards3(NextPointRewards):
 
 
 
-    def calculate_reward(self, observations, processed_obs, race_finished, other_terminations):
-        self.normalize = False # Deactivate normalization to ensure correct calculations
-        reward,info = super().calculate_reward(observations, processed_obs, race_finished, other_terminations)
+    def get_sum_of_weighted_rewards(self, observations, processed_obs, race_finished, other_terminations):      
+        reward,info = super().get_sum_of_weighted_rewards(observations, processed_obs, race_finished, other_terminations)
 
         ssD : SimStateData = observations[IPCFields.SIMSTATE]
         time =  ssD.time/ constants.MILLISECONDS_TO_SECONDS
@@ -396,9 +393,6 @@ class NextPointRewards3(NextPointRewards):
         rw = max(rw,-20.0)
 
         reward += rw+ro
-
-        # Reactivate normalization
-        self.normalize = self.og_normalize
         self.last_time = time 
         return super().normalize_reward(reward),info
 

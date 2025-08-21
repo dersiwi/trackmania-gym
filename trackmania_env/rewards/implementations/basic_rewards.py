@@ -10,11 +10,11 @@ class BasicRewardCalculation(RewradCalculator):
     def __init__(self, normalize : bool = False):
         super().__init__(normalize)
 
-    def calculate_reward(self, observations, processed_obs : dict[str, any], race_finished, other_terminations) -> tuple[float, dict[str, any]]:
+    def get_sum_of_weighted_rewards(self, observations, processed_obs, race_finished, other_terminations):
         ssD : SimStateData = observations[IPCFields.SIMSTATE]
         velocity = ssD.velocity
         reward = np.linalg.norm(velocity[0:1]) + self.pos_buffer.distance_moved()
 
         if race_finished:
             reward += 10000
-        return super().normalize_reward(reward), {}
+        return reward, {}

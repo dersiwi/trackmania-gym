@@ -8,7 +8,8 @@ from trackmania_env.utils.position_buffer import PositionBuffer
 from trackmania_env.rewards.normalizer import RewardNormalizer
 
 class RewradCalculator:
-    """Responsible for reward calculations for environment"""
+    """Responsible for reward calculations for environment.
+    Subclasses have to implement self.get_sum_of_weighted_rewards()"""
 
     def __init__(self, normalize : bool = False):
         self.env = None
@@ -31,18 +32,20 @@ class RewradCalculator:
         self.set_reference_line(self.env.reference_line)
         self.set_position_buffer(self.env.position_buffer)
 
+    def get_sum_of_weighted_rewards(self, observations : dict[str, any], processed_obs : dict[str, any], race_finished : bool, other_terminations : dict[str, bool]) -> tuple[float, dict[str, int | float]]:
+        raise NotImplementedError("Do Not use this class directly. Use RewardCalculator.get_instance()")
+
     def calculate_reward(self, observations : dict[str, any], processed_obs : dict[str, any], race_finished : bool, other_terminations : dict[str, bool]) -> tuple[float, dict[str, int | float]]:
         """Calculates the rewrad given observations for current environment-step
         
-        Parameters
-        ----------
-            - observations  : raw observations obtained from game
-            - provessed_obs : observations after being processed by manager
-            - race_finished : True, if race has been finished organically
-            - other_terminations    : Information dict given by Termination Manager; contains information about other possible terminatio reasons.
+        Args:
+            observations  (dict)    : raw observations obtained from game
+            provessed_obs (dict)    : observations after being processed by manager
+            race_finished (bool)    : True, if race has been finished organically
+            other_terminations (dict): Information dict given by Termination Manager; contains information about other possible terminatio reasons.
 
-        Returns 
-        -------
+        Returns:
+            reward (float) : Sum of weighted rewards; 
             - self.normalize_reward(reward) : which is the cummulative reward of all reward terms, normalized, depending on the 
                 initialization of this class.
             - reward_info : dictionary containing reward-term-names (str) as keys and the values
@@ -51,7 +54,8 @@ class RewradCalculator:
 
         For Future implementations; be sure to only put (str, float/int) pairs into the reward_info-dictionary as this s expected by RewardLogCallback.  
         """
-        raise NotImplementedError("Do Not use this class directly. Use RewardCalculator.get_instance()")
+        weighted_rewards, info = self.get_sum_of_weighted_rewards(observations, processed_obs, race_finished, other_terminations)
+        return self.normalize_reward(weighted_rewards), info
     
     def normalize_reward(self, rewards : float) -> float | np.ndarray:
         """Normalizes rewards, if self.normalize == True. If not, just returns them as is"""
