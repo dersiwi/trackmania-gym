@@ -1,0 +1,136 @@
+platforms:
+  os: windows
+  home: ${oc.env:USERPROFILE,""}
+  tmloader: C:/Users/ALR-Students/Desktop/TmNationsForever/TMLoader-1.0.1-win32/TMLoader.exe
+  plugin: C:/Users/ALR-Students/Documents/TMInterface/Plugins/Python_Link.as
+  map_dir: C:/Users/ALR-Students/Documents/TmForever/Tracks/Challenges
+  device: cuda
+rl_env:
+  obs_manager:
+    name: nextpointobs
+    img_width: 128
+    img_height: 128
+    colorspace: grayscale
+    camera_id: 2
+    convert_torch: true
+  reward_manager:
+    name: nextpoint
+    args:
+      accum_distance_weight: 1200
+      race_not_finished_weight: 0.05
+      race_finished_reward_weight: 100
+      other_termination_punishment: 20
+      velocity_reward_weight: 1
+      backward_weight: 0
+      distance_to_center_weight: 1
+      velocity_change_reward_weight: 30
+      speed_reward_weight: 1
+      lateral_distance_mode: gauss
+  termination_manager:
+    name: no_progress
+    max_steps_until_reset: 2048
+    ignore_stuck_for_n_steps_after_reset: 80
+    terminate_after_steps_without_progress: 4096
+  env:
+    _partial_: true
+    _target_: trackmania_env.envs.single_agent_env2.TMNF_Single_Agent_Env
+    n_previous_actions: 10
+    reset_mode: respawn
+    position_buffer_size: 20
+    position_moved_threshold: 0.2
+    normalize_rewards: true
+    normalize_obs: true
+    store_imgs_as_uint8: false
+    game_speed: 70
+    countdown_speed: 70
+    wrap_obs_in_test: false
+    test: false
+    startposition_accuracy_threshold: 0.5
+    ignore_stuck_for_n_steps_after_reset: 80
+    automatic_prevent_sim_finish: true
+    disable_waitforstep_after_n_consecutive_timeouts: 5
+    actions_per_second: 20
+    waitforstep_timeout_in_s: 1.2
+    use_rewind: true
+  wrappers:
+    monitor:
+      _partial_: true
+      _target_: stable_baselines3.common.monitor.Monitor
+sb3:
+  constructor:
+   _partial_: true
+   _target_: dtrpl.Discrete_TRPL.DTRPL
+   verbose: 1
+
+  algorithm_params:
+    learning_rate: 0.00025          # Learning rate
+    n_steps: 2048                  # Steps per update
+    batch_size: 512                 # Minibatch size
+    n_epochs: 5                   # Epochs per update
+    gamma: 0.99                    # Discount factor
+    gae_lambda: 0.95               # GAE lambda
+    clip_range_vf: null            # Value function clip
+    normalize_advantage: true      # Normalize advantage
+    ent_coef: 0.01                 # Entropy coefficient
+    vf_coef: 1                     # Value function loss weight
+    max_grad_norm: 0.5             # Gradient clipping
+    use_sde: false                 # Use SDE
+    sde_sample_freq: -1            # SDE frequency
+    rollout_buffer_class: null     # Custom buffer class
+    rollout_buffer_kwargs: null    # Buffer kwargs
+    stats_window_size: 100         # Stats window
+    seed: null                     # Random seed
+    _init_setup_model: true        # Init model immediately
+
+    # DTRPL-specific parameters
+    kl_bound: 0.05                 # KL divergence bound for TRPL
+    alpha: 0.1                     # Scaling factor for TRPL projection loss
+    dtrpl_check_valid: true        # Whether to check TRPL projection validity
+    dtrpl_max_steps: 30            # Max iterations for TRPL projection
+    dtrpl_num_points: 128          # Number of points for TRPL projection
+    dtrpl_threshold: 1e-6          # Convergence threshold for TRPL
+    dtrpl_lower: 1e-6              # Lower bound for TRPL projection
+    dtrpl_upper: 1e6               # Upper bound for TRPL projection
+wandb_callbacks:
+  _partial_: true
+  _target_: wandb.integration.sb3.WandbCallback
+  model_save_freq: 1000
+  gradient_save_freq: 100
+  log: all
+  verbose: 2
+models:
+  _partial_: true
+  _target_: neuronal_networks.vision_encoder.conv_NNs.VisionModelSix
+lr_scheduler:
+  _target_: neuronal_networks.lr_schedulers.DropoffScheduler
+  initial_learning_rate: 0.00025
+  scheduling_beginn: 0.5
+  scheduling_type: linear
+  propagate_progress: true
+policy:
+  name: basic
+  type: MultiInputPolicy
+  extractors_out_dim: 64
+  share_features_extractor: true
+  normalize_images: false
+extractors_out_dim: 64
+share_features_extractor: true
+learn_args:
+  total_timesteps: 10000000
+  log_interval: 1
+  reset_num_timesteps: true
+  progress_bar: true
+  tb_log_name: PPO
+gmi:
+  launch: true
+  tm_loader_profile_name: default
+  headless: false
+  port: 8775
+  track: simple1_validated.Challenge.Gbx
+  reference_line: tracks/reference_line/simple1_validated.npy
+wandb:
+  use: true
+  entity: tmnf-practical-ss25
+  project: tmnf_ppo
+  checkpoint_freq: 500000
+  eval_freq: 1000000
