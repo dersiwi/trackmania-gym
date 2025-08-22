@@ -8,10 +8,7 @@ from typing import Literal
 from trackmania_env.rewards.reward_calculation import RewradCalculator
 from game_interaction.ipc_fields import IPCFields
 from trackmania_env.utils import constants
-
-
-MAX_LATERAL_DISTANCE = 12 # maximal lateral difference, this is an estimate.
-
+from trackmania_env.utils.lateral_distance_manager import LateralDistanceManager
 class NextPointRewards(RewradCalculator):
 
     def __init__(self, 
@@ -47,15 +44,6 @@ class NextPointRewards(RewradCalculator):
             velocity_change_reward_weight (float):Weight for smooth velocity changes.
             speed_reward_weight (float):          General reward for maintaining speed.
             lateral_distance_mode (str):          Mode used to calculate lateral distance.
-
-            mean (float)  : Mean of the Gaussian function used for distance-to-centerline reward. (Only active if literal_distance_mode = "Gauss")
-                         Represents the ideal centerline offset (typically 0).
-            sigma (float) : Standard deviation of the Gaussian, controlling the reward falloff 
-                           as the vehicle deviates from the centerline. (Only active if literal_distance_mode = "Gauss")
-
-            yshift (float)        : Vertical shift applied to the Gaussian curve to shape the baseline reward.
-            multiplicator (float) : Scales the Gaussian's amplitude; higher values amplify the reward.
-            dist_scale (float)    : Scaling factor for the input distance before applying the Gaussian.
     """
         
         super().__init__(normalize)
@@ -81,11 +69,7 @@ class NextPointRewards(RewradCalculator):
         
         self.current_refline_idx : int = 0
 
-        self.max_lateral_difference = MAX_LATERAL_DISTANCE
-        self.lateral_distance_mode = lateral_distance_mode
-        self.mean, self.sigma, self.yshift, self.multiplicator, self.dist_scale = mean, sigma, yshift, multiplicator, dist_scale
-
-
+        self.lateral_distance_manager = LateralDistanceManager.get_instance(lateral_distance_mode)
         self.last_simstate : SimStateData = None
 
     def _get_normed_velocity(self, velocity : list[float, float, float]) -> float:
@@ -109,26 +93,10 @@ class NextPointRewards(RewradCalculator):
             # only calculate reward to centerline once car is within the firsrt linesgement, 
             # e.g. if the agent drives backwards out of map immediately he will always get max reward, because this term will always be 1/12 * self.ditsance_to_center_weight
             return 0 
-        
-        distance_to_center_reward = 0
-        absolute_dist = np.clip(self.refline_manager.calculate_lateral_difference(idx = next_refline_idx, car_position=car_position), a_min = 0, a_max = self.max_lateral_difference)
 
-
-        if self.lateral_distance_mode == "triangle":
-            # inverse the distance, such that reward is bigger once distance gets smaller
-            distance_to_center_reward = 0.5 - absolute_dist / self.max_lateral_difference
-            
-        elif self.lateral_distance_mode == "gauss":
-            distance_to_center_reward = self.multiplicator * norm.pdf(absolute_dist * self.dist_scale, loc =self.mean, scale = self.sigma) + self.yshift
-
-        elif self.lateral_distance_mode == "trapez":
-            raise NotImplementedError("Not implemented.")
-
-        else:
-            raise ValueError(f"No Such Errorfunction '{self.lateral_distance_mode}' available")
-
-        return distance_to_center_reward * self.distance_to_center_weight
-
+        absolute_dist = self.refline_manager.calculate_lateral_difference(idx = next_refline_idx, car_position=car_position)
+        return self.lateral_distance_manager.scale_lateral_distance(absolute_dist) * self.distance_to_center_weight
+    
     def _calculate_termination_rewards(self, other_terminations) -> float:
         ot = False
         if "stuck" in other_terminations:
