@@ -1,17 +1,25 @@
 from __future__ import annotations
 import numpy as np
 from scipy.stats import norm
+import sys, os
+sys.path.append(os.path.abspath(os.path.join(
+    os.path.join(os.path.dirname(__file__), '..'), '..'))) # TODO : <- i don't want this here and it shouldnt have to be here!!!
 from trackmania_env.utils.constants import MAX_LATERAL_DISTANCE
 
 class LateralDistanceManager:
 
     @staticmethod
     def get_instance(distance_type : str): # TODO : parameterize.
-        if distance_type == "triangle":
+        """Returns an instance of the LateralDistanceManager.
+        Args: 
+            distance_type (str) : Specifies what type of latearl distance reward normalizer"""
+        if distance_type == TriangleLateralDistance.NAME:
             return TriangleLateralDistance()
             
-        elif distance_type == "gauss":
+        elif distance_type == GaussianLateralDistance.NAME:
             return GaussianLateralDistance()
+        elif distance_type == GaussianEdgePunisher.NAME:
+            return GaussianEdgePunisher()
 
         elif distance_type == "trapez":
             raise NotImplementedError("Not implemented.")
@@ -30,11 +38,28 @@ class LateralDistanceManager:
         return self._specific_ldist_scale(clipped_dist)
 
     def _specific_ldist_scale(self, absolute_dist : float) -> float:
-        raise NotImplementedError("Not Implemented, Use one of the subclasses via get_instance()")        
+        raise NotImplementedError("Not Implemented, Use one of the subclasses via get_instance()")
     
+    def draw(self):
+        from matplotlib import pyplot as plt
+        xs = np.linspace(0, MAX_LATERAL_DISTANCE, 200)
+        ys = [self._specific_ldist_scale(x) for x in xs]
+
+        plt.figure(figsize=(6,4))
+        plt.plot(xs, ys, label="Reward / Distance from Road Center")
+        plt.axhline(0, color="gray", linestyle=":")
+        plt.title("Reward / Distance from Road Center")
+        plt.xlabel("Distance from road center")
+        plt.ylabel("Reward")
+        plt.axvline(MAX_LATERAL_DISTANCE, linestyle=":")
+        plt.legend()
+        plt.grid(True, alpha=0.3)
+        plt.show()
+        
 
     
 class TriangleLateralDistance(LateralDistanceManager):
+    NAME = "triangle"
     def __init__(self):
         super().__init__()
     
@@ -45,6 +70,8 @@ class TriangleLateralDistance(LateralDistanceManager):
 
     
 class GaussianLateralDistance(LateralDistanceManager):
+    """Scales reward via a gaussian curve, where the center line is the maximum, edges are 'minima'."""
+    NAME = "gauss"
     def __init__(self, mean :float = 0, sigma : float = 1, multiplicator : float = 5, yshift : float = -1, dist_scale : float = 0.3):
         """
         Args:
@@ -66,3 +93,14 @@ class GaussianLateralDistance(LateralDistanceManager):
 
     def _specific_ldist_scale(self, clipped_dist : float) -> float:
         return self.multiplicator * norm.pdf(clipped_dist * self.dist_scale, loc =self.mean, scale = self.sigma) + self.yshift
+    
+
+class GaussianEdgePunisher(GaussianLateralDistance):
+    NAME = "gauss_edge"
+    def __init__(self, mean = MAX_LATERAL_DISTANCE, sigma = 1, multiplicator = -2.5, yshift = 0, dist_scale = 1):
+        super().__init__(mean, sigma, multiplicator, yshift, dist_scale)
+
+
+if __name__ == "__main__":
+
+    LateralDistanceManager.get_instance(GaussianEdgePunisher.NAME).draw()
