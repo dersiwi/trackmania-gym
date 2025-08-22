@@ -1,10 +1,3 @@
-platforms:
-  os: windows
-  home: ${oc.env:USERPROFILE,""}
-  tmloader: C:/Users/ALR-Students/Desktop/TmNationsForever/TMLoader-1.0.1-win32/TMLoader.exe
-  plugin: C:/Users/ALR-Students/Documents/TMInterface/Plugins/Python_Link.as
-  map_dir: C:/Users/ALR-Students/Documents/TmForever/Tracks/Challenges
-  device: cuda
 rl_env:
   obs_manager:
     name: nextpointobs

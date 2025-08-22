@@ -1,6 +1,0 @@
-os: linux
-home: /home/${oc.env:USER,""} # the "" is the fallback value if the environment variable does not exist
-tmloader: ${.home}/.wine/drive_c/Program_Files_x86/TmNationsForever/TMLoader.exe
-plugin: ${.home}/Documents/TMInterface/Plugins/Python_Link.as
-map_dir: ${.home}/Documents/TmForever/Tracks/Challenges
-device: cuda

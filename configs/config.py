@@ -191,6 +191,7 @@ class TrainConfig:
     image: ImageConfig
     total_timesteps: int
     extractors_out_dim : int
+    platforms_config_path : str
     learn_args: SB3LearnArgsConfig
     platforms: Optional[PlatformConfig] = None
     models: Optional[PretrainedResNetConfig] = None

@@ -1,5 +1,4 @@
 defaults:
-  - platforms: windows2.yaml  # or platforms/windows
   - rl_env: single_agent_env.yaml
   - sb3: ppo.yaml
   - wandb_callbacks : sb3_callback.yaml
@@ -7,6 +6,7 @@ defaults:
   - lr_scheduler: dropoff_scheduling.yaml
   - policy: basic_policy.yaml
 
+platforms_config_path : "configs/platforms.yaml"
 extractors_out_dim: 64 # every extractor will produce an output with this dimension 
 #share_features_extractor: True # whether to share the features extractor between actor and critic when applicable
 
@@ -15,7 +15,7 @@ learn_args:
   log_interval: 1
   reset_num_timesteps: True
   progress_bar: True
-  tb_log_name: "QR_DQN"
+  tb_log_name: "PPO"
 
 gmi:
   launch: True

@@ -205,3 +205,5 @@ runs/
 models/
 checkpoints/
 *.gif
+sb3/
+configs/platforms.yaml

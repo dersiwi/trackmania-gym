@@ -7,6 +7,19 @@
 
 Create conda environment using `conda env create -f conda_env.yml`.
 
+## Platform
+Before starting up the code, create a `platforms.yaml`, containing the operating system, the device and paths to angel-script plugin as well as TM-Forever folder;
+
+```yaml
+platforms:
+  os: windows / linux                             # operating system
+  tmloader: .../TMLoader/TMLoader.exe             # path to tmloader-executable
+  plugin: .../TMInterface/Plugins/python_link.as  # path to plugin
+  map_dir: .../TmForever/Tracks/Challenges        # path to challenges folder
+  device: cuda / cpu                              # device; either cpu or cuda
+```
+The default location for this file is in `configs/platforms.yaml`, but you can chance this by changing the `platforms_config_path` attribute of `configs/train.ymal` file to the desired path.
+
 # Make Car Go Fast
 
 In this student research-project at the  [ALR](https://alr.iar.kit.edu/) the goal was to investigate on how a reinforcement learning agent can learn in a [TMNF : Trackmania Nations Forever Environment](https://www.trackmaniaforever.com/).

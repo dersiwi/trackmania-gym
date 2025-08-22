@@ -12,7 +12,7 @@ from game_interaction.run_multiprocess_wrapper import start_process_and_wait_for
 from game_interaction.ipc_fields import IPCCommands
 
 
-from utils.hydra_wandb_utils import get_models
+from utils.hydra_wandb_utils import get_models, load_and_merge_yaml
 from utils.plotting.conv_NN_plot import VerboseExecution
 from trackmania_env.envs.enivonrments import get_environment
 
@@ -29,7 +29,7 @@ _HYDRA_PARAMS = {
 
 @hydra.main(**_HYDRA_PARAMS)
 def main(cfg : TrainConfig):
-
+    cfg = load_and_merge_yaml(cfg, cfg.platforms_config_path)
     tmi_process, control_queue, response_queue = start_process_and_wait_for_startsignal(cfg, cfg.image.width, cfg.image.height)
 
     try:

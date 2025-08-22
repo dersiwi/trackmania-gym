@@ -15,7 +15,7 @@ from game_interaction.ipc_fields import IPCCommands
 
 from trackmania_env.envs.enivonrments import get_environment
 
-from utils.hydra_wandb_utils import get_models
+from utils.hydra_wandb_utils import get_models, load_and_merge_yaml
 
 run = "Level1"
 run_path_hydra = f"C:\\Users\\siwis\\OneDrive\\Dokumente\\Studium\\Master\\1.Semester\\trackmania\\interaction_template\\outputs\\{run}\\.hydra"
@@ -30,6 +30,7 @@ _HYDRA_PARAMS = {
 
 @hydra.main(**_HYDRA_PARAMS)
 def main(cfg : TrainConfig):
+    cfg = load_and_merge_yaml(cfg, cfg.platforms_config_path)
     tmi_process, control_queue, response_queue = start_process_and_wait_for_startsignal(cfg, cfg.rl_env.obs_manager.img_width, cfg.rl_env.obs_manager.img_height)
 
     try:

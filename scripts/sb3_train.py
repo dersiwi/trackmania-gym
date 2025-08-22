@@ -8,21 +8,18 @@ import traceback
 from hydra.core.hydra_config import HydraConfig
 from typing import Optional
 
-# imports for communication between TMInterface and environment
-from game_interaction.run_multiprocess_wrapper import start_process_and_wait_for_startsignal
-from game_interaction.ipc_fields import IPCCommands
 
 from configs.config import TrainConfig
-from trackmania_env.envs.enivonrments import get_environment
+
 from trackmania_env.envs.sec_env import CrashProofEnvironment
+from utils.hydra_wandb_utils import get_models, init_and_login_wandb, BeforeAndAfterTraining, load_and_merge_yaml
+
 
 _HYDRA_PARAMS = {
     "version_base": "1.3",
     "config_path": "../configs",
     "config_name": "train.yaml",
 }
-
-from utils.hydra_wandb_utils import get_models, init_and_login_wandb, BeforeAndAfterTraining
 
 @hydra.main(**_HYDRA_PARAMS)
 def main(cfg : TrainConfig, run_id : Optional[str] = None):
@@ -31,6 +28,7 @@ def main(cfg : TrainConfig, run_id : Optional[str] = None):
         cfg (TrainConfig)   : Configuration file for current training run (inferred by hydra)
         run_id (str)        : Run id if weights and biases run is to be resumed
     """
+    cfg = load_and_merge_yaml(cfg, cfg.platforms_config_path)
 
     hydra_run_dir = HydraConfig.get().run.dir
     resume = "must" if run_id else None

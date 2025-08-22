@@ -11,6 +11,7 @@ from trackmania_env.envs.enivonrments import get_environment
 from trackmania_env.envs.testenv_single_agent import TestEnvironment
 import trackmania_env.envs.testcases_single_agent as testcases
 
+from utils.hydra_wandb_utils import load_and_merge_yaml
 
 import hydra
 from configs.config import TrainConfig
@@ -23,6 +24,7 @@ _HYDRA_PARAMS = {
 
 @hydra.main(**_HYDRA_PARAMS)
 def main(cfg : TrainConfig):
+    cfg = load_and_merge_yaml(cfg, cfg.platforms_config_path)
 
     tmi_process, control_queue, response_queue = start_process_and_wait_for_startsignal(cfg,cfg.rl_env.obs_manager.img_width, cfg.rl_env.obs_manager.img_height)
     tm_env : TestEnvironment = get_environment(cfg, control_queue, response_queue, test=True)

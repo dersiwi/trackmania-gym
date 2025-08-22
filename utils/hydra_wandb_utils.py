@@ -5,7 +5,7 @@ import hydra
 import wandb
 from wandb.wandb_run import Run
 
-from omegaconf import DictConfig, OmegaConf
+from omegaconf import DictConfig, OmegaConf, open_dict
 from itertools import chain
 
 from neuronal_networks.get_policy import get_policy
@@ -190,6 +190,21 @@ def save_model(model : BaseAlgorithm, run_dir : str) -> None:
         print(f"Replay buffer saved to {replay_buffer_save_path}")
 
     return steps_trained, model_save_path, replay_buffer_save_path
+
+
+from hydra.utils import to_absolute_path
+
+def load_and_merge_yaml(cfg : TrainConfig, yaml_to_merge : str) -> TrainConfig:
+    """Loads a yaml and merges it with cfg
+    Args:
+        cfg (TrainConfig)   : Configuration provided by hydra
+        yaml_to_merge (str) : Path to external yaml file to merge with yaml
+    Returns:
+        Merged (TrainConcig): Merged hydra-config with external yaml."""
+    yaml = OmegaConf.load(to_absolute_path(yaml_to_merge))
+    with open_dict(cfg):
+        merged = OmegaConf.merge(cfg, yaml)
+    return merged
 
 from stable_baselines3.common.callbacks import EvalCallback, CheckpointCallback, CallbackList
 from trackmania_env.rewards.reward_calculation import RewardLogCallback, AccumRewardLogCallback
