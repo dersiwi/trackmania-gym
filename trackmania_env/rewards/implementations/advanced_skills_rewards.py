@@ -3,7 +3,7 @@ import numpy as np
 from trackmania_env.rewards.reward_calculation import RewradCalculator
 from trackmania_env.utils import constants
 from trackmania_env.rewards.implementations.nextpointrewards import NextPointRewards
-from tminterface.structs import  SimStateData
+from tminterface.structs import  SimStateData,SimulationWheel
 from game_interaction.ipc_fields import IPCFields
 
 MIN_DRIFT_ANGULAR_VELOCITY = 30 
@@ -63,5 +63,59 @@ class NextPointDriftReward(NextPointRewards):
         info["drift_reward"] = drift_reward
 
         reward += drift_reward
+
+        return reward,info
+
+class AirBrakeNextPointReward(NextPointRewards):
+    def __init__(self, 
+                 accum_distance_weight = 1200,
+                race_not_finished_weight = 0.05,
+                race_finished_reward_weight = 100, 
+                other_termination_punishment = 20,
+                velocity_reward_weight = 1,
+                backward_weight = 0,
+                distance_to_center_weight = 1,
+                velocity_change_reward_weight = 30,
+                speed_reward_weight = 1,
+                air_brake_reward_weight = 1,
+                lateral_distance_mode = "gauss",
+                mean = 0,
+                sigma = 1,
+                yshift = -1,
+                multiplicator = 5,
+                dist_scale = 0.3,
+                normalize = False,
+                **kwargs):
+        super().__init__(accum_distance_weight, race_not_finished_weight, race_finished_reward_weight, other_termination_punishment, velocity_reward_weight, backward_weight, distance_to_center_weight, velocity_change_reward_weight, speed_reward_weight, lateral_distance_mode, mean, sigma, yshift, multiplicator, dist_scale, normalize, **kwargs)
+        
+        self.air_brake_reward_weight = air_brake_reward_weight
+        self.mid_air_brake = False
+
+    def reset(self):
+        super().reset()
+        self.mid_air_brake = False
+    
+    def get_sum_of_weighted_rewards(self, observations, processed_obs, race_finished, other_terminations):
+        reward,info = super().get_sum_of_weighted_rewards(observations, processed_obs, race_finished, other_terminations)
+
+        ssD : SimStateData = observations[IPCFields.SIMSTATE]
+        wheels: np.ndarray[SimulationWheel] = ssD.simulation_wheels
+        in_air:bool = all([not (wheels[i].real_time_state.has_ground_contact) for i in range(wheels.shape[0])])
+        braking:bool = ssD.input_brake
+
+        # air-brake reward
+        air_brake_rew = 0
+        if in_air:
+            # only give reward for first brake in the air so that he doesn not spam it and gets slower
+            if braking and not self.mid_air_brake:
+                air_brake_rew = 1
+                self.mid_air_brake = True
+        else:
+            # Reset when agent lands
+            self.mid_air_brake = False
+
+        air_brake_rew *= self.air_brake_reward_weight
+        info["air_brake_reward"] = air_brake_rew
+        reward += air_brake_rew
 
         return reward,info
