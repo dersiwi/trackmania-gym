@@ -7,6 +7,7 @@ from trackmania_env.observations.observation_manager import ObservationManager
 from trackmania_env.utils import constants
 from game_interaction.ipc_fields import IPCFields
 from tminterface.structs import SimStateData, HmsDynaStateStruct
+from trackmania_env.observations.terms import SophyGlobalFeatures
 
 IMAGE_SIZE = 64
 """Image size as specified in sophy paper."""
@@ -48,6 +49,8 @@ class SophyObsManager(ObservationManager):
         self.propriocentric_features_dim = 3*4 + 2*self.maxlen_history - 1
         self.global_features_dim = self.n_points * 3
 
+        self.global_featues = SophyGlobalFeatures(lookahead_sec, n_points, normalize=False)
+
     def reset(self):
         self.last_velocity = np.array([0.,0.,0.],dtype=np.float32)
         self.h_a_t = np.array([0.,0.,0.],dtype=np.float32)
@@ -67,7 +70,7 @@ class SophyObsManager(ObservationManager):
         """
         game_states = raw_observation[IPCFields.SIMSTATE]
         propriocentric_features = self.get_propriocentric_features(game_states)
-        global_features = self.get_global_features(game_states).ravel()
+        global_features = self.global_featues.get_observation(game_states) 
         img = self.cnvt_imgs(raw_observation[IPCFields.IMG])
         
         assert img.shape == (self.n_channels, self.img_height, self.img_width), f"Expected shape to be ({self.n_channels},{self.img_height}, {self.img_width}) but got {img.shape}"
@@ -161,88 +164,3 @@ class SophyObsManager(ObservationManager):
 
         return propriocentric_features
  
-    def get_global_features(self, game_states: SimStateData):
-        """
-        Extracts global course point features from the input game states, following the method
-        described in Wurman et al. (2022).
-    
-        Course points describe the geometry of the track via the left and right boundaries and the
-        center line. At each time step, this method computes the 3D relative positions of course 
-        points ahead of the agent, based on its current velocity. These points are sampled from 
-        0.1 to 6.0 seconds into the future, at 0.1-second intervals, assuming constant forward speed.
-    
-        The distance to each course point is dynamically computed using the agent's current speed 
-        (i.e., distance = velocity x time). This results in 59 course points per line (left, center, right), 
-        giving a predictive spatial representation of the upcoming track segment.
-    
-        Args:
-            game_states (SimStateData): The current simulation state(s), including vehicle speed and 
-                position.
-    
-        Returns:
-            np.ndarray or torch.Tensor: A tensor containing the relative 3D coordinates of the course 
-                points for the left, center, and right track lines.
-        """
-        #NOTE as for now we only return the center points no left and right
-
-        dyna_current: HmsDynaStateStruct = game_states.dyna.current_state # current dynamic state of the car, such as its position, orientation, speed ... .
-        position = np.array(dyna_current.position,dtype=np.float32,)  # (3,)
-        orientation = dyna_current.rotation.to_numpy().T.astype(np.float32)  # (3, 3)
-        speed = game_states.display_speed / constants.MS_TO_KMH
-
-        next_idx, d, drel = self.env.reference_line.get_distance_to_next_point()
-        if d > constants.MAX_DISTANCE_TO_REFLINE : speed = 0
-
-        cp_passed = max(self.lookahead_sec * speed,1) // self.env.reference_line.mean_segment_length
-        end_idx = int(next_idx + cp_passed)
-
-        points =  self.env.reference_line.get_reference_line_points(
-                    begin_idx= next_idx, 
-                    end_idx= end_idx, 
-                    extrapolate=True,
-                    stride= 1)
-        
-        assert points.shape[0] != 0
-        comming_refline_points = np.repeat(points, self.n_points, axis=0) if points.shape[0] == 1 else SophyObsManager.interpolate_points(n_points= self.n_points,points=points)
-        comming_refline_points : np.ndarray = np.array(orientation).dot((comming_refline_points - np.array(position)).T).T
-
-        self.info["comming_refline_points"] = comming_refline_points
-        self.info["orientation"] = orientation
-        self.info["position"] = position
-     
-        return comming_refline_points
-    
-    @staticmethod
-    def interpolate_points(n_points:int,points:np.ndarray):
-        """
-        Interpolates a sequence of 3D points to produce a uniform set of `n_points` sampled along the curve.
-
-        This method computes the arc length of the polyline defined by `points`, then performs cubic spline
-        interpolation over the x, y, and z coordinates independently. The result is a smooth path sampled at
-        equally spaced arc lengths.
-
-        Parameters:
-            points (np.ndarray): Array of shape (N, 3) representing a sequence of 3D points (x, y, z) along a path.
-
-        Returns:
-            np.ndarray: Array of shape (self.n_points, 3) containing interpolated 3D points evenly spaced by arc length.
-        """
-        # length calculation in 3D
-        diffs = np.diff(points, axis=0)
-        lengths = np.concatenate([[0], np.cumsum(np.linalg.norm(diffs, axis=1))])
-        total_length = lengths[-1]
-
-        # Create interpolation functions (x, y, z) over lengths
-        fx = CubicSpline(lengths, points[:, 0])
-        fy = CubicSpline(lengths, points[:, 1])
-        fz = CubicSpline(lengths, points[:, 2])
-
-        # Sample equidistant points along lengths
-        uniform_s = np.linspace(0, total_length, n_points)
-        x_sampled = fx(uniform_s)
-        y_sampled = fy(uniform_s)
-        z_sampled = fz(uniform_s)
-
-        sampled_points = np.stack([x_sampled, y_sampled, z_sampled], axis=1)  # shape: (n_points, 3)
-
-        return sampled_points

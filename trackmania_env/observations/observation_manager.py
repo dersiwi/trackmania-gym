@@ -8,7 +8,7 @@ from utils.image_converter import ImageConverter
 from PIL import Image
 import os
 import traceback
-
+from trackmania_env.observations.terms import ObservationTerm
 class ObservationManager:
 
     class Colorspace:
@@ -55,6 +55,9 @@ class ObservationManager:
         if self.img_dump_freq > -1:
             os.makedirs(self.img_dir, exist_ok=True)
 
+        self.observation_terms : list[ObservationTerm] = []
+        self.statevector_dim = 0
+
     def grayscaleimgs_as_uint8(self, val : bool):
         """Sets self.convert_grayscale_to_uint8 to given value."""
         self.convert_grayscale_to_uint8 = val
@@ -71,7 +74,11 @@ class ObservationManager:
         Returns
         -------
         Vector of shape [N,] where N is the amount of non-image observation-fields."""
-        raise NotImplementedError("Do not use this method directly, use on of the implementations of this method.")
+        obsarray = [term.get_observation(obs) for term in self.observation_terms]
+        floatvec : np.ndarray = np.hstack(obsarray, dtype =  np.float32)
+        
+        assert floatvec.shape[0] == self.statevector_dim, f"Floatvector has size {floatvec.shape[0]}, however should be size {self.statevector_dim}"
+        return floatvec
     
 
     def cnvt_imgs(self, images : np.ndarray) -> np.ndarray | torch.Tensor:
@@ -93,8 +100,13 @@ class ObservationManager:
     def get_observation_dict(self) -> spaces.Dict:
         """Returns observation dict for environment according to initialization.
         In most cases this is going to be a dictonray-observation space containing one 'image' field and one 'state'-field."""
-        raise NotImplementedError("Do not use this method directly, use on of the implementations of this method.")
-        
+        self.statevector_dim = 0
+        for obsterm in self.observation_terms:
+            self.statevector_dim += obsterm.dim
+        return spaces.Dict({
+                "image": spaces.Box(low=0, high=1, shape=(self.n_channels, self.img_height, self.img_width), dtype=np.uint8),
+                "state": spaces.Box(low=-np.inf, high=np.inf, shape=(self.statevector_dim,), dtype=np.float32),
+            })
         
     def reset(self):
         """Resets the observation-manager. This is called if the environment is reset."""

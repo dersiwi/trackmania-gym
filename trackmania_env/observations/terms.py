@@ -13,7 +13,10 @@ from tminterface.structs import (
 from trackmania_env.utils.contact_materials import physics_behavior_fromint,NUM_SURFACE_CATEGORIES
 from trackmania_env.utils.constants import ObsNormalizationFactors
 from numba import jit
-
+import trackmania_env.utils.constants as constants
+from trackmania_env.envs.sec_env import CrashProofEnvironment
+from trackmania_env.utils.interpolation import interpolate_points
+from collections import deque
 
 def get_wheel_states(game_states : SimStateData) -> tuple[list[RealTimeState], np.ndarray[SimulationWheel]]:
     wheels: np.ndarray[SimulationWheel] = game_states.simulation_wheels
@@ -28,7 +31,7 @@ class ObservationTerm:
         self.dim = dim
         self.normalize = normalize
     
-    def _get_obs(self, gamestates : SimStateData, **kwargs) -> np.ndarray:
+    def _get_obs(self, game_states : SimStateData, **kwargs) -> np.ndarray:
         raise NotImplementedError()
     
     def _normalize(self, obs) -> np.ndarray:
@@ -116,22 +119,27 @@ class SpeedTerm(ObservationTerm):
         return gamestates.display_speed
 
 class NextReflinePoint(ObservationTerm):
-    def __init__(self, n_refline_points : int, normalize):
+    def __init__(self, n_refline_points : int, reference_line_stride : int, normalize):
         super().__init__(n_refline_points * 3, normalize)
         self.n_refline_points = n_refline_points
+        self.reference_line_stride : int = reference_line_stride
 
     def _normalize(self, obs):
         return obs / ObsNormalizationFactors.refline_norm
     
     def _get_obs(self, gamestates, **kwargs):
         dyna_current: HmsDynaStateStruct = gamestates.dyna.current_state
-        comming_refline_points : np.ndarray = kwargs["reflinepoints"]
+        refline = CrashProofEnvironment.get_instance().reference_line
+        next_idx, _, _ = refline.get_distance_to_next_point()
+        comming_refline_points : np.ndarray = CrashProofEnvironment.get_instance().reference_line.get_reference_line_points(begin_idx=next_idx,
+                                                                end_idx= next_idx + self.n_refline_points * self.reference_line_stride, 
+                                                                extrapolate= True, stride = self.reference_line_stride)
 
         car_position = gamestates.position
         car_orientation = np.array(dyna_current.rotation.to_numpy(), dtype=float).T
 
         assert comming_refline_points.shape[0] == self.n_refline_points, f"Expected to get {self.n_refline_points} points from reflinemanager, got {comming_refline_points.shape[0]}"
-        
+
         comming_refline_points_rel_to_car : np.ndarray = np.array(car_orientation).dot((comming_refline_points - np.array(car_position)).T).T # (n,3)
         #comming_refline_points_rel_to_car_flattened = comming_refline_points_rel_to_car.ravel()
         return comming_refline_points_rel_to_car.ravel()
@@ -144,6 +152,79 @@ class LateralDistance(ObservationTerm):
     def _normalize(self, obs):
         return obs / ObsNormalizationFactors.lateral_dist_norm
 
-    def _get_obs(self, gamestates, **kwargs):
-        lateral_distance : np.ndarray = kwargs["lateral_distance"]
+    def _get_obs(self, gamestates : SimStateData, **kwargs):
+        reference_line = CrashProofEnvironment.get_instance().reference_line
+        next_idx, d, drel = reference_line.get_distance_to_next_point()
+        lateral_distance : np.ndarray = reference_line.calculate_lateral_difference(next_idx, gamestates.position)
         return lateral_distance
+    
+class RelativeDistance(ObservationTerm):
+    def __init__(self, normalize):
+        super().__init__(1, normalize)
+
+    def _normalize(self, obs):
+        return obs
+    
+    def _get_obs(self, game_states, **kwargs):
+        reference_line = CrashProofEnvironment.get_instance().reference_line
+        next_idx, d, drel = reference_line.get_distance_to_next_point()
+        return drel
+
+class SophyGlobalFeatures(ObservationTerm):
+
+    def __init__(self, lookahead_sec, n_points : int, normalize):
+        super().__init__(n_points * 3, normalize)
+        self.lookahead_sec = lookahead_sec
+        self.n_points = n_points
+
+    def _get_obs(self, game_states, **kwargs):
+        """
+        Extracts global course point features from the input game states, following the method
+        described in Wurman et al. (2022).
+    
+        Course points describe the geometry of the track via the left and right boundaries and the
+        center line. At each time step, this method computes the 3D relative positions of course 
+        points ahead of the agent, based on its current velocity. These points are sampled from 
+        0.1 to 6.0 seconds into the future, at 0.1-second intervals, assuming constant forward speed.
+    
+        The distance to each course point is dynamically computed using the agent's current speed 
+        (i.e., distance = velocity x time). This results in 59 course points per line (left, center, right), 
+        giving a predictive spatial representation of the upcoming track segment.
+    
+        Args:
+            game_states (SimStateData): The current simulation state(s), including vehicle speed and 
+                position.
+    
+        Returns:
+            np.ndarray or torch.Tensor: A tensor containing the relative 3D coordinates of the course 
+                points for the left, center, and right track lines.
+        """
+        #NOTE as for now we only return the center points no left and right
+        reference_line = CrashProofEnvironment.get_instance().reference_line
+        dyna_current: HmsDynaStateStruct = game_states.dyna.current_state # current dynamic state of the car, such as its position, orientation, speed ... .
+        
+        position = np.array(dyna_current.position,dtype=np.float32,)  # (3,)
+        orientation = dyna_current.rotation.to_numpy().T.astype(np.float32)  # (3, 3)
+        speed = game_states.display_speed / constants.MS_TO_KMH
+
+        next_idx, d, drel = reference_line.get_distance_to_next_point()
+        if d > constants.MAX_DISTANCE_TO_REFLINE : speed = 0
+
+        cp_passed = max(self.lookahead_sec * speed,1) // reference_line.mean_segment_length
+        end_idx = int(next_idx + cp_passed)
+
+        points =  reference_line.get_reference_line_points(
+                    begin_idx= next_idx, 
+                    end_idx= end_idx, 
+                    extrapolate=True,
+                    stride= 1)
+        
+        assert points.shape[0] != 0
+        comming_refline_points = np.repeat(points, self.n_points, axis=0) if points.shape[0] == 1 else interpolate_points(n_points= self.n_points,points=points)
+        comming_refline_points : np.ndarray = np.array(orientation).dot((comming_refline_points - np.array(position)).T).T
+
+        self.info["comming_refline_points"] = comming_refline_points
+        self.info["orientation"] = orientation
+        self.info["position"] = position
+     
+        return comming_refline_points.ravel()
