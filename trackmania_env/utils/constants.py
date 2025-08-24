@@ -4,3 +4,12 @@ MAX_DISTANCE_TO_REFLINE = 15 # the distance after which the car is considered to
 MAX_HEIGHT_DIFERENCE = 7
 
 MAX_LATERAL_DISTANCE = 12 # maximal lateral difference of the car to the road-center, this is an estimate.
+
+class ObsNormalizationFactors:
+
+    speed_norm = 1000.0
+    refline_norm = 500.0
+    gearbox_norm = 5.0
+    rpm_norm = 12000.0
+    lateral_dist_norm = 18
+    gear_norm = 2

@@ -73,14 +73,6 @@ class ObservationManager:
         Vector of shape [N,] where N is the amount of non-image observation-fields."""
         raise NotImplementedError("Do not use this method directly, use on of the implementations of this method.")
     
-    def normalize_state_vector(self, obs : np.ndarray) -> np.ndarray:
-        """Normalizes unnormaliezd (@param : obs) state vector.
-        This method has to be overwritten by subclass, otherwise it returns the identity.
-
-        Returns
-        -------
-        Normalized observations. """
-        return obs
 
     def cnvt_imgs(self, images : np.ndarray) -> np.ndarray | torch.Tensor:
         """Converts image given by simulation into specified colortype and normalizes them into [0,1]."""
@@ -137,8 +129,6 @@ class ObservationManager:
             2) If self.normalize_state_vec it uses self.normalize_state_vector() to normalize the observations
         """
         state_observation_vector = self.get_values_from_state_dict(raw_observation[IPCFields.SIMSTATE])
-        if self.normalize_state_vec:
-            state_observation_vector = self.normalize_state_vector(state_observation_vector)
             
         if self.convert_torch:
             state_observation_vector = torch.from_numpy(state_observation_vector)
