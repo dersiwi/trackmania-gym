@@ -74,7 +74,7 @@ class CrashProofEnvironment(gym.Env):
             1) start_process_and_wait_for_startsignal(...)
             2) get_environment(...)
         This enviornment is then used for further interaction"""
-        from trackmania_env.envs.enivonrments import get_environment
+        from trackmania_env.envs.enivonrments import get_environment    # TODO put this back at the top.
         self.env_initalizations += 1
         self.logger.info(f"Initializing environment for the {self.env_initalizations}-th time.")
         self.tmi_process, self.control_queue, self.response_queue = start_process_and_wait_for_startsignal(self.cfg, 

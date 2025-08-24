@@ -19,7 +19,7 @@ from game_interaction.ipc_fields import IPCCommands
 from game_interaction.tminterface_commands import TMInterfaceCommands
 from game_interaction.ipc_fields import IPCFields
 
-#from trackmania_env.observations.observation_manager import ObservationManager
+#from trackmania_env.observations.observation_manager import ObservationManager TODO : put this back.
 from trackmania_env.rewards.reward_calculation import RewradCalculator
 from trackmania_env.terminations.termination_manager import TerminationManager
 from trackmania_env.utils.reference_line_manager import ReferenceLineManager
