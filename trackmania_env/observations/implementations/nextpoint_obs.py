@@ -20,113 +20,12 @@ from trackmania_env.utils.constants import NormalizationFactors
 
 from dataclasses import dataclass
 
-@dataclass(frozen=True)
-class OSV:
-    """Utility class for indexes in statevector of Nextpoint obs manager. (actually i don't remember what OSV stands for, but there is an acronym: my best gues is Observation [?] Vector)
-    This class is extremenly dependent on the implementation of NextPointObs, since the main
-    purpose is to indicate the inicie of Nexpointobs-state-vector.
-    """
-    n_refline_points: int
-
-    @property
-    def drel_idx(self) -> int:
-        return 0
-
-    @property
-    def speed_idx(self) -> int:
-        return 1
-
-    @property
-    def lateral_dist_idx(self) -> int:
-        return 2
-
-    # Ranges as slices (half-open)
-    @property
-    def refline(self) -> slice:
-        start = 3
-        stop = 3 + self.n_refline_points * 3
-        return slice(start, stop) 
-
-    @property
-    def sliding(self) -> slice:
-        start = self.refline.stop
-        stop = start + 4
-        return slice(start, stop)
-
-    @property
-    def ground_contact(self) -> slice:
-        start = self.sliding.stop
-        stop = start + 4
-        return slice(start, stop)
-
-    @property
-    def damper_absorb(self) -> slice:
-        start = self.ground_contact.stop
-        stop = start + 4
-        return slice(start, stop)
-
-    # Scalars that follow the ranges
-    @property
-    def gearbox_state_idx(self) -> int:
-        return self.damper_absorb.stop
-
-    @property
-    def gear_idx(self) -> int:
-        return self.gearbox_state_idx + 1
-
-    @property
-    def actual_rpm_idx(self) -> int:
-        return self.gear_idx + 1
-
-    @property
-    def is_freewheeling_idx(self) -> int:
-        return self.actual_rpm_idx + 1
-
-    @property
-    def surface_categories(self) -> slice:
-        start = self.is_freewheeling_idx + 1
-        stop  = start + 4
-        return slice(start, stop)
-
-    @property
-    def zero_to_surfaces(self) -> slice:
-        # everything from 0 up to end of surface categories
-        return slice(0, self.surface_categories.start)
-
-    def validate(self, length: int | None = None) -> None:
-        prev = -1
-        for s in [slice(self.drel_idx, self.drel_idx+1),
-                  slice(self.speed_idx, self.speed_idx+1),
-                  slice(self.lateral_dist_idx, self.lateral_dist_idx+1),
-                  self.refline, self.sliding, self.ground_contact, self.damper_absorb,
-                  slice(self.gearbox_state_idx, self.gearbox_state_idx+1),
-                  slice(self.gear_idx, self.gear_idx+1),
-                  slice(self.actual_rpm_idx, self.actual_rpm_idx+1),
-                  slice(self.is_freewheeling_idx, self.is_freewheeling_idx+1),
-                  self.surface_categories]:
-            assert prev <= s.start <= s.stop, "Non-monotonic indexes"
-            prev = s.stop
-        if length is not None:
-            assert self.surface_categories.stop <= length, "Statevector too short"
-    
-    @staticmethod
-    def label_block(osv: OSV, idx: int) -> str:
-        if idx == osv.drel_idx: return "drel"
-        if idx == osv.speed_idx: return "speed"
-        if idx == osv.lateral_dist_idx: return "lateral_dist"
-        if idx in range(osv.refline.start, osv.refline.stop): return "refline"
-        if idx in range(osv.sliding.start, osv.sliding.stop): return "sliding"
-        if idx in range(osv.ground_contact.start, osv.ground_contact.stop): return "ground_contact"
-        if idx in range(osv.damper_absorb.start, osv.damper_absorb.stop): return "damper_absorb"
-        if idx == osv.gearbox_state_idx: return "gearbox_state"
-        if idx == osv.gear_idx: return "gear"
-        if idx == osv.actual_rpm_idx: return "actual_rpm"
-        if idx == osv.is_freewheeling_idx: return "is_freewheeling"
-        if idx in range(osv.surface_categories.start, osv.surface_categories.stop): return "surface_category"
-        return "unknown"
-
-
-
+from trackmania_env.utils.statevector_indexing import IOSVBase
+class NextpointIOSV(IOSVBase):
+    FIELDS = IOSVBase.FIELDS + [
+        ("road_features", "refline", "road_feature"),  # dynamic range : (road_features is the attribute name, "road_features_len" name of the attribute provided at runtime, "road_feature" label-block override)
+        ("lateral_dist", 1),
+    ]
 class NextPointObsManager(IndependentObservationManager):
     def __init__(self, colorspace, convert_torch, img_width, img_height, normalize_obs,normalize_sanity_check = False):
         super().__init__(colorspace, convert_torch, img_width, img_height, normalize_obs=normalize_obs)
@@ -136,7 +35,7 @@ class NextPointObsManager(IndependentObservationManager):
         self.last_obs : SimStateData = None
 
         self.statevector_dim = 0
-        self.idxs = OSV(self.reference_line_points_lookahead)
+        self.idxs = NextpointIOSV(refline = self.reference_line_points_lookahead)
 
         self.normalize_sanity_check = normalize_sanity_check
 
@@ -149,14 +48,13 @@ class NextPointObsManager(IndependentObservationManager):
         obs[self.idxs.actual_rpm_idx]       /= NormalizationFactors.rpm_norm                 
         obs[self.idxs.lateral_dist_idx]     /= NormalizationFactors.lateral_dist_norm                       
         obs[self.idxs.gear_idx]             /= NormalizationFactors.gear_norm                        
-        #obs[self.idxs.damper_absorb]       /= 0.15                     
         
         if self.normalize_sanity_check:
             try:
                 # Sanity checks <- i like the name of this
                 gonetol = 1.0 + 1e-4
                 goneidxs = np.nonzero(obs >= gonetol)[0]
-                gonelabels = [OSV.label_block(self.idxs, i) for i in goneidxs]
+                gonelabels = [IOSVBase.label_block(self.idxs, i) for i in goneidxs]
                 assert np.all(obs <= gonetol), f"Expected observations to be normalized to [0,1] before surface categories. \
                     Got unnormalized values : {goneidxs, obs[goneidxs]}. These are in the {gonelabels}"
 

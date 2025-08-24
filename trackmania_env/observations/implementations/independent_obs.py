@@ -20,63 +20,7 @@ from trackmania_env.utils.constants import NormalizationFactors
 
 from dataclasses import dataclass
 
-@dataclass(frozen=True)
-class IOSV:
-    """Utility class for indexes in statevector of IndependentObservations. Can also be noramlized for 
-
-    The base index can be shifted by passing a different `base` value.
-    Example:
-        OSV(45).sliding[0] == 45
-    You can append other OSVs or append this to other osvs.
-    """
-    mobile_states: int = 0  # starting index offset
-
-    @property
-    def sliding(self) -> slice:
-        start = self.mobile_states
-        stop = start + 4
-        return slice(start, stop)
-
-    @property
-    def ground_contact(self) -> slice:
-        start = self.sliding.stop
-        stop = start + 4
-        return slice(start, stop)
-
-    @property
-    def damper_absorb(self) -> slice:
-        start = self.ground_contact.stop
-        stop = start + 4
-        return slice(start, stop)
-
-    # Scalars that follow the ranges
-    @property
-    def gearbox_state_idx(self) -> int:
-        return self.damper_absorb.stop
-
-    @property
-    def gear_idx(self) -> int:
-        return self.gearbox_state_idx + 1
-
-    @property
-    def actual_rpm_idx(self) -> int:
-        return self.gear_idx + 1
-
-    @property
-    def is_freewheeling_idx(self) -> int:
-        return self.actual_rpm_idx + 1
-
-    @property
-    def surface_categories(self) -> slice:
-        start = self.is_freewheeling_idx + 1
-        stop  = start + 4
-        return slice(start, stop)
-    
-    @property
-    def speed_idx(self) -> int:
-        return self.surface_categories.stop + 1
-
-
+from trackmania_env.utils.statevector_indexing import IOSVBase
 class IndependentObservationManager(ObservationManager):
     """The idea behind this observation manager is that other maangers, 
     like e.g. NextPoint-obs contain map-specific observation like comming reference line points.
@@ -88,7 +32,7 @@ class IndependentObservationManager(ObservationManager):
         self.mobile_states_dim = 4 + 3*4 + 4
         self.statevector_dim = self.mobile_states_dim + 1 #+1 because of speed
 
-        self.idxs = IOSV(0)
+        self.idxs = IOSVBase(0)
 
     def get_observation_dict(self) -> spaces.Dict:
         """Returns observation dict for environment according to initialization."""
