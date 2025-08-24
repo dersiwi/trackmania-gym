@@ -193,6 +193,7 @@ def save_model(model : BaseAlgorithm, run_dir : str) -> None:
 
 
 from hydra.utils import to_absolute_path
+from omegaconf.errors import ConfigAttributeError
 
 def load_and_merge_yaml(cfg : TrainConfig, yaml_to_merge : str) -> TrainConfig:
     """Loads a yaml and merges it with cfg
@@ -205,6 +206,19 @@ def load_and_merge_yaml(cfg : TrainConfig, yaml_to_merge : str) -> TrainConfig:
     with open_dict(cfg):
         merged = OmegaConf.merge(cfg, yaml)
     return merged
+
+def load_and_merge_platform(cfg : TrainConfig) -> TrainConfig:
+    """Load and merge the standalone platform-yaml and merge it into the global 'cfg'-yaml."""
+    platform_path = None
+    platform_default_path = "configs/platforms.yaml"
+    try:
+        platform_path = cfg.platforms_config_path
+    except ConfigAttributeError as e:
+        print(f"[!!] Platform-path attribute missing in cfg; config too old? Trying default path : {platform_default_path}")
+        platform_path = platform_default_path
+    assert not platform_path is None
+    return load_and_merge_yaml(cfg, platform_path)
+
 
 from stable_baselines3.common.callbacks import EvalCallback, CheckpointCallback, CallbackList
 from trackmania_env.rewards.reward_calculation import RewardLogCallback, AccumRewardLogCallback
