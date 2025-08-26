@@ -7,7 +7,6 @@ from trackmania_env.observations.implementations.linesight_obs_wrapper import ge
 from trackmania_env.observations.implementations.nextpoint_obs import NextPointObsManager
 from trackmania_env.observations.implementations.sophy_obs import SophyObsManager
 from trackmania_env.observations.implementations.dyn_nextpoint_obs import DynamicNextPointObsManager
-from trackmania_env.observations.implementations.listbased_state_obs import ListbasedObs
 
 def get_observation_manager(cfg : TrainConfig, wrap_obs_in_test : bool = False, normalize : bool = False, grayscale_imgs_as_uint8 : bool = False) -> ObservationManager:
     """Instanciate Configuration manager according to confguration.
@@ -17,12 +16,6 @@ def get_observation_manager(cfg : TrainConfig, wrap_obs_in_test : bool = False, 
     obs_manager_cfg : ObservationManagerConfig = cfg.rl_env.obs_manager
     name = obs_manager_cfg.name 
     match name:
-        case "basic":
-            obs_manager = ListbasedObs(observation_list=obs_manager_cfg.observation_list, 
-                                        colorspace=obs_manager_cfg.colorspace,
-                                        convert_torch=obs_manager_cfg.convert_torch,
-                                        img_width=obs_manager_cfg.img_width, 
-                                        img_height=obs_manager_cfg.img_height)
         case "linesight":
             obs_manager = get_linesight_obs_instance(cfg)
 

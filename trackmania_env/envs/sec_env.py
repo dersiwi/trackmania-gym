@@ -15,8 +15,8 @@ from trackmania_env.envs.single_agent_env2 import TMNF_Single_Agent_Env, TMIComm
 
 from game_interaction.run_multiprocess_wrapper import start_process_and_wait_for_startsignal
 from game_interaction.ipc_fields import IPCCommands
-
-
+from trackmania_env.utils.constants import Globals
+from trackmania_env.envs.enivonrments import get_environment
 
 class CrashProofEnvironment(gym.Env):
     """
@@ -30,12 +30,6 @@ class CrashProofEnvironment(gym.Env):
     If the error is detected, no further informaiton from the current enviornment can be gathered. Therefore, the last recorded state is sent back
     once more; however truncated is set to True. The learner process can then call reset, in order to keep disruption to trajectory collection mininmal.   
     """
-    _env = None
-    @staticmethod
-    def get_instance(env_id : int = 0) -> TMNF_Single_Agent_Env:
-        assert CrashProofEnvironment._env is not None, "Cannot return instance of environment, as is none. Call init_environment beforehadn."
-        return CrashProofEnvironment._env
-
 
     def __init__(self, train_cfg : TrainConfig):
         """
@@ -74,14 +68,14 @@ class CrashProofEnvironment(gym.Env):
             1) start_process_and_wait_for_startsignal(...)
             2) get_environment(...)
         This enviornment is then used for further interaction"""
-        from trackmania_env.envs.enivonrments import get_environment    # TODO put this back at the top.
+        
         self.env_initalizations += 1
         self.logger.info(f"Initializing environment for the {self.env_initalizations}-th time.")
         self.tmi_process, self.control_queue, self.response_queue = start_process_and_wait_for_startsignal(self.cfg, 
                                                                                             self.cfg.rl_env.obs_manager.img_width, 
                                                                                             self.cfg.rl_env.obs_manager.img_height)
         self.env = get_environment(self.cfg, self.control_queue, self.response_queue)
-        CrashProofEnvironment._env = self.env.env
+        Globals._env = self.env.env
 
     def finalize_process(self, reinit : bool = True):
         """

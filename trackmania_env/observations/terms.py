@@ -10,38 +10,21 @@ from tminterface.structs import (
     SimulationWheel,
     RealTimeState,
     Engine)
-from trackmania_env.utils.contact_materials import physics_behavior_fromint,NUM_SURFACE_CATEGORIES
-from trackmania_env.utils.constants import ObsNormalizationFactors
-from numba import jit
-import trackmania_env.utils.constants as constants
-from trackmania_env.envs.sec_env import CrashProofEnvironment
+
+
+from trackmania_env.utils.contact_materials import physics_behavior_fromint, NUM_SURFACE_CATEGORIES
+from trackmania_env.utils.constants import ObsNormalizationFactors, Globals
+from trackmania_env.utils.reference_line_manager import ReferenceLineManager
 from trackmania_env.utils.interpolation import interpolate_points
-from collections import deque
+import trackmania_env.utils.constants as constants
+
 
 def get_wheel_states(game_states : SimStateData) -> tuple[list[RealTimeState], np.ndarray[SimulationWheel]]:
     wheels: np.ndarray[SimulationWheel] = game_states.simulation_wheels
     wheels_states : list[RealTimeState] = [wheels[i].real_time_state for i in range(wheels.shape[0])]
     return wheels_states, wheels
 
-class ObservationTerm:
-    """This class contains observation terms for vecotr-like observations.
-    Each observation-term returns a numpy-array of shape [N,]."""
-
-    def __init__(self, dim : int, normalize : bool):
-        self.dim = dim
-        self.normalize = normalize
-    
-    def _get_obs(self, game_states : SimStateData, **kwargs) -> np.ndarray:
-        raise NotImplementedError()
-    
-    def _normalize(self, obs) -> np.ndarray:
-        raise NotImplementedError()
-
-    def get_observation(self, game_states : SimStateData, **kwargs) -> np.ndarray:
-        obs = self._get_obs(game_states, **kwargs)
-        if self.normalize:
-            obs = self._normalize(obs)
-        return obs
+from trackmania_env.observations.observation_manager import ObservationTerm
     
 
 class SurfaceFloats(ObservationTerm):
@@ -129,9 +112,9 @@ class NextReflinePoint(ObservationTerm):
     
     def _get_obs(self, gamestates, **kwargs):
         dyna_current: HmsDynaStateStruct = gamestates.dyna.current_state
-        refline = CrashProofEnvironment.get_instance().reference_line
+        refline : ReferenceLineManager = Globals.get_instance().reference_line
         next_idx, _, _ = refline.get_distance_to_next_point()
-        comming_refline_points : np.ndarray = CrashProofEnvironment.get_instance().reference_line.get_reference_line_points(begin_idx=next_idx,
+        comming_refline_points : np.ndarray = refline.get_reference_line_points(begin_idx=next_idx,
                                                                 end_idx= next_idx + self.n_refline_points * self.reference_line_stride, 
                                                                 extrapolate= True, stride = self.reference_line_stride)
 
@@ -153,7 +136,7 @@ class LateralDistance(ObservationTerm):
         return obs / ObsNormalizationFactors.lateral_dist_norm
 
     def _get_obs(self, gamestates : SimStateData, **kwargs):
-        reference_line = CrashProofEnvironment.get_instance().reference_line
+        reference_line = Globals.get_instance().reference_line
         next_idx, d, drel = reference_line.get_distance_to_next_point()
         lateral_distance : np.ndarray = reference_line.calculate_lateral_difference(next_idx, gamestates.position)
         return lateral_distance
@@ -166,7 +149,7 @@ class RelativeDistance(ObservationTerm):
         return obs
     
     def _get_obs(self, game_states, **kwargs):
-        reference_line = CrashProofEnvironment.get_instance().reference_line
+        reference_line = Globals.get_instance().reference_line
         next_idx, d, drel = reference_line.get_distance_to_next_point()
         return drel
 
@@ -200,7 +183,7 @@ class SophyGlobalFeatures(ObservationTerm):
                 points for the left, center, and right track lines.
         """
         #NOTE as for now we only return the center points no left and right
-        reference_line = CrashProofEnvironment.get_instance().reference_line
+        reference_line = Globals.get_instance().reference_line
         dyna_current: HmsDynaStateStruct = game_states.dyna.current_state # current dynamic state of the car, such as its position, orientation, speed ... .
         
         position = np.array(dyna_current.position,dtype=np.float32,)  # (3,)

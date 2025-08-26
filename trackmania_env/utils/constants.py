@@ -2,7 +2,7 @@ MS_TO_KMH = 3.6       # meters per second to kilometers per hour
 MILLISECONDS_TO_SECONDS = 1000  # milliseconds to seconds
 MAX_DISTANCE_TO_REFLINE = 15 # the distance after which the car is considered to be off-course
 MAX_HEIGHT_DIFERENCE = 7
-
+TYPING = False
 MAX_LATERAL_DISTANCE = 12 # maximal lateral difference of the car to the road-center, this is an estimate.
 
 class ObsNormalizationFactors:
@@ -13,3 +13,10 @@ class ObsNormalizationFactors:
     rpm_norm = 12000.0
     lateral_dist_norm = 18
     gear_norm = 2
+
+class Globals:
+    _env = None
+    @staticmethod
+    def get_instance(env_id : int = 0):
+        assert Globals._env is not None, "Cannot return instance of environment, as is none. Call init_environment beforehadn."
+        return Globals._env

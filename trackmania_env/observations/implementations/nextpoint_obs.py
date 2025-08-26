@@ -4,8 +4,7 @@ from trackmania_env.observations.observation_manager import ObservationManager
 from gymnasium import spaces
 import numpy as np
 
-from trackmania_env.observations.terms import NextReflinePoint, MobileStatesTerm, SurfaceFloats, SpeedTerm, ObservationTerm, LateralDistance, RelativeDistance
-from trackmania_env.utils.contact_materials import physics_behavior_fromint,NUM_SURFACE_CATEGORIES
+from trackmania_env.observations.terms import NextReflinePoint, MobileStatesTerm, SurfaceFloats, SpeedTerm,  LateralDistance, RelativeDistance
 
 class NextPointObsManager(ObservationManager):
     def __init__(self, colorspace, convert_torch, img_width, img_height, normalize_obs):
