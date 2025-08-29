@@ -29,7 +29,7 @@ class ObservationTerm:
     def _normalize(self, obs) -> np.ndarray:
         raise NotImplementedError()
 
-    def get_observation(self, game_states : SimStateData, env, **kwargs) -> np.ndarray:
+    def get_observation(self, game_states : SimStateData, **kwargs) -> np.ndarray:
         obs = self._get_obs(game_states, **kwargs)
         if self.normalize:
             obs = self._normalize(obs)
