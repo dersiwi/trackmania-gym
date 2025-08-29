@@ -15,7 +15,6 @@ from trackmania_env.envs.single_agent_env2 import TMNF_Single_Agent_Env, TMIComm
 
 from game_interaction.run_multiprocess_wrapper import start_process_and_wait_for_startsignal
 from game_interaction.ipc_fields import IPCCommands
-from trackmania_env.utils.constants import Globals
 from trackmania_env.envs.enivonrments import get_environment
 
 class CrashProofEnvironment(gym.Env):
@@ -75,7 +74,6 @@ class CrashProofEnvironment(gym.Env):
                                                                                             self.cfg.rl_env.obs_manager.img_width, 
                                                                                             self.cfg.rl_env.obs_manager.img_height)
         self.env = get_environment(self.cfg, self.control_queue, self.response_queue)
-        Globals._env = self.env.env
 
     def finalize_process(self, reinit : bool = True):
         """

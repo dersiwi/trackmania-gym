@@ -13,10 +13,3 @@ class ObsNormalizationFactors:
     rpm_norm = 12000.0
     lateral_dist_norm = 18
     gear_norm = 2
-
-class Globals:
-    _env = None
-    @staticmethod
-    def get_instance(env_id : int = 0):
-        assert Globals._env is not None, "Cannot return instance of environment, as is none. Call init_environment beforehadn."
-        return Globals._env

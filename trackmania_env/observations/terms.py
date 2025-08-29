@@ -13,7 +13,7 @@ from tminterface.structs import (
 
 
 from trackmania_env.utils.contact_materials import physics_behavior_fromint, NUM_SURFACE_CATEGORIES
-from trackmania_env.utils.constants import ObsNormalizationFactors, Globals
+from trackmania_env.utils.constants import ObsNormalizationFactors
 from trackmania_env.utils.reference_line_manager import ReferenceLineManager
 from trackmania_env.utils.interpolation import interpolate_points
 import trackmania_env.utils.constants as constants
@@ -112,7 +112,7 @@ class NextReflinePoint(ObservationTerm):
     
     def _get_obs(self, gamestates, **kwargs):
         dyna_current: HmsDynaStateStruct = gamestates.dyna.current_state
-        refline : ReferenceLineManager = Globals.get_instance().reference_line
+        refline : ReferenceLineManager = self.env.reference_line
         next_idx, _, _ = refline.get_distance_to_next_point()
         comming_refline_points : np.ndarray = refline.get_reference_line_points(begin_idx=next_idx,
                                                                 end_idx= next_idx + self.n_refline_points * self.reference_line_stride, 
@@ -136,7 +136,7 @@ class LateralDistance(ObservationTerm):
         return obs / ObsNormalizationFactors.lateral_dist_norm
 
     def _get_obs(self, gamestates : SimStateData, **kwargs):
-        reference_line = Globals.get_instance().reference_line
+        reference_line = self.env.reference_line
         next_idx, d, drel = reference_line.get_distance_to_next_point()
         lateral_distance : np.ndarray = reference_line.calculate_lateral_difference(next_idx, gamestates.position)
         return lateral_distance
@@ -149,7 +149,7 @@ class RelativeDistance(ObservationTerm):
         return obs
     
     def _get_obs(self, game_states, **kwargs):
-        reference_line = Globals.get_instance().reference_line
+        reference_line = self.env.reference_line
         next_idx, d, drel = reference_line.get_distance_to_next_point()
         return drel
 
@@ -183,7 +183,7 @@ class SophyGlobalFeatures(ObservationTerm):
                 points for the left, center, and right track lines.
         """
         #NOTE as for now we only return the center points no left and right
-        reference_line = Globals.get_instance().reference_line
+        reference_line = self.env.reference_line
         dyna_current: HmsDynaStateStruct = game_states.dyna.current_state # current dynamic state of the car, such as its position, orientation, speed ... .
         
         position = np.array(dyna_current.position,dtype=np.float32,)  # (3,)

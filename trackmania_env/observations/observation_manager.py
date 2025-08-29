@@ -17,6 +17,11 @@ class ObservationTerm:
     def __init__(self, dim : int, normalize : bool):
         self.dim = dim
         self.normalize = normalize
+        self.env = None
+
+    def set_env(self, env):
+        from trackmania_env.envs.single_agent_env2 import TMNF_Single_Agent_Env
+        self.env : TMNF_Single_Agent_Env = env
     
     def _get_obs(self, game_states : SimStateData, **kwargs) -> np.ndarray:
         raise NotImplementedError()
@@ -24,7 +29,7 @@ class ObservationTerm:
     def _normalize(self, obs) -> np.ndarray:
         raise NotImplementedError()
 
-    def get_observation(self, game_states : SimStateData, **kwargs) -> np.ndarray:
+    def get_observation(self, game_states : SimStateData, env, **kwargs) -> np.ndarray:
         obs = self._get_obs(game_states, **kwargs)
         if self.normalize:
             obs = self._normalize(obs)
@@ -86,6 +91,8 @@ class ObservationManager:
     def set_env(self, environment):
         from trackmania_env.envs.single_agent_env2 import TMNF_Single_Agent_Env
         self.env : TMNF_Single_Agent_Env = environment
+        for term in self.observation_terms:
+            term.set_env(environment)
 
 
     def get_values_from_state_dict(self, obs : SimStateData) -> np.ndarray:
