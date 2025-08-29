@@ -7,6 +7,30 @@ from trackmania_env.utils.reference_line_manager import ReferenceLineManager
 from trackmania_env.utils.position_buffer import PositionBuffer
 from trackmania_env.rewards.normalizer import RewardNormalizer
 
+class RewardTerm():
+
+    def __init__(self, weight : float, name : str):
+        self.weight = weight
+        self.name = name
+        self.env = None
+
+    def _get_term(self, observations : dict[str, any], processed_obs : dict[str, any], race_finished : bool, other_terminations : dict[str, bool]) -> float:
+        raise NotImplementedError("")
+
+    def _get_weighted_term(self, observations : dict[str, any], processed_obs : dict[str, any], race_finished : bool, other_terminations : dict[str, bool]) -> float:
+        return self._get_term(observations, processed_obs, race_finished, other_terminations) * self.weight
+    
+    def calculate_reward_term(self, observations : dict[str, any], processed_obs : dict[str, any], race_finished : bool, other_terminations : dict[str, bool]) -> tuple[float, dict[str, int | float]]:
+        val =  self._get_weighted_term(observations, processed_obs, race_finished, other_terminations)
+        return val, {self.name : val}
+    
+    def set_env(self, env):
+        from trackmania_env.envs.single_agent_env2 import TMNF_Single_Agent_Env
+        self.env : TMNF_Single_Agent_Env= env
+        
+    def reset(self) -> None:
+        pass
+
 class RewradCalculator:
     """Responsible for reward calculations for environment.
     Subclasses have to implement self.get_sum_of_weighted_rewards()"""
@@ -18,23 +42,26 @@ class RewradCalculator:
         self.normalizer = RewardNormalizer()
         self.normalize = normalize
 
-    def set_position_buffer(self, position_buffer : PositionBuffer):
-        """Set position buffer for this instance"""
-        self.pos_buffer = position_buffer
+        self.reward_terms : list[RewardTerm] = []
 
-    def set_reference_line(self,refline_manager: ReferenceLineManager):
-        """ Set reference line for this instance"""
-        self.refline_manager = refline_manager
 
     def set_env(self, env):
         from trackmania_env.envs.single_agent_env2 import TMNF_Single_Agent_Env
         self.env : TMNF_Single_Agent_Env= env
-        self.set_reference_line(self.env.reference_line)
-        self.set_position_buffer(self.env.position_buffer)
+
+        for term in self.reward_terms:
+            term.set_env(env)
 
     def get_sum_of_weighted_rewards(self, observations : dict[str, any], processed_obs : dict[str, any], race_finished : bool, other_terminations : dict[str, bool]) -> tuple[float, dict[str, int | float]]:
-        raise NotImplementedError("Do Not use this class directly. Use RewardCalculator.get_instance()")
-
+        rew = 0
+        info = {}
+        for term in self.reward_terms:
+            termvalue, terminfo = term.calculate_reward_term(observations, processed_obs, race_finished, other_terminations)
+            rew += termvalue
+            info = info | terminfo
+        info["total"] = rew
+        return rew, info
+    
     def calculate_reward(self, observations : dict[str, any], processed_obs : dict[str, any], race_finished : bool, other_terminations : dict[str, bool]) -> tuple[float, dict[str, int | float]]:
         """Calculates the rewrad given observations for current environment-step
         
@@ -65,7 +92,8 @@ class RewradCalculator:
 
     def reset(self) -> None:
         """resets rewrad calculator"""
-        pass
+        for term in self.reward_terms:
+            term.reset()
 
 
 class RewardLogCallback(BaseCallback):
