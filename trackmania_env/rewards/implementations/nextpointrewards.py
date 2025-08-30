@@ -10,7 +10,7 @@ from game_interaction.ipc_fields import IPCFields
 from trackmania_env.utils import constants
 from trackmania_env.utils.lateral_distance_manager import LateralDistanceManager
 
-from trackmania_env.rewards.terms import (
+from trackmania_env.rewards.reward_terms.basic_terms import (
     RaceFinished,
     ConstantRewardTerm,
     LateralDistanceReward,
@@ -21,7 +21,7 @@ from trackmania_env.rewards.terms import (
     OffTrackPunishment,
     AccumulatedWallPenalty)
 
-from trackmania_env.rewards.implementations.advanced_skills_rewards import DriftReward,AirBrakeReward,SpeedSlideReward
+from trackmania_env.rewards.reward_terms.advanced_skills_terms import DriftReward,AirBrakeReward,SpeedSlideReward
 
 class NextPointRewards(RewradCalculator):
 
