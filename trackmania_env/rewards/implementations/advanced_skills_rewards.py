@@ -1,9 +1,7 @@
 from typing import List
 import numpy as np
 
-from trackmania_env.rewards.reward_calculation import RewradCalculator
 from trackmania_env.utils import constants
-from trackmania_env.rewards.implementations.nextpointrewards import NextPointRewards
 from tminterface.structs import  SimStateData,SimulationWheel
 from game_interaction.ipc_fields import IPCFields
 from trackmania_env.rewards.reward_calculation import RewardTerm
@@ -154,30 +152,3 @@ class AirBrakeReward(RewardTerm):
     
     def reset(self):
          self.mid_air_brake = False
-    
-class NextPointDriftReward(NextPointRewards):
-    def __init__(self, 
-                drift_reward_weight = 1,
-                normalize = False,
-                **kwargs):
-        super().__init__(normalize=normalize, **kwargs)
-        self.reward_terms.append(DriftReward(drift_reward_weight))
-
-class AirBrakeNextPointReward(NextPointRewards):
-
-    def __init__(self, 
-                air_brake_reward_weight = 1,
-                normalize = False,
-                **kwargs):
-        super().__init__(normalize=normalize, **kwargs)
-        self.reward_terms.append(AirBrakeReward(air_brake_reward_weight))        
-
-
-class SpeedSplideNextPointReward(NextPointRewards):
-   
-    def __init__(self, 
-                speed_slide_reward_weight = 1,
-                normalize = False,
-                **kwargs):
-        super().__init__(normalize=normalize, **kwargs)
-        self.reward_terms.append(SpeedSlideReward(speed_slide_reward_weight))        

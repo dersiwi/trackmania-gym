@@ -21,6 +21,8 @@ from trackmania_env.rewards.terms import (
     OffTrackPunishment,
     AccumulatedWallPenalty)
 
+from trackmania_env.rewards.implementations.advanced_skills_rewards import DriftReward,AirBrakeReward,SpeedSlideReward
+
 class NextPointRewards(RewradCalculator):
 
     def __init__(self, 
@@ -123,3 +125,30 @@ class NextPointRewards3(NextPointRewards):
         super().__init__(normalize=normalize, **kwargs)
         self.reward_terms.append(OffTrackPunishment(weight=off_course_penalty_weight))
         self.reward_terms.append(AccumulatedWallPenalty(weight=wall_penalty_weight,min_wall_contact_time = min_wall_contact_time))
+
+class NextPointDriftReward(NextPointRewards):
+    def __init__(self, 
+                drift_reward_weight = 1,
+                normalize = False,
+                **kwargs):
+        super().__init__(normalize=normalize, **kwargs)
+        self.reward_terms.append(DriftReward(drift_reward_weight))
+
+class AirBrakeNextPointReward(NextPointRewards):
+
+    def __init__(self, 
+                air_brake_reward_weight = 1,
+                normalize = False,
+                **kwargs):
+        super().__init__(normalize=normalize, **kwargs)
+        self.reward_terms.append(AirBrakeReward(air_brake_reward_weight))        
+
+
+class SpeedSplideNextPointReward(NextPointRewards):
+   
+    def __init__(self, 
+                speed_slide_reward_weight = 1,
+                normalize = False,
+                **kwargs):
+        super().__init__(normalize=normalize, **kwargs)
+        self.reward_terms.append(SpeedSlideReward(speed_slide_reward_weight))        

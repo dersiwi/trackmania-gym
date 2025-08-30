@@ -2,9 +2,15 @@
 from trackmania_env.rewards.reward_calculation import RewradCalculator
 from trackmania_env.rewards.implementations.basic_rewards import BasicRewardCalculation
 from trackmania_env.rewards.implementations.linesight_rewards import LinesightRewardCalculator
-from trackmania_env.rewards.implementations.nextpointrewards import NextPointRewards,NextPointRewards3 ,RaceFinishedRewards
+from trackmania_env.rewards.implementations.nextpointrewards import (
+    NextPointRewards,
+    NextPointRewards3,
+    RaceFinishedRewards,
+    AirBrakeNextPointReward,
+    NextPointDriftReward,
+    SpeedSplideNextPointReward)
+
 from trackmania_env.rewards.implementations.sophy_rewards import SophyRewards
-from trackmania_env.rewards.implementations.advanced_skills_rewards import NextPointDriftReward,AirBrakeNextPointReward,SpeedSplideNextPointReward
 from configs.config import RewardManagerCfg
 
 
