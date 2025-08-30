@@ -138,7 +138,7 @@ class OffTrackPunishment(RewardTerm):
         if is_off_course:
             # Accumulate off-course time and apply penalty
             self.total_off_course_time += delta_time
-            reward = -self.total_off_course_time * self.weight
+            reward = -self.total_off_course_time
         else:
             # Reset timer if agent is back on course
             self.total_off_course_time = 0
@@ -179,7 +179,7 @@ class AccumulatedWallPenalty(RewardTerm):
                 excess_contact_time = (
                     self.continuous_wall_contact_time - self.min_wall_contact_time
                 )
-                reward = -excess_contact_time * self.weight
+                reward = -excess_contact_time
         else:
             # Reset timer when contact is lost
             self.continuous_wall_contact_time = 0.0
