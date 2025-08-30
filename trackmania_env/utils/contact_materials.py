@@ -50,6 +50,14 @@ class ContactMaterial(Enum):
 #   3 represents broadly "Turbo category"
 #   4 represents broadly "anything else"
 
+class SurfaceCategory(Enum):
+    """Broad surface categories for driving physics or logic grouping."""
+    ASPHALT = 0 
+    GRASS = 1    
+    DIRT = 2     
+    TURBO = 3    
+    OTHER = 4    
+
 # TODO in linesight the variable corresponds to config_copy.n_contact_material_physics_behavior_types
 """
 TODO in linesight the variable corresponds to config_copy.n_contact_material_physics_behavior_types
@@ -58,37 +66,42 @@ which is set to 4. But there are actually 5 categories. Did they do this on purp
 """
 NUM_SURFACE_CATEGORIES = 4
 physics_group_fromstr = {
-    "Concrete": 0,
-    "Pavement": 0,
-    "Grass": 1,
-    "Ice": 4,
-    "Metal": 4,
-    "Sand": 2,
-    "Dirt": 2,
-    "Turbo": 3,
-    "DirtRoad": 2,
-    "Rubber": 4,
-    "SlidingRubber": 4,
-    "Test": 4,
-    "Rock": 4,
-    "Water": 4,
-    "Wood": 4,
-    "Danger": 4,
-    "Asphalt": 0,
-    "WetDirtRoad": 2,
-    "WetAsphalt": 0,
-    "WetPavement": 0,
-    "WetGrass": 1,
-    "Snow": 4,
-    "ResonantMetal": 4,
-    "GolfBall": 4,
-    "GolfWall": 4,
-    "GolfGround": 4,
-    "Turbo2": 3,
-    "Bumper": 4,
-    "NotCollidable": 4,
-    "FreeWheeling": 4,
-    "TurboRoulette": 4,
+    "Concrete": SurfaceCategory.ASPHALT,
+    "Pavement": SurfaceCategory.ASPHALT,
+    "Asphalt": SurfaceCategory.ASPHALT,
+    "WetAsphalt": SurfaceCategory.ASPHALT,
+    "WetPavement": SurfaceCategory.ASPHALT,
+
+    "Grass": SurfaceCategory.GRASS,
+    "WetGrass": SurfaceCategory.GRASS,
+
+    "Sand": SurfaceCategory.DIRT,
+    "Dirt": SurfaceCategory.DIRT,
+    "DirtRoad": SurfaceCategory.DIRT,
+    "WetDirtRoad": SurfaceCategory.DIRT,
+
+    "Turbo": SurfaceCategory.TURBO,
+    "Turbo2": SurfaceCategory.TURBO,
+
+    # Everything else falls under "OTHER"
+    "Ice": SurfaceCategory.OTHER,
+    "Metal": SurfaceCategory.OTHER,
+    "Rubber": SurfaceCategory.OTHER,
+    "SlidingRubber": SurfaceCategory.OTHER,
+    "Test": SurfaceCategory.OTHER,
+    "Rock": SurfaceCategory.OTHER,
+    "Water": SurfaceCategory.OTHER,
+    "Wood": SurfaceCategory.OTHER,
+    "Danger": SurfaceCategory.OTHER,
+    "Snow": SurfaceCategory.OTHER,
+    "ResonantMetal": SurfaceCategory.OTHER,
+    "GolfBall": SurfaceCategory.OTHER,
+    "GolfWall": SurfaceCategory.OTHER,
+    "GolfGround": SurfaceCategory.OTHER,
+    "Bumper": SurfaceCategory.OTHER,
+    "NotCollidable": SurfaceCategory.OTHER,
+    "FreeWheeling": SurfaceCategory.OTHER,
+    "TurboRoulette": SurfaceCategory.OTHER,
 }
 
 # creates the mapping from enum value to  its physics behavior group
