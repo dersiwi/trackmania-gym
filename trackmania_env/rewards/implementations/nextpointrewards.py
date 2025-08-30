@@ -9,8 +9,17 @@ from trackmania_env.rewards.reward_calculation import RewradCalculator
 from game_interaction.ipc_fields import IPCFields
 from trackmania_env.utils import constants
 from trackmania_env.utils.lateral_distance_manager import LateralDistanceManager
-from trackmania_env.rewards.terms import RaceFinished, ConstantRewardTerm, LateralDistanceReward, AccumulatedDistanceReward, SpeedReward, NoProgressPunishment, TerminationPunishment
 
+from trackmania_env.rewards.terms import (
+    RaceFinished,
+    ConstantRewardTerm,
+    LateralDistanceReward,
+    AccumulatedDistanceReward,
+    SpeedReward,
+    NoProgressPunishment,
+    TerminationPunishment,
+    OffTrackPunishment,
+    AccumulatedWallPenalty)
 
 class NextPointRewards(RewradCalculator):
 
@@ -105,112 +114,12 @@ class NextPointRewards3(NextPointRewards):
 
     def __init__(
         self,
-        accum_distance_weight=1200,
-        race_not_finished_weight=0.05,
-        race_finished_reward_weight=100,
-        other_termination_punishment=20,
-        velocity_reward_weight=1,
-        backward_weight=0,
-        distance_to_center_weight=1,
-        velocity_change_reward_weight=30,
-        speed_reward_weight=1,
-        lateral_distance_mode="gauss",
-        mean=0,
-        sigma=1,
-        yshift=-1,
-        multiplicator=5,
-        dist_scale=0.3,
-        normalize=False,
         off_course_penalty_weight:float = 0.034, 
         wall_penalty_weight:float = 10.0,
         min_wall_contact_time:float = 0.5,   
-        minimum_punishment_speed:float = 10.0,
+        normalize=False,
         **kwargs
     ):
-        super().__init__(
-            accum_distance_weight,
-            race_not_finished_weight,
-            race_finished_reward_weight,
-            other_termination_punishment,
-            velocity_reward_weight,
-            backward_weight,
-            distance_to_center_weight,
-            velocity_change_reward_weight,
-            speed_reward_weight,
-            lateral_distance_mode,
-            mean,
-            sigma,
-            yshift,
-            multiplicator,
-            dist_scale,
-            normalize,
-            **kwargs
-        )
-        self.last_time = 0
-        self.continuous_wall_contact_time = 0
-        self.total_off_course_time = 0
-
-        self.min_wall_contact_time = min_wall_contact_time
-        self.minimum_punishment_speed = minimum_punishment_speed
-
-        self.w_off_course = off_course_penalty_weight
-        self.w_wall = wall_penalty_weight
-    
-    def reset(self):
-        super().reset()
-        self.last_time = 0
-        self.continuous_wall_contact_time = 0.0
-        self.total_off_course_time = 0
-
-
-
-    def get_sum_of_weighted_rewards(self, observations, processed_obs, race_finished, other_terminations):      
-        reward,info = super().get_sum_of_weighted_rewards(observations, processed_obs, race_finished, other_terminations)
-
-        ssD : SimStateData = observations[IPCFields.SIMSTATE]
-        time =  ssD.time/ constants.MILLISECONDS_TO_SECONDS
-        delta_time = time - self.last_time
-        next_refline_index , d, _ = self.refline_manager.get_distance_to_next_point()
-        speed = ssD.display_speed / constants.MS_TO_KMH
-        refline_z_coord = self.refline_manager.reference_line[next_refline_index][1]
-        agent_z_coord = ssD.position[1]
-        height_diff = abs(agent_z_coord-refline_z_coord)
-        
-        # off-course
-        lateral_distance = d
-        is_off_course = lateral_distance >= constants.MAX_DISTANCE_TO_REFLINE or height_diff >= constants.MAX_HEIGHT_DIFERENCE 
-        ro = 0
-
-        if is_off_course:
-            # Increment the total off-course time
-            self.total_off_course_time += delta_time
-            # The penalty is based on the new time accumulated in this step
-            ro = -self.total_off_course_time * self.w_off_course
-        else:
-            self.total_off_course_time = 0
-            
-        ro = max(ro,-20.0)
-        info["off-course"] = ro
-
-        # wall
-        rw = 0
-        if ssD.scene_mobil.has_any_lateral_contact:
-            # increment timer by the time elapsed
-            self.continuous_wall_contact_time += delta_time
-            
-            # Punish only if contact time exceeds threshold (to allow things like speedbumps)
-            if self.continuous_wall_contact_time > self.min_wall_contact_time:
-                # The punishment starts small and grows as the agent stays on the wall
-                punishment_duration = self.continuous_wall_contact_time - self.min_wall_contact_time
-                rw = -punishment_duration #* max(speed,self.minimum_punishment_speed) # use minimum speed to ensure a penalty even when not moving
-                rw *= self.w_wall 
-        else: 
-            self.continuous_wall_contact_time = 0.0 # Reset timer if contact is lost
-        info["wall"] = rw
-
-        rw = max(rw,-20.0)
-
-        reward += rw+ro
-        self.last_time = time 
-        return super().normalize_reward(reward),info
-
+        super().__init__(normalize=normalize, **kwargs)
+        self.reward_terms.append(OffTrackPunishment(weight=off_course_penalty_weight))
+        self.reward_terms.append(AccumulatedWallPenalty(weight=wall_penalty_weight,min_wall_contact_time = min_wall_contact_time))
