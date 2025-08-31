@@ -22,7 +22,6 @@ class EnvPlotter(ABC):
     def plot(self):
         pass
 
-
 class Plot_Obs_Images(EnvPlotter):
     """
     This plots the images which are part of the observation space in realtime
@@ -74,7 +73,7 @@ class Plot_Rewards(EnvPlotter):
     """
     This plots all the reward terms which get used in the reward manager.
     """
-    def __init__(self, key_to_plot = None, y_lim=(-1, 1)):
+    def __init__(self, key_to_plot = None, y_lim=(-1, 1), plot_total = True):
         super().__init__()
         self.fig = None
         self.ax = None
@@ -82,9 +81,10 @@ class Plot_Rewards(EnvPlotter):
         self.y_lim = y_lim 
         self.vals = {}
         self.lines = {}
+        self.plot_total = plot_total
 
     def setup_plot(self):
-        self.fig, self.ax = plt.subplots(figsize=(13, 13))
+        self.fig, self.ax = plt.subplots(figsize=(8, 8))
         plt.ion()
         plt.show()
 
@@ -98,6 +98,8 @@ class Plot_Rewards(EnvPlotter):
             self.ax.set_ylabel("Reward Values per env step")
 
             for key, values in self.vals.items():
+                if key == "total" and not self.plot_total:
+                    continue
                 if key not in self.lines:
                     line, = self.ax.plot(values, label=key)
                     self.lines[key] = line

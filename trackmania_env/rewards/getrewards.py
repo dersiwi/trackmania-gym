@@ -2,14 +2,7 @@
 from trackmania_env.rewards.reward_calculation import RewradCalculator
 from trackmania_env.rewards.implementations.basic_rewards import BasicRewardCalculation
 from trackmania_env.rewards.implementations.linesight_rewards import LinesightRewardCalculator
-from trackmania_env.rewards.implementations.nextpointrewards import (
-    NextPointRewards,
-    NextPointRewards3,
-    RaceFinishedRewards,
-    AirBrakeNextPointReward,
-    NextPointDriftReward,
-    SpeedSplideNextPointReward)
-
+from trackmania_env.rewards.implementations.nextpointrewards import *
 from trackmania_env.rewards.implementations.sophy_rewards import SophyRewards
 from configs.config import RewardManagerCfg
 
@@ -36,6 +29,8 @@ def get_reward_calculator(reward_calculator_cfg: RewardManagerCfg, normalize: bo
             return AirBrakeNextPointReward(**reward_calculator_cfg.args, normalize=normalize)
         case "nextpoint_speed_slide":
             return SpeedSplideNextPointReward(**reward_calculator_cfg.args, normalize=normalize)
+        case "optimize_racetime":
+            return OptimizeRaceTiem(**reward_calculator_cfg.args, normalize=normalize)
         case "race_finished":
             return RaceFinishedRewards(**reward_calculator_cfg.args, 
                                        use_punishment=reward_calculator_cfg.use_punishment, 

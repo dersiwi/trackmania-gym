@@ -1,0 +1,8 @@
+name: "optimize_racetime"
+args:
+    accum_distance_weight : 500
+    race_not_finished_weight : 0.05
+    race_finished_reward_weight : 100
+    other_termination_punishment : 20
+    speed_reward_weight: 1
+    wall_contact : -0.2

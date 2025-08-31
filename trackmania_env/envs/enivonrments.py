@@ -46,7 +46,7 @@ def get_environment(cfg : TrainConfig, control_queue : Queue, response_queue : Q
     "termination_manger": termination_manger,
     "reference_line": ReferenceLineManager(cfg.gmi.reference_line),
     "env_cfg": cfg.rl_env.env,
-    "platform" : cfg.platforms.device,
+    "platform" : cfg.platforms.os,
     "gamma" : cfg.sb3.algorithm_params.gamma # TODO : This is maybe not the greatest idea, as soon as we work with smth other than sb3 this has to go
     }
 

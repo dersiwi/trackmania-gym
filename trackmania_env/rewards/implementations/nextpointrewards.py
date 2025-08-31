@@ -10,18 +10,8 @@ from game_interaction.ipc_fields import IPCFields
 from trackmania_env.utils import constants
 from trackmania_env.utils.lateral_distance_manager import LateralDistanceManager
 
-from trackmania_env.rewards.reward_terms.basic_terms import (
-    RaceFinished,
-    ConstantRewardTerm,
-    LateralDistanceReward,
-    AccumulatedDistanceReward,
-    SpeedReward,
-    NoProgressPunishment,
-    TerminationPunishment,
-    OffTrackPunishment,
-    AccumulatedWallPenalty)
-
-from trackmania_env.rewards.reward_terms.advanced_skills_terms import DriftReward,AirBrakeReward,SpeedSlideReward
+from trackmania_env.rewards.reward_terms.basic_terms import *
+from trackmania_env.rewards.reward_terms.advanced_skills_terms import *
 
 class NextPointRewards(RewradCalculator):
 
@@ -83,14 +73,27 @@ class NextPointRewards(RewradCalculator):
                              ConstantRewardTerm((-1) * race_not_finished_weight),
                              SpeedReward(speed_reward_weight / SpeedReward.THEORETICAL_MAX_VALUE),
                              LateralDistanceReward(distance_to_center_weight, lateral_distance_mode),
-                             TerminationPunishment(self.other_termination_punishment)
-]
+                             TerminationPunishment((-1) * self.other_termination_punishment)]
         
     def reset(self):
         self.current_refline_idx = 0
         return super().reset()
     
+class OptimizeRaceTiem(RewradCalculator):
 
+    def __init__(self, accum_distance_weight = 1200, 
+                 race_not_finished_weight = 0.05, 
+                 race_finished_reward_weight = 100, 
+                 other_termination_punishment = 20, 
+                 speed_reward_weight = 1,
+                  wall_contact = -0.2, normalize = False, **kwargs):
+        super().__init__(normalize, **kwargs)
+        self.reward_terms = [AccumulatedDistanceReward(accum_distance_weight),
+                             RaceFinished(race_finished_reward_weight, scaled_by_steps_taken=True),
+                             ConstantRewardTerm((-1) * race_not_finished_weight),
+                             SpeedReward(speed_reward_weight / SpeedReward.THEORETICAL_MAX_VALUE),
+                             TerminationPunishment((-1) * other_termination_punishment),
+                             HasWallConatact(wall_contact)]
 
 class RaceFinishedRewards(NextPointRewards):
     """Similar to NextPointRewards, but it scales the distance to center in relation to the accumulated distance."""
@@ -107,7 +110,7 @@ class RaceFinishedRewards(NextPointRewards):
         self.reward_terms = [
             RaceFinished(self.race_finished_reward_weight, scaled_by_steps_taken=True),
             AccumulatedDistanceReward(self.accum_distance_weight),
-            TerminationPunishment(self.other_termination_punishment)]
+            TerminationPunishment((-1) * self.other_termination_punishment)]
         
         if use_punishment:
             self.reward_terms.append(NoProgressPunishment(self.race_finished_reward_weight, steps_without_progress_until_punishment))

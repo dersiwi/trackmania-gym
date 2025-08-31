@@ -77,7 +77,7 @@ class TerminationPunishment(BoundedRewardterm):
         if "no_progress" in other_terminations:
             ot = ot or other_terminations["no_progress"]
 
-        other_term_reward = (-1) * ot
+        other_term_reward = ot
         return other_term_reward
     
 class HasWallConatact(BoundedRewardterm):

@@ -30,7 +30,7 @@ def main(cfg : TrainConfig):
     tm_env : TestEnvironment = get_environment(cfg, control_queue, response_queue, test=True)
 
     obs, info = tm_env.reset()
-    tm_env.add_env_test_calback(testcases.Plot_Rewards_Callback())
+    tm_env.add_env_test_calback(testcases.Plot_Rewards_Callback(plot_total=False))
   
     tm_env.step_with_manual_input()
     

@@ -18,6 +18,7 @@ class KEYS:
     RIGHT = "nach-rechts"
     ESCAPE = "esc"
     SHIFT = "shift"
+    RESET = "k"
 
     @staticmethod
     def get_key_combo(left : bool, right : bool, accelerate : bool, brake : bool):
@@ -53,6 +54,10 @@ class TestEnvironmentCallback():
         """This method is called by TestEnvironment.step_with_manual_input(), after the main-loop has been executed via `esc`."""
         pass
 
+    def reset(self):
+        """Resets the callback, if the user presses 'r'"""
+        pass
+
 class Live3dPlotEnvironmentCallback(TestEnvironmentCallback):
 
     def __init__(self):
@@ -68,6 +73,10 @@ class Live3dPlotEnvironmentCallback(TestEnvironmentCallback):
     def _setup_plot(self):
         """Responsible for settingup"""
         pass
+
+    def reset(self):
+        """clear the axis"""
+        plt.gca().cla()
 
 
 
@@ -144,6 +153,10 @@ class TestEnvironment(TMNF_Single_Agent_Env):
             if self.keyboard.is_pressed(KEYS.SHIFT):
                 #super().random_reset()
                 pass
+
+            if self.keyboard.is_pressed(KEYS.RESET):
+                for callback in self.env_test_callback:
+                    callback.reset()
             
             reverse_action = (left, right, accelerate, brake)
             try:
@@ -176,7 +189,8 @@ class LinuxKeyboardWrapper:
             "nach-links": Key.left,
             "nach-rechts": Key.right,
             "esc": Key.esc,
-            "shift": Key.shift
+            "shift": Key.shift,
+            "r" : KeyCode.from_char(KEYS.RESET)
         }
 
         # Keep track of currently pressed keys

@@ -619,8 +619,8 @@ class Plot_Obs_Images_Callback(NonBlockingPlot):
 
 BANNED =  ["nextpoint_reference_index"]
 class Plot_Rewards_Callback(NonBlockingPlot):
-    def __init__(self, key_to_plot=None, y_lim=(-1, 1)):
-        super().__init__(plotter=Plot_Rewards(key_to_plot=key_to_plot, y_lim=y_lim))
+    def __init__(self, key_to_plot=None, y_lim=(-1, 1), plot_total : bool = True):
+        super().__init__(plotter=Plot_Rewards(key_to_plot=key_to_plot, y_lim=y_lim, plot_total=plot_total))
 
     def _call_after_step(self, processed_obs, reward, terminated, truncated, info):
         rewards = info["rewards"]
