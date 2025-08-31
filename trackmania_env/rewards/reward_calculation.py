@@ -9,19 +9,36 @@ from trackmania_env.rewards.normalizer import RewardNormalizer
 
 class RewardTerm():
 
-    def __init__(self, weight : float, name : str):
+    THEORETICAL_MAX_VALUE = np.inf
+    """Theroretical maximial Value of the reward-term, before weighting."""
+    THEORETICAL_MIN_VALUE = -np.inf
+    """Theroretical minimal Value of the reward-term, before weighting."""
+
+
+    def __init__(self, weight : float, name : str, clip_min : float, clip_max : float):
+        """
+        Args:
+            weight (float)  : factor by which the reward is multiplied before being added to other reward terms to form a final reward signal
+            name (str)      : Name of the reward-term
+            clip_min (flaot): Minimal value of the reward term (applied before weighing)
+            clip_max (float): Maximal value of the reward term (applied before weighing)
+        """
         self.weight = weight
         self.name = name
+        self.clip_min = clip_min
+        self.clip_max = clip_max
         self.env = None
 
     def _get_term(self, observations : dict[str, any], processed_obs : dict[str, any], race_finished : bool, other_terminations : dict[str, bool]) -> float:
         raise NotImplementedError("")
 
     def _get_weighted_term(self, observations : dict[str, any], processed_obs : dict[str, any], race_finished : bool, other_terminations : dict[str, bool]) -> float:
-        return self._get_term(observations, processed_obs, race_finished, other_terminations) * self.weight
+        termval = self._get_term(observations, processed_obs, race_finished, other_terminations)
+        clipped_val = np.clip(termval, a_min = self.clip_min, a_max=self.clip_max)
+        return clipped_val * self.weight
     
     def calculate_reward_term(self, observations : dict[str, any], processed_obs : dict[str, any], race_finished : bool, other_terminations : dict[str, bool]) -> tuple[float, dict[str, int | float]]:
-        val =  self._get_weighted_term(observations, processed_obs, race_finished, other_terminations)
+        val = self._get_weighted_term(observations, processed_obs, race_finished, other_terminations)
         return val, {self.name : val}
     
     def set_env(self, env):
@@ -31,9 +48,20 @@ class RewardTerm():
     def reset(self) -> None:
         pass
 
+class BoundedRewardterm(RewardTerm):
+    """The term itself can only return values 0,1."""
+
+    THEORETICAL_MAX_VALUE = 1
+    """Theroretical maximial Value of the reward-term, before weighting."""
+    THEORETICAL_MIN_VALUE = 0
+    """Theroretical minimal Value of the reward-term, before weighting."""
+
+    def __init__(self, weight, name):
+        super().__init__(weight, name, clip_min=0.0, clip_max=1.0)
+
 class RewradCalculator:
     """Responsible for reward calculations for environment.
-    Subclasses have to implement self.get_sum_of_weighted_rewards()"""
+    Subclasses have to initialize self.reward_terms with the desired reward-terms. This has to happen in the constructor!"""
 
     def __init__(self, normalize : bool = False):
         self.env = None
@@ -72,7 +100,7 @@ class RewradCalculator:
             other_terminations (dict): Information dict given by Termination Manager; contains information about other possible terminatio reasons.
 
         Returns:
-            reward (float) : Sum of weighted rewards; 
+            reward (float) : Sum of weighted rewards (uses get_sum_of_weighted_rewards).
             - self.normalize_reward(reward) : which is the cummulative reward of all reward terms, normalized, depending on the 
                 initialization of this class.
             - reward_info : dictionary containing reward-term-names (str) as keys and the values

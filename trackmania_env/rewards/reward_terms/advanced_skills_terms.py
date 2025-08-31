@@ -4,11 +4,11 @@ import numpy as np
 from trackmania_env.utils import constants
 from tminterface.structs import  SimStateData,SimulationWheel
 from game_interaction.ipc_fields import IPCFields
-from trackmania_env.rewards.reward_calculation import RewardTerm
+from trackmania_env.rewards.reward_calculation import BoundedRewardterm
 from trackmania_env.utils.contact_materials import physics_behavior_fromint,SurfaceCategory
 
 
-class OffTrackConditionedRewardTerm(RewardTerm):
+class OffTrackConditionedRewardTerm(BoundedRewardterm):
     """
     A helper class for reward terms that ensures no reward is given if the agent is off-track.
     This is to prevent exploits where the agent could perform actions off-track while still receiving rewards.
@@ -103,7 +103,6 @@ class SpeedSlideReward(OffTrackConditionedRewardTerm):
             multip  = self.get_combined_side_friction_multiplier(front_tire_mat_id,rear_tire_mat_id)
    
             speed_slide_quality = self.get_speed_slide_quality(speed[0],speed[2],multip)
-            print(f"{speed_slide_quality=}")
             speed_slide_reward = speed_slide_quality
         
         return speed_slide_reward
@@ -127,7 +126,8 @@ class SpeedSlideReward(OffTrackConditionedRewardTerm):
 
         return 0.5 * front_mul + 0.5 * rear_mul
     
-class AirBrakeReward(RewardTerm):
+class AirBrakeReward(BoundedRewardterm):
+    """Implements an airbrake rewarrd (aka when the player breaks in the air to reduce turning whilst completely in the air.)"""
     def __init__(self, weight, name = "air_brake_reward"):
         super().__init__(weight, name)
         self.mid_air_brake = False

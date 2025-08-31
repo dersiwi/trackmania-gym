@@ -81,7 +81,7 @@ class NextPointRewards(RewradCalculator):
         self.reward_terms = [AccumulatedDistanceReward(accum_distance_weight),
                              RaceFinished(race_finished_reward_weight),
                              ConstantRewardTerm((-1) * race_not_finished_weight),
-                             SpeedReward(speed_reward_weight / 1000),
+                             SpeedReward(speed_reward_weight / SpeedReward.THEORETICAL_MAX_VALUE),
                              LateralDistanceReward(distance_to_center_weight, lateral_distance_mode),
                              TerminationPunishment(self.other_termination_punishment)
 ]

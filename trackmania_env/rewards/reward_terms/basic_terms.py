@@ -1,14 +1,30 @@
-from trackmania_env.rewards.reward_calculation import RewardTerm
+"""
+Contains basic reward terms
+    - AccumulatedDistanceReward
+    - LateralDistanceReward
+    - TerminationPunishment
+    - HasWallContact
+    - SpeedReward
+    - RaceFinished
+    - ConstantRewardTerm
+    - NoProgressPunishment
+    - OffTrackPunishment
+    - AccumulatedWallPenalty
+    """
+
+from trackmania_env.rewards.reward_calculation import RewardTerm, BoundedRewardterm
 from trackmania_env.utils import constants
 from trackmania_env.utils.lateral_distance_manager import LateralDistanceManager
 from game_interaction.ipc_fields import IPCFields
-from tminterface.structs import SimStateData
-
-class AccumulatedDistanceReward(RewardTerm):
+from tminterface.structs import SimStateData, SceneVehicleCar
+import numpy as np
+class AccumulatedDistanceReward(BoundedRewardterm):
     """Calculates the reward along indicating the distance driven along the centerline"""
 
+    NAME = "accumulated_distance"
+
     def __init__(self, weight):
-        super().__init__(weight, "accumulated_distance")
+        super().__init__(weight, AccumulatedDistanceReward.NAME)
         self.current_refline_idx = 0
 
     def _get_term(self, observations : dict[str, any], processed_obs : dict[str, any], race_finished : bool, other_terminations : dict[str, bool]):
@@ -26,11 +42,16 @@ class AccumulatedDistanceReward(RewardTerm):
     def reset(self):
         self.current_refline_idx = 0
     
-
 class LateralDistanceReward(RewardTerm):
+    THEORETICAL_MAX_VALUE = np.inf
+    """Theroretical maximial Value of the reward-term, before weighting."""
+    THEORETICAL_MIN_VALUE = 0
+    """Theroretical minimal Value of the reward-term, before weighting."""
 
-    def __init__(self, weight, lateral_distance_mode : str):
-        super().__init__(weight, "lateral_distance")
+    NAME = "lateral_distance"
+
+    def __init__(self, weight, lateral_distance_mode : str, clip_min = 0.0, clip_max = 1.0):
+        super().__init__(weight, LateralDistanceReward.NAME, clip_min, clip_max)
         self.lateral_distance_manager = LateralDistanceManager.get_instance(lateral_distance_mode)
 
     def _get_term(self, observations : dict[str, any], processed_obs : dict[str, any], race_finished : bool, other_terminations : dict[str, bool]):
@@ -43,8 +64,8 @@ class LateralDistanceReward(RewardTerm):
         absolute_dist = self.env.reference_line.calculate_lateral_difference(idx = next_refline_index, car_position=observations[IPCFields.SIMSTATE].position)
         return self.lateral_distance_manager.scale_lateral_distance(absolute_dist)
     
-
-class TerminationPunishment(RewardTerm):
+class TerminationPunishment(BoundedRewardterm):
+    """Punihses terminations like 'stuck' or 'no-progress'."""
 
     def __init__(self, weight):
         super().__init__(weight, "terminations")
@@ -58,16 +79,40 @@ class TerminationPunishment(RewardTerm):
 
         other_term_reward = (-1) * ot
         return other_term_reward
+    
+class HasWallConatact(BoundedRewardterm):
+    """Boolean term, returns if 1, if one of the tires has wall contact."""
+
+    def __init__(self, weight):
+        super().__init__(weight, "wall_contact")
+
+    def _get_term(self, observations, processed_obs, race_finished, other_terminations):
+        #ssD : SimStateData = observations[IPCFields.SIMSTATE]
+        #svc : SceneVehicleCar = ssD.scene_mobil 
+        return observations[IPCFields.SIMSTATE].scene_mobil.has_any_lateral_contact
 
 class SpeedReward(RewardTerm):
-    def __init__(self, weight):
-        super().__init__(weight, "speed")
+    """Awards display-speed of the player; not weighted, range ~[0,1000]"""
+
+    THEORETICAL_MAX_VALUE = 1000
+    """Theroretical maximial Value of the reward-term, before weighting."""
+    THEORETICAL_MIN_VALUE = 0
+    """Theroretical minimal Value of the reward-term, before weighting."""
+
+    def __init__(self, weight, clip_min=THEORETICAL_MIN_VALUE, clip_max=THEORETICAL_MAX_VALUE):
+        super().__init__(weight, "speed", clip_min=clip_min, clip_max=clip_max)
 
     def _get_term(self, observations, processed_obs, race_finished, other_terminations):
         return observations[IPCFields.SIMSTATE].display_speed 
     
-class RaceFinished(RewardTerm):
+class RaceFinished(BoundedRewardterm):
+    """Binary Reward, given if the race is finished."""
     def __init__(self, weight, scaled_by_steps_taken : bool = False):
+        """
+        Args:
+            weight (float) : weight of the reward term used in the sum
+            scaled_by_steps_taken (bool) : If True, does not return a boolean, but a fraction 1 - t/x, where t is the amount of steps taken
+            and n is the environment-timeout."""
         super().__init__(weight, "race_finished")
         self.scaled_by_steps_taken = scaled_by_steps_taken
 
@@ -78,18 +123,27 @@ class RaceFinished(RewardTerm):
             return (1 - self.env.n_steps / self.env.termination_manager.timeout) * race_finished
         return race_finished
     
-class ConstantRewardTerm(RewardTerm):
-    def __init__(self, weight):
-        super().__init__(weight, "race_not_finished")
+class ConstantRewardTerm(BoundedRewardterm):
+    """Just returns 1 everystep; i.e. its weighted value is equal to the weight (can be used for consistent time-penalties e.g.)"""
+    def __init__(self, weight, name : str = "race_not_finished"):
+        super().__init__(weight, name)
 
     def _get_term(self, observations, processed_obs, race_finished, other_terminations):
         return 1
     
 
 class NoProgressPunishment(RewardTerm):
+    """Returns -1, if the agent has not made any progresss along the center-line."""
 
-    def __init__(self, weight, steps_without_progress_until_punishment = 0):
-        super().__init__(weight, "no_progress")
+    THEORETICAL_MAX_VALUE = 0
+    """Theroretical maximial Value of the reward-term, before weighting."""
+    THEORETICAL_MIN_VALUE = -np.inf
+    """Theroretical minimal Value of the reward-term, before weighting."""
+
+    NAME = "no_progress"
+
+    def __init__(self, weight, steps_without_progress_until_punishment = 0, clip_min = -10, clip_max = 0):
+        super().__init__(weight, NoProgressPunishment.NAME, clip_min=clip_min, clip_max=clip_max)
         self.current_refline_idx = 0
         self.steps_without_progress_until_punishment = steps_without_progress_until_punishment
         self.steps_since_last_progress = 0
@@ -108,8 +162,18 @@ class NoProgressPunishment(RewardTerm):
         self.steps_since_last_progress = 0
 
 class OffTrackPunishment(RewardTerm):
-    def __init__(self, weight, name = "off_track"):
-        super().__init__(weight, name)
+    """Implements a punishment if the agent is off-track."""
+
+
+    THEORETICAL_MAX_VALUE = 0
+    """Theroretical maximial Value of the reward-term, before weighting."""
+    THEORETICAL_MIN_VALUE = -1
+    """Theroretical minimal Value of the reward-term, before weighting."""
+
+    NAME = "off_track"
+
+    def __init__(self, weight, clip_min=THEORETICAL_MIN_VALUE, clip_max=THEORETICAL_MAX_VALUE):
+        super().__init__(weight, OffTrackPunishment.NAME, clip_min=clip_min, clip_max=clip_max)
     
     def _get_term(self, observations, processed_obs, race_finished, other_terminations):
         """
@@ -142,10 +206,6 @@ class OffTrackPunishment(RewardTerm):
         else:
             # Reset timer if agent is back on course
             self.total_off_course_time = 0
-
-        # Clamp reward to minimum value
-        reward = max(reward, -1.0)
-
         return reward
     
     def reset(self):
@@ -153,8 +213,15 @@ class OffTrackPunishment(RewardTerm):
         self.total_off_course_time = 0
 
 class AccumulatedWallPenalty(RewardTerm):
-    def __init__(self, weight, min_wall_contact_time = 0.5 , name="accumulated_wall_penalty"):
-        super().__init__(weight, name)
+    THEORETICAL_MAX_VALUE = 0
+    """Theroretical maximial Value of the reward-term, before weighting."""
+    THEORETICAL_MIN_VALUE = -np.inf
+    """Theroretical minimal Value of the reward-term, before weighting."""
+
+    NAME = "accumulated_wall_penalty+"
+    def __init__(self, weight, min_wall_contact_time = 0.5 , clip_min : float = -2.0, clip_max = 0.0):
+        super().__init__(weight, AccumulatedWallPenalty.NAME, clip_min=clip_min, clip_max=clip_max)
+
         self.min_wall_contact_time = min_wall_contact_time
     
     def _get_term(self, observations, processed_obs, race_finished, other_terminations):
@@ -184,7 +251,6 @@ class AccumulatedWallPenalty(RewardTerm):
             # Reset timer when contact is lost
             self.continuous_wall_contact_time = 0.0
 
-        reward = max(reward, -20.0)
         return reward
 
     def reset(self):
