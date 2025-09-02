@@ -4,6 +4,7 @@ import torch
 from gymnasium import spaces
 from tminterface.structs import SimStateData
 from game_interaction.ipc_fields import IPCFields
+from trackmania_env.utils.reference_line_manager import ReferenceLineManager
 from utils.image_converter import ImageConverter
 from PIL import Image
 import os
@@ -183,3 +184,70 @@ class ObservationManager:
             return {"image" : imgs, "state" : state_observation_vector},self.info
         else:
             return state_observation_vector,self.info
+
+from trackmania_env.envs.single_agent_env2 import TMNF_Single_Agent_Env
+from gymnasium.spaces import Space
+
+class ObservationManager:
+    def __init__(self,convert_torch = True,normalize = False):
+        #- convert_torch : if true, observations are converted from numpy to torch-tensor
+        self.env = None
+        self.pos_buffer = None # do not reset or add anything to this position buffer, read-only! (no reset, no add...)
+        self.refline_manager: ReferenceLineManager = None
+        
+        self.obs_space: Space = None
+        self.observation_terms= None
+
+        self.normalize = normalize
+        self.convert_torch = convert_torch
+
+    def set_env(self, env):
+        self.env : TMNF_Single_Agent_Env = env
+        self.set_ob_term_env()
+    
+    def set_obs_term_env(self):
+        raise NotImplementedError
+    
+    def get_observation(self,obs : SimStateData):
+        raise NotImplementedError
+    
+    def get_observation_space(self):
+        raise NotImplementedError
+    
+    def set_normalize(self):
+        raise NotImplementedError
+    
+
+class DictObservationManager(ObservationManager):
+    """This observation manger only deals with dictionary observations spaces"""
+    def __init__(self, convert_torch=True, normalize=False):
+        super().__init__(convert_torch, normalize)
+        self.observation_terms : list[ObservationTerm] = []
+
+    def set_obs_term_env(self):
+        assert self.env is not None
+        for term in self.observation_terms:
+            term.set_env(self.env)
+    
+    def get_observation_space(self):
+        if self.obs_space is None:
+            space_dict = {}
+            for obs_term in self.observation_terms:
+                name,space = obs_term.get_observation_space()
+                space_dict[name] = space
+            self.obs_space = spaces.Dict(space_dict)
+        
+        return self.obs_space
+
+    def get_observation(self, obs:SimStateData):
+        observations = {}
+        for term in self.observation_terms:
+            name,computed_obs = term.get_observation(obs)
+            assert self.obs_space.contains(name)
+            observations[name] = computed_obs
+
+        return observations
+    
+    def set_normalize(self):
+         for term in self.observation_terms:
+            term.normalize = self.normalize
