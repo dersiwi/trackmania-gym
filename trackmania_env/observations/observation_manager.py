@@ -15,26 +15,32 @@ class ObservationTerm:
     """This class contains observation terms for vecotr-like observations.
     Each observation-term returns a numpy-array of shape [N,]."""
 
-    def __init__(self, dim : int, normalize : bool):
-        self.dim = dim
+    def __init__(self, name:str, convert_torch:bool, normalize : bool):
+        self.name = name
+        self.convert_torch = convert_torch
         self.normalize = normalize
         self.env = None
+        self.observation_space: Space = None
 
     def set_env(self, env):
         from trackmania_env.envs.single_agent_env2 import TMNF_Single_Agent_Env
         self.env : TMNF_Single_Agent_Env = env
     
-    def _get_obs(self, game_states : SimStateData, **kwargs) -> np.ndarray:
+    def _get_obs(self, game_states : dict[str, np.ndarray | SimStateData], **kwargs) -> np.ndarray:
         raise NotImplementedError()
     
     def _normalize(self, obs) -> np.ndarray:
         raise NotImplementedError()
 
-    def get_observation(self, game_states : SimStateData, **kwargs) -> np.ndarray:
+    def get_observation(self, game_states : dict[str, np.ndarray | SimStateData], **kwargs) -> np.ndarray:
         obs = self._get_obs(game_states, **kwargs)
         if self.normalize:
             obs = self._normalize(obs)
-        return obs
+        return self.name,obs
+    
+    def get_observation_space(self):
+        return self.observation_space
+
 
 class ObservationManager:
 
@@ -187,8 +193,9 @@ class ObservationManager:
 
 from trackmania_env.envs.single_agent_env2 import TMNF_Single_Agent_Env
 from gymnasium.spaces import Space
+from abc import ABC, abstractmethod
 
-class ObservationManager:
+class ObservationManager2(ABC):
     def __init__(self,convert_torch = True,normalize = False):
         #- convert_torch : if true, observations are converted from numpy to torch-tensor
         self.env = None
@@ -205,19 +212,32 @@ class ObservationManager:
         self.env : TMNF_Single_Agent_Env = env
         self.set_ob_term_env()
     
+    @abstractmethod
     def set_obs_term_env(self):
         raise NotImplementedError
     
-    def get_observation(self,obs : SimStateData):
+    @abstractmethod
+    def get_observation(self,obs:dict[str, np.ndarray | SimStateData]):
+        # obs are here raw_observation meaning 
+        # raw_obs = {
+        # "ssD" : ...
+        # "image" : ...
+        #  }
+        #
         raise NotImplementedError
     
+    @abstractmethod
     def get_observation_space(self):
         raise NotImplementedError
     
+    @abstractmethod
     def set_normalize(self):
         raise NotImplementedError
     
-
+    @abstractmethod
+    def set_convert_torch(self):
+        raise NotImplementedError
+    
 class DictObservationManager(ObservationManager):
     """This observation manger only deals with dictionary observations spaces"""
     def __init__(self, convert_torch=True, normalize=False):
@@ -239,7 +259,7 @@ class DictObservationManager(ObservationManager):
         
         return self.obs_space
 
-    def get_observation(self, obs:SimStateData):
+    def get_observation(self, obs: dict[str, np.ndarray | SimStateData]):
         observations = {}
         for term in self.observation_terms:
             name,computed_obs = term.get_observation(obs)
@@ -251,3 +271,7 @@ class DictObservationManager(ObservationManager):
     def set_normalize(self):
          for term in self.observation_terms:
             term.normalize = self.normalize
+    
+    def set_convert_torch(self):
+        for term in self.observation_terms:
+            term.convert_torch = self.convert_torch
