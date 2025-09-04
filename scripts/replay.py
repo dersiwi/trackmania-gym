@@ -17,9 +17,9 @@ from trackmania_env.envs.enivonrments import get_environment
 
 from utils.hydra_wandb_utils import get_models, load_and_merge_platform
 
-run = "Level1"
-run_path_hydra = f"C:\\Users\\siwis\\OneDrive\\Dokumente\\Studium\\Master\\1.Semester\\trackmania\\interaction_template\\outputs\\{run}\\.hydra"
-model_path = f"C:\\Users\\siwis\\OneDrive\\Dokumente\\Studium\\Master\\1.Semester\\trackmania\\interaction_template\\outputs\\{run}\\best_model.zip"
+run = None
+run_path_hydra = None
+model_path = None
 #cfg : TrainConfig= OmegaConf.load(os.path.join("configs", "train.yaml"))
 
 _HYDRA_PARAMS = {

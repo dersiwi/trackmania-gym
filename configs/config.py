@@ -184,12 +184,19 @@ class RLEnvConfig:
 @dataclass
 class LearningRateSchedulerConfig:
     initial_value : float
+@dataclass
+class Learnargs:
+    total_timesteps : int
+    log_interval : int
+    reset_num_timesteps : bool
+    progress_bar : bool
+    tb_log_name : str
 
 @dataclass
 class TrainConfig:
     gmi: GMIConfig
     image: ImageConfig
-    total_timesteps: int
+    learn_args : Learnargs
     extractors_out_dim : int
     platforms_config_path : str
     learn_args: SB3LearnArgsConfig

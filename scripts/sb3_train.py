@@ -12,8 +12,8 @@ from typing import Optional
 from configs.config import TrainConfig
 
 from trackmania_env.envs.sec_env import CrashProofEnvironment
-from utils.hydra_wandb_utils import get_models, init_and_login_wandb, BeforeAndAfterTraining, load_and_merge_platform
-
+from utils.hydra_wandb_utils import get_models, init_and_login_wandb, BeforeAndAfterTraining, load_and_merge_platform, secure_attribute_retrieval
+from utils.introscreen import introscreen
 
 _HYDRA_PARAMS = {
     "version_base": "1.3",
@@ -26,10 +26,9 @@ def main(cfg : TrainConfig, run_id : Optional[str] = None):
     """Main Trainings script for training with stable-baslines3.
     Args:
         cfg (TrainConfig)   : Configuration file for current training run (inferred by hydra)
-        run_id (str)        : Run id if weights and biases run is to be resumed
-    """
+        run_id (str)        : Run id if weights and biases run is to be resumed"""
     cfg = load_and_merge_platform(cfg)
-
+    introscreen(cfg, askstart=secure_attribute_retrieval(lambda : cfg.ask_start, default=True))
     hydra_run_dir = HydraConfig.get().run.dir
     resume = "must" if run_id else None
 

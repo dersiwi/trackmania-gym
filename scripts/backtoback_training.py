@@ -15,5 +15,5 @@ input(f"Confiform blocktraining on {yaml_files} \n[Press anything to continue]")
 
 
 for config in yaml_files:
-    os.system(f"python scripts/sb3_train.py --config-path={folder_path} --config-name={config}")
+    os.system(f"python scripts/sb3_train.py --config-path={folder_path} --config-name={config} +ask_start=False") #ask_start disbales start-screen to require human input
     #TODO : Make sure game is actually closed.

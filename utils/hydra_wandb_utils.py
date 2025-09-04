@@ -6,6 +6,7 @@ import wandb
 from wandb.wandb_run import Run
 
 from omegaconf import DictConfig, OmegaConf, open_dict
+from omegaconf.errors import ConfigAttributeError
 from itertools import chain
 
 from neuronal_networks.get_policy import get_policy
@@ -23,7 +24,18 @@ from trackmania_env.utils.return_tracker import ReturnLogCallback
 from trackmania_env.envs.single_agent_env2 import TMNF_Single_Agent_Env
 
 from configs.config import TrainConfig
+from typing import Callable
 
+def secure_attribute_retrieval(getter : Callable, default : any = None):
+    """Securely returns an attribute from the config.
+    Args:
+        getter (Callable)   : Lambda function retrieving attribute from config : `lambda: cfg.gmi` (e.g.)
+        default (any)       : Default value to be returned if getter fails
+    """
+    try:    
+        return getter()
+    except ConfigAttributeError:
+        return default
 
 def print_model_params(model : BaseAlgorithm):
     """"Prints parametrs of the given model"""
@@ -123,6 +135,9 @@ def get_models(
 
     model_constructor = hydra.utils.instantiate(cfg.sb3.constructor)
     model : BaseAlgorithm = model_constructor(**model_args)
+    
+    if print_params:
+        print_model_params(model)
 
     if load_model_path: 
         # set_parameters() operates in in-place. If we would use model.load() we would 
@@ -134,8 +149,7 @@ def get_models(
             model.load_replay_buffer(load_replay_buffer_path)
             print(f"Loading replay buffer from {load_replay_buffer_path}...")
     
-    if print_params:
-        print_model_params(model)
+    
 
     return vision_model, model
 
@@ -193,7 +207,6 @@ def save_model(model : BaseAlgorithm, run_dir : str) -> None:
 
 
 from hydra.utils import to_absolute_path
-from omegaconf.errors import ConfigAttributeError
 
 def load_and_merge_yaml(cfg : TrainConfig, yaml_to_merge : str) -> TrainConfig:
     """Loads a yaml and merges it with cfg
