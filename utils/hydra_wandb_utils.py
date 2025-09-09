@@ -115,7 +115,10 @@ def get_models(
 
     Returns vision model as well as the algorithm."""
     device = cfg.platforms.device
-    vision_model = get_vision_model(cfg, tm_env.observation_space["image"].shape , cfg.extractors_out_dim)
+    if secure_attribute_retrieval(lambda : cfg.rl_env.env.obs_have_imgs, True):
+        vision_model = get_vision_model(cfg, tm_env.observation_space["image"].shape , cfg.extractors_out_dim)
+    else:
+        vision_model = None
     algorithm_params = OmegaConf.to_container(cfg.sb3.algorithm_params, resolve=True)
   
     policy_type, policy_kwargs = get_policy(observation_space = tm_env.observation_space, policy_cfg = cfg.policy, device = device, vision_model = vision_model)

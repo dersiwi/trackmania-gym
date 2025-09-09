@@ -106,7 +106,7 @@ Welcome to
 
 """
 from configs.config import TrainConfig
-
+from utils.hydra_wandb_utils import secure_attribute_retrieval
 
 def introscreen(cfg : TrainConfig, asciiart = welcome, askstart : bool = False):
     """Displays an ascii art and some core configuration-values
@@ -118,11 +118,13 @@ def introscreen(cfg : TrainConfig, asciiart = welcome, askstart : bool = False):
     print(asciiart)
     print(f"""\n============================= General =============================
             - Observation-Manager   : {cfg.rl_env.obs_manager.name}
+              - use images          : {secure_attribute_retrieval(lambda : cfg.rl_env.env.obs_have_imgs)}
             - Reward-Manager        : {cfg.rl_env.reward_manager.name}
             - Termination-Manager   : {cfg.rl_env.termination_manager.name}
             - RL-scheduler          : {cfg.lr_scheduler._target_}
             - n_env_steps           : {cfg.learn_args.total_timesteps}
             - tb-log-name           : {cfg.learn_args.tb_log_name}
+          If values are None, the loaded config does not have this attribute.
           """)
     if askstart and input("[y/Y] to start training.").strip().lower() not in ["y", "yes"]:
         exit()

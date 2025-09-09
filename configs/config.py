@@ -139,6 +139,7 @@ class EnvConfig:
     countdown_speed : float
     test : bool
     wrap_obs_in_test : bool
+    obs_have_imgs : bool
     n_previous_actions : int
     camera_id : int
 

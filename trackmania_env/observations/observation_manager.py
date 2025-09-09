@@ -45,21 +45,20 @@ class ObservationManager:
         REV_DICT = {"grayscale" : 0, "rgb" : 1, "rgba" : 2} #this is somewhat ugly but this way the config contains a readable string
 
     def __init__(self, colorspace : str, convert_torch : bool, img_width : int, 
-                 img_height : int, obs_have_img: bool = True, 
-                 img_dump_freq : int = 1000000, n_dump_imgs : int= 20, normalize_obs : bool = False):
+                 img_height : int, img_dump_freq : int = 1000000, n_dump_imgs : int= 20, normalize_obs : bool = False):
         """
-        Parameters
-        ---------
-            - colorspace : string specifying the colorspace "grayscale", "rgb", "rgba"
-            - convert_torch : if true, observations are converted from numpy to torch-tensor    
-            - img_width     : width of image
-            - img_height    : height of image
-            - obs_have_img  : If True, image is passed along with state-vector, if false, only state vector is returned by get_observation(). If set to -1, no images are dumped.7
-            - img_dump_freq : Specifies a frequency in which n_dump_imgs are dumped in logs/observations/. The idea behind this is to manually control, if the states produced by
-            the environment match the expected. 
-            - n_dump_imgs   : Amount of images that are dumped
+        Initializes Observation-Manager
+        Args:
+            colorspace (str)    : string specifying the colorspace "grayscale", "rgb", "rgba"
+            convert_torch (bool): if true, observations are converted from numpy to torch-tensor    
+            img_width     (int)  : width of image
+            img_height    (int)  : height of image
+            obs_have_img  (bool) : If True, image is passed along with state-vector, if false, only state vector is returned by get_observation(). If set to -1, no images are dumped.7
+            img_dump_freq (int)  : Specifies a frequency in which n_dump_imgs are dumped in logs/observations/. The idea behind this is to manually control, if the states produced by
+                the environment match the expected. 
+            n_dump_imgs   (int)  : Amount of images that are dumped
         """
-        self.obs_have_img = obs_have_img
+        self.obs_have_img = True
         self.colorspace : int = ObservationManager.Colorspace.REV_DICT[colorspace]
         self.convert_torch : bool = convert_torch
         self.img_width = img_width
@@ -87,6 +86,10 @@ class ObservationManager:
     def grayscaleimgs_as_uint8(self, val : bool):
         """Sets self.convert_grayscale_to_uint8 to given value."""
         self.convert_grayscale_to_uint8 = val
+
+    def set_obs_have_imgs(self, val : bool):
+        """Sets self.obs_have_imgs"""
+        self.obs_have_img = val
 
     def set_env(self, environment):
         from trackmania_env.envs.single_agent_env2 import TMNF_Single_Agent_Env
@@ -131,10 +134,13 @@ class ObservationManager:
         self.statevector_dim = 0
         for obsterm in self.observation_terms:
             self.statevector_dim += obsterm.dim
-        return spaces.Dict({
-                "image": spaces.Box(low=0, high=1, shape=(self.n_channels, self.img_height, self.img_width), dtype=np.uint8),
-                "state": spaces.Box(low=-np.inf, high=np.inf, shape=(self.statevector_dim,), dtype=np.float32),
-            })
+        if self.obs_have_img:
+            return spaces.Dict({
+                    "image": spaces.Box(low=0, high=1, shape=(self.n_channels, self.img_height, self.img_width), dtype=np.uint8),
+                    "state": spaces.Box(low=-np.inf, high=np.inf, shape=(self.statevector_dim,), dtype=np.float32),
+                })
+        else:
+            return spaces.Dict({"state": spaces.Box(low=-np.inf, high=np.inf, shape=(self.statevector_dim,), dtype=np.float32),})
         
     def reset(self):
         """Resets the observation-manager. This is called if the environment is reset."""
@@ -182,4 +188,4 @@ class ObservationManager:
             assert imgs.shape == (self.n_channels, self.img_height, self.img_width), f"Expected shape to be ({self.n_channels},{self.img_height}, {self.img_width}) but got {imgs.shape}"
             return {"image" : imgs, "state" : state_observation_vector},self.info
         else:
-            return state_observation_vector,self.info
+            return {"state" : state_observation_vector} ,self.info

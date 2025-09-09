@@ -21,6 +21,7 @@ env:
   countdown_speed : 70
 
   wrap_obs_in_test : False  # Applies an test-wrapper to the observations.
+  obs_have_imgs : True
   test : False
 
   startposition_accuracy_threshold : 0.5 # how close the start position has to be to the initial starting posiiton after each reset (in ingame-meters.)
