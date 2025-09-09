@@ -14,8 +14,8 @@ class ObservationTerm:
     """This class contains observation terms for vecotr-like observations.
     Each observation-term returns a numpy-array of shape [N,]."""
 
-    def __init__(self, dim : int, normalize : bool):
-        self.dim = dim
+    def __init__(self, shape : tuple[int], normalize : bool):
+        self.shape = shape
         self.normalize = normalize
         self.env = None
 
@@ -23,17 +23,53 @@ class ObservationTerm:
         from trackmania_env.envs.single_agent_env2 import TMNF_Single_Agent_Env
         self.env : TMNF_Single_Agent_Env = env
     
-    def _get_obs(self, game_states : SimStateData, **kwargs) -> np.ndarray:
+    def _get_obs(self, raw_observation : dict[str, np.ndarray | SimStateData], **kwargs) -> np.ndarray:
         raise NotImplementedError()
     
     def _normalize(self, obs) -> np.ndarray:
         raise NotImplementedError()
 
-    def get_observation(self, game_states : SimStateData, **kwargs) -> np.ndarray:
-        obs = self._get_obs(game_states, **kwargs)
+    def get_observation(self, raw_observation : dict[str, np.ndarray | SimStateData], **kwargs) -> np.ndarray:
+        obs = self._get_obs(raw_observation, **kwargs)
         if self.normalize:
             obs = self._normalize(obs)
         return obs
+
+class ObservationDictEntry:
+    """The observation-Manager returns an observation-dictionary. This class is the base-class for dictionary-entry-implementations;
+        e.g. one that collects all vector-like observation and merges them, or one that collects image-like observations and merges them.
+    """
+
+    def __init__(self, name : str, obstermlist : list[ObservationTerm], axis : int = 0):
+        self.name = name
+        self.termlist = obstermlist
+        self.axis = axis
+        
+        shape = self.termlist[0].shape
+        self.shape = [s for s in shape]
+
+
+        for i in range(1, len(self.termlist)):
+            assert len(shape) == len(self.termlist[i].shape), "All terms have to be of the same type of shape (i.e. length of shape has to match.)"
+            self.shape[axis] += self.termlist[i].shape[axis]
+
+            #check that all dimension other than the axis on which they're merged on are the same
+            for j in range(len(shape)):
+                if j == axis:
+                    continue
+                assert self.shape[j] == self.termlist[i].shape[j], "All terms have to have the same dimension on all non-merge axis."
+
+        self.shape = tuple(self.shape)
+
+
+    def get_term(self, raw_observation : dict[str, np.ndarray | SimStateData]) -> np.ndarray:
+        if len(self.termlist) == 1:
+            return {self.name : self.termlist[0]}
+        termlist = []
+        for term in self.termlist:
+            termlist.append(term.get_observation(raw_observation))
+        return {self.name : np.concatenate(termlist, axis = self.axis)}
+
 
 class ObservationManager:
 

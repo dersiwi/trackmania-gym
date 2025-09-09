@@ -25,13 +25,14 @@ def get_wheel_states(game_states : SimStateData) -> tuple[list[RealTimeState], n
     return wheels_states, wheels
 
 from trackmania_env.observations.observation_manager import ObservationTerm
-    
+from game_interaction.ipc_fields import IPCFields
+
 
 class SurfaceFloats(ObservationTerm):
     
 
     def __init__(self, normalize):
-        super().__init__(4, normalize)
+        super().__init__((4), normalize)
 
     def _normalize(self, obs):
         return obs # is always normalized
@@ -60,7 +61,7 @@ class MobileStatesTerm(ObservationTerm):
     """Returns all relevant dynamic car states"""
 
     def __init__(self, normalize):
-        super().__init__(16, normalize)
+        super().__init__((16), normalize)
 
     def _normalize(self, obs):
         obs[12]             /= ObsNormalizationFactors.gearbox_norm
@@ -93,32 +94,35 @@ class MobileStatesTerm(ObservationTerm):
 
 class SpeedTerm(ObservationTerm):
     def __init__(self, normalize):
-        super().__init__(1, normalize)
+        super().__init__((1), normalize)
 
     def _normalize(self, obs):
         return obs / ObsNormalizationFactors.speed_norm
 
-    def _get_obs(self, gamestates, **kwargs):
-        return gamestates.display_speed
+    def _get_obs(self, raw_observation : dict[str, np.ndarray | SimStateData], **kwargs):
+        game_states : SimStateData = raw_observation[IPCFields.SIMSTATE]
+
+        return game_states.display_speed
 
 class NextReflinePoint(ObservationTerm):
     def __init__(self, n_refline_points : int, reference_line_stride : int, normalize):
-        super().__init__(n_refline_points * 3, normalize)
+        super().__init__((n_refline_points * 3), normalize)
         self.n_refline_points = n_refline_points
         self.reference_line_stride : int = reference_line_stride
 
     def _normalize(self, obs):
         return obs / ObsNormalizationFactors.refline_norm
     
-    def _get_obs(self, gamestates, **kwargs):
-        dyna_current: HmsDynaStateStruct = gamestates.dyna.current_state
+    def _get_obs(self, raw_observation : dict[str, np.ndarray | SimStateData], **kwargs):
+        game_states : SimStateData = raw_observation[IPCFields.SIMSTATE]
+        dyna_current: HmsDynaStateStruct = game_states.dyna.current_state
         refline : ReferenceLineManager = self.env.reference_line
         next_idx, _, _ = refline.get_distance_to_next_point()
         comming_refline_points : np.ndarray = refline.get_reference_line_points(begin_idx=next_idx,
                                                                 end_idx= next_idx + self.n_refline_points * self.reference_line_stride, 
                                                                 extrapolate= True, stride = self.reference_line_stride)
 
-        car_position = gamestates.position
+        car_position = game_states.position
         car_orientation = np.array(dyna_current.rotation.to_numpy(), dtype=float).T
 
         assert comming_refline_points.shape[0] == self.n_refline_points, f"Expected to get {self.n_refline_points} points from reflinemanager, got {comming_refline_points.shape[0]}"
@@ -130,25 +134,26 @@ class NextReflinePoint(ObservationTerm):
 class LateralDistance(ObservationTerm):
 
     def __init__(self, normalize):
-        super().__init__(1, normalize)
+        super().__init__((1), normalize)
     
     def _normalize(self, obs):
         return obs / ObsNormalizationFactors.lateral_dist_norm
 
-    def _get_obs(self, gamestates : SimStateData, **kwargs):
+    def _get_obs(self, raw_observation : dict[str, np.ndarray | SimStateData], **kwargs):
+        game_states : SimStateData = raw_observation[IPCFields.SIMSTATE]
         reference_line = self.env.reference_line
         next_idx, d, drel = reference_line.get_distance_to_next_point()
-        lateral_distance : np.ndarray = reference_line.calculate_lateral_difference(next_idx, gamestates.position)
+        lateral_distance : np.ndarray = reference_line.calculate_lateral_difference(next_idx, game_states.position)
         return lateral_distance
     
 class RelativeDistance(ObservationTerm):
     def __init__(self, normalize):
-        super().__init__(1, normalize)
+        super().__init__((1), normalize)
 
     def _normalize(self, obs):
         return obs
     
-    def _get_obs(self, game_states, **kwargs):
+    def _get_obs(self, raw_observation : dict[str, np.ndarray | SimStateData], **kwargs):
         reference_line = self.env.reference_line
         next_idx, d, drel = reference_line.get_distance_to_next_point()
         return drel
@@ -156,11 +161,11 @@ class RelativeDistance(ObservationTerm):
 class SophyGlobalFeatures(ObservationTerm):
 
     def __init__(self, lookahead_sec, n_points : int, normalize):
-        super().__init__(n_points * 3, normalize)
+        super().__init__((n_points * 3), normalize)
         self.lookahead_sec = lookahead_sec
         self.n_points = n_points
 
-    def _get_obs(self, game_states, **kwargs):
+    def _get_obs(self, raw_observation : dict[str, np.ndarray | SimStateData], **kwargs):
         """
         Extracts global course point features from the input game states, following the method
         described in Wurman et al. (2022).
@@ -182,6 +187,7 @@ class SophyGlobalFeatures(ObservationTerm):
             np.ndarray or torch.Tensor: A tensor containing the relative 3D coordinates of the course 
                 points for the left, center, and right track lines.
         """
+        game_states : SimStateData = raw_observation[IPCFields.SIMSTATE]
         #NOTE as for now we only return the center points no left and right
         reference_line = self.env.reference_line
         dyna_current: HmsDynaStateStruct = game_states.dyna.current_state # current dynamic state of the car, such as its position, orientation, speed ... .
