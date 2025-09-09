@@ -17,7 +17,9 @@ from trackmania_env.utils.constants import ObsNormalizationFactors
 from trackmania_env.utils.reference_line_manager import ReferenceLineManager
 from trackmania_env.utils.interpolation import interpolate_points
 import trackmania_env.utils.constants as constants
+from collections import deque
 
+from utils.image_converter import ImageConverter
 
 def get_wheel_states(game_states : SimStateData) -> tuple[list[RealTimeState], np.ndarray[SimulationWheel]]:
     wheels: np.ndarray[SimulationWheel] = game_states.simulation_wheels
@@ -217,3 +219,129 @@ class SophyGlobalFeatures(ObservationTerm):
         self.info["position"] = position
      
         return comming_refline_points.ravel()
+    
+
+class ImageObservationTerm(ObservationTerm):
+    """"""
+    class Colorspace:
+        GRAYSCALE = 0
+        RGB = 1
+        BGRA = 2
+
+        REV_DICT = {"grayscale" : 0, "rgb" : 1, "rgba" : 2} #this is somewhat ugly but this way the config contains a readable string
+    def __init__(self, width, height, normalize, colorspace : str, cvr_grayscale_to_uint8 : bool):
+        self.n_channels = 1 if self.colorspace == ImageObservationTerm.Colorspace.GRAYSCALE else 3
+        super().__init__((self.n_channels, height, width), normalize)
+        self.colorspace = colorspace
+        self.convert_grayscale_to_uint8 = cvr_grayscale_to_uint8
+
+    def _get_obs(self, images : np.ndarray) -> np.ndarray:
+        """Converts image given by simulation into specified colortype and normalizes them into [0,1]."""
+        if self.colorspace == ImageObservationTerm.Colorspace.RGB:
+            imgs = ImageConverter.bgra_to_rgb(images)
+        elif self.colorspace == ImageObservationTerm.Colorspace.GRAYSCALE:
+            imgs = ImageConverter.bgra_to_graysacle(images, self.convert_grayscale_to_uint8)
+
+        # only normlalize if not conversion, otherwiese it'll be stored as float again.
+        if self.colorspace == ImageObservationTerm.Colorspace.GRAYSCALE and self.convert_grayscale_to_uint8:
+            return imgs
+        else:
+            return imgs / 255.0
+        
+class Propriocentric_features(ObservationTerm):
+        
+        def __init__(self, normalize, maxlen_history = 3, lookahead_sec = 6,n_points = 60):
+            self.last_velocity = np.array([0.,0.,0.],dtype=np.float32)
+            self.maxlen_history = maxlen_history
+            self.angles : deque = deque([0.]*self.maxlen_history, maxlen=self.maxlen_history) # History of the last three steering angles
+            self.last_time = 0 # dunno if this should be set to zero after env reset because in game timer doesn't reset 
+            self.epsilon = 1e-6  # Tolerance for float comparisons
+            self.max_degree_radians = np.pi / 6 # equivalent to np.deg2rad(30) so the max steering angle is |30| degree 
+            
+            self.lookahead_sec = lookahead_sec
+            self.n_points = n_points
+            self.propriocentric_features_dim = 3*4 + 2*self.maxlen_history - 1
+            super().__init__((self.propriocentric_features_dim), normalize) # TODO !! Fix shape
+
+
+        def reset(self):
+            self.last_velocity = np.array([0.,0.,0.],dtype=np.float32)
+            self.h_a_t = np.array([0.,0.,0.],dtype=np.float32)
+            self.angles : deque = deque([0.]*self.maxlen_history, maxlen=self.maxlen_history)
+            
+        def get_propriocentric_features(self, game_states: SimStateData):
+            """
+            Extracts propriocentric features from the given game state.
+
+            Propriocentric features are derived from the car's local frame of reference 
+            The extracted feature vector `opt` includes:
+
+            - v_t (R^3): Linear velocity of the vehicle.
+            - a_t (dv/dt) (R^3): Linear acceleration of the vehicle.
+            - v_r_t (R^3): Angular velocity of the vehicle.
+            - c_t (R^3): Control input vector consisting of steering, throttle, and brake values.
+            - h_a_t (R^n): History of the last n (default is 3) steering angles.
+            - h_d_t (R^n-1): History of delta (change in) steering values over the last n steps.
+
+            Args:
+                game_states (SimStateData): The current simulation state from which to extract 
+                                            propriocentric features.
+
+            Returns:
+                np.ndarray: A concatenated array of all propriocentric features (opt) 
+            """
+            
+            dyna_current: HmsDynaStateStruct = game_states.dyna.current_state # current dynamic state of the car, such as its position, orientation, speed ... .
+            orientation = dyna_current.rotation.to_numpy().T.astype(np.float32)  # (3, 3)
+            velocity = np.array(dyna_current.linear_speed,dtype=np.float32)  # (3,)
+            angular_speed = np.array(dyna_current.angular_speed,dtype=np.float32)  # (3,)
+            time =  game_states.time/constants.MILLISECONDS_TO_SECONDS
+            delta_t = time - self.last_time # normal time is counted in ms
+            #print(delta_t)
+            #assert delta_t != 0
+
+            v_t:np.ndarray = orientation.dot(velocity)  #(3,)
+            a_t:np.ndarray =np.array([0.,0.,0.]) if delta_t == 0 else (v_t - self.last_velocity)/delta_t #(3,) # the only time delta_t should be zero is during the start
+            v_r_t:np.ndarray = orientation.dot(angular_speed)  #(3,)
+
+            throttle = 2.* game_states.scene_mobil.input_gas  - 1. # [-1,1] | original gas is between [0,1]
+            brake =  2.* game_states.scene_mobil.input_brake -1. # [-1,1] | original brake is between [0,1]
+            steer = game_states.scene_mobil.input_steer # [-1,1]
+            c_t:np.ndarray = np.array([steer,throttle,brake]) #(3,)
+            assert np.all(np.abs(c_t) <= 1 + self.epsilon), f"Values in c_t out of range [-1,1]: {c_t}"
+
+
+            # steering angle
+            turning_rate = game_states.scene_mobil.turning_rate # [-1,1]
+            steering_angle = self.max_degree_radians * turning_rate # when wheels are fully to the right then turning rate is equal to 1 but they only rotate too roughly 30 degree.
+            assert np.abs(steering_angle) <= self.max_degree_radians + self.epsilon, f"steering_angle out of range: {steering_angle}"
+            self.angles.append(steering_angle)
+            h_a_t:np.ndarray = np.array(self.angles)
+            h_d_t:np.ndarray = h_a_t[1:] - h_a_t[:-1]
+
+            
+            self.last_time =  time
+            self.last_velocity = v_t
+
+            # for debuggin purposes
+            self.info["linear_velocity"] = v_t
+            self.info["linear_acceleration"] = a_t
+            self.info["angular_velocity"] = v_r_t
+
+            self.info["throttle"] = throttle
+            self.info["brake"] = brake 
+            self.info["steer"] = steer
+
+            self.info["history_steering_angles"] = h_a_t
+            self.info["history_steering_deltas"] = h_d_t
+
+            propriocentric_features: np.ndarray = np.hstack([
+                v_t.ravel(),    #(3,)
+                a_t.ravel(),    #(3,)
+                v_r_t.ravel(),  #(3,)
+                c_t.ravel(),    #(3,)
+                h_a_t.ravel(),  #(n,)
+                h_d_t.ravel(),  #(n-1,)
+            ],dtype =  np.float32) # total (3*4 + 2*n - 1)
+
+            return propriocentric_features
