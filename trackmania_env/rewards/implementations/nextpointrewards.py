@@ -86,7 +86,7 @@ class OptimizeRaceTiem(RewradCalculator):
                  race_finished_reward_weight = 100, 
                  other_termination_punishment = 20, 
                  speed_reward_weight = 1,
-                  wall_contact = -0.2, normalize = False, **kwargs):
+                 wall_contact = -0.2, normalize = False, **kwargs):
         super().__init__(normalize, **kwargs)
         self.reward_terms = [AccumulatedDistanceReward(accum_distance_weight),
                              RaceFinished(race_finished_reward_weight, scaled_by_steps_taken=True),
@@ -109,7 +109,7 @@ class RaceFinishedRewards(NextPointRewards):
 
         self.reward_terms = [
             RaceFinished(self.race_finished_reward_weight, scaled_by_steps_taken=True),
-            AccumulatedDistanceReward(self.accum_distance_weight),
+            AccumulatedDistanceReward(self.accum_distance_weight, enhanced_by_amount_travelled=True, exponential_factor=1.5),
             TerminationPunishment((-1) * self.other_termination_punishment)]
         
         if use_punishment:

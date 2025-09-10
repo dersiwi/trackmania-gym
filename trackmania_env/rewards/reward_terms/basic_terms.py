@@ -23,20 +23,29 @@ class AccumulatedDistanceReward(BoundedRewardterm):
 
     NAME = "accumulated_distance"
 
-    def __init__(self, weight):
+    def __init__(self, weight, enhanced_by_amount_travelled : bool = False, exponential_factor : float = 1.0):
+        """Iniitialites
+        Args:
+            weight (float)  : Weight of the term
+            enhanced_by_amount_travelled (bool) : If true, multiplies the reward by the amount of refline-points passed (to give more incentive to pass more at a single environment step)
+        """
         super().__init__(weight, AccumulatedDistanceReward.NAME)
         self.current_refline_idx = 0
+        self.enhanced_by_amount_travelled = enhanced_by_amount_travelled
+        self.exponential_factor = exponential_factor
 
     def _get_term(self, observations : dict[str, any], processed_obs : dict[str, any], race_finished : bool, other_terminations : dict[str, bool]):
         next_refline_index, _, _ = self.env.reference_line.get_distance_to_next_point()
         accum_dist_reward = 0
+        n_passed = next_refline_index - self.current_refline_idx
         if self.current_refline_idx < next_refline_index: #only give reward if progress in regards to last one was made
 
-            for i in range(next_refline_index - self.current_refline_idx):
+            for i in range(n_passed):
                 accum_dist_reward += self.env.reference_line.get_discrete_distance(self.current_refline_idx + i)
-
+                
             self.current_refline_idx = next_refline_index
-
+        if self.enhanced_by_amount_travelled:
+            accum_dist_reward = accum_dist_reward * n_passed ** self.exponential_factor
         return accum_dist_reward
     
     def reset(self):
