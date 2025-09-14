@@ -1,9 +1,9 @@
 name: "race_finished"
 args:
-    accum_distance_weight : 10
+    accum_distance_weight : 100
     race_not_finished_weight : 0.02 # not used
     race_finished_reward_weight : 300
-    other_termination_punishment : 20
+    other_termination_punishment : 5
     velocity_reward_weight : 1  #not used
     backward_weight : 0 #not used
     distance_to_center_weight : 1 #not used

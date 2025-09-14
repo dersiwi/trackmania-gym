@@ -109,8 +109,9 @@ class RaceFinishedRewards(NextPointRewards):
 
         self.reward_terms = [
             RaceFinished(self.race_finished_reward_weight, scaled_by_steps_taken=True),
-            AccumulatedDistanceReward(self.accum_distance_weight, enhanced_by_amount_travelled=True, exponential_factor=1.5),
-            TerminationPunishment((-1) * self.other_termination_punishment)]
+            AccumulatedDistanceReward(self.accum_distance_weight, enhanced_by_amount_travelled=True, exponential_factor=1.2),
+            TerminationPunishment((-1) * self.other_termination_punishment),
+            HasWallConatact(-0.15)]
         
         if use_punishment:
             self.reward_terms.append(NoProgressPunishment(self.race_finished_reward_weight, steps_without_progress_until_punishment))

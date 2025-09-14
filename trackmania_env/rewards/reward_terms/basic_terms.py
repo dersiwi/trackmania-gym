@@ -18,7 +18,7 @@ from trackmania_env.utils.lateral_distance_manager import LateralDistanceManager
 from game_interaction.ipc_fields import IPCFields
 from tminterface.structs import SimStateData, SceneVehicleCar
 import numpy as np
-class AccumulatedDistanceReward(BoundedRewardterm):
+class AccumulatedDistanceReward(RewardTerm):
     """Calculates the reward along indicating the distance driven along the centerline"""
 
     NAME = "accumulated_distance"
@@ -28,8 +28,9 @@ class AccumulatedDistanceReward(BoundedRewardterm):
         Args:
             weight (float)  : Weight of the term
             enhanced_by_amount_travelled (bool) : If true, multiplies the reward by the amount of refline-points passed (to give more incentive to pass more at a single environment step)
+            exponential_factor (float)          : Number of steps travelled in this step is raised to this power. Default 1.
         """
-        super().__init__(weight, AccumulatedDistanceReward.NAME)
+        super().__init__(weight, AccumulatedDistanceReward.NAME, clip_min=0, clip_max=10)
         self.current_refline_idx = 0
         self.enhanced_by_amount_travelled = enhanced_by_amount_travelled
         self.exponential_factor = exponential_factor
@@ -90,9 +91,9 @@ class TerminationPunishment(BoundedRewardterm):
         return other_term_reward
     
 class HasWallConatact(BoundedRewardterm):
-    """Boolean term, returns if 1, if one of the tires has wall contact."""
 
     def __init__(self, weight):
+        """Boolean term, returns if 1, if one of the tires has wall contact."""
         super().__init__(weight, "wall_contact")
 
     def _get_term(self, observations, processed_obs, race_finished, other_terminations):
