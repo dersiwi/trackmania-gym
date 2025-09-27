@@ -12,7 +12,7 @@ class ObservationTerm(ABC):
     """
     Base class for observation terms.
     """
-
+    # TODO do we really need the convert torch ?
     def __init__(self, name: str, convert_torch: bool, normalize: bool):
         self.name = name
         self.convert_torch = convert_torch
@@ -24,7 +24,7 @@ class ObservationTerm(ABC):
         self.env = env
 
     @abstractmethod
-    def _get_obs(self, game_states: dict[str, Union[np.ndarray, "SimStateData"]], **kwargs) -> np.ndarray:
+    def _get_obs(self, game_states: dict[str, Union[np.ndarray, SimStateData]], **kwargs) -> np.ndarray:
         raise NotImplementedError()
 
     @abstractmethod
@@ -32,13 +32,59 @@ class ObservationTerm(ABC):
         raise NotImplementedError()
 
     def get_observation(
-        self, game_states: dict[str, Union[np.ndarray, "SimStateData"]], **kwargs) -> tuple[str, np.ndarray]:
+        self, game_states: dict[str, Union[np.ndarray, SimStateData]], **kwargs) -> tuple[str, np.ndarray]:
         obs = self._get_obs(game_states, **kwargs)
         if self.normalize:
             obs = self._normalize(obs)
         return self.name, obs
 
     def get_observation_space(self) -> Optional[Space]:
+        return self.observation_space
+
+class Obs_Float_Stacker(ObservationTerm):
+    """
+    Combines multiple ObservationTerms into a single stacked float vector.
+    """
+    # TODO think of turning this into an obsmanager maybe
+    def __init__(self, 
+                 observation_terms: list[ObservationTerm],
+                 name: str = "floats",
+                 convert_torch: bool = True,
+                 normalize: bool = False):
+        super().__init__(name=name, convert_torch=convert_torch, normalize=normalize)
+        self.observation_terms = observation_terms
+        self.observation_space = None 
+
+        for term in self.observation_terms:
+            term.normalize = normalize
+            term.convert_torch = False 
+
+    def set_env(self, env: gym.Env):
+        self.env = env
+        for term in self.observation_terms:
+            term.set_env(env)
+
+    def _get_obs(self, game_states: dict[str, Union[np.ndarray, SimStateData]], **kwargs) -> np.ndarray:
+        obs_list = []
+        for term in self.observation_terms:
+            _, obs = term.get_observation(game_states)
+            obs_list.append(obs.ravel())  # flatten in case of multidimensional obs
+        return np.concatenate(obs_list, axis=-1)
+
+    def _normalize(self, obs: np.ndarray) -> np.ndarray:
+        # Optional: normalize each term individually before stacking, or normalize here
+        # This is a bit confusing but the normalisation already happens in _get_obs
+        return obs  
+
+    def get_observation_space(self) -> Space:
+        if self.observation_space is None:
+            sizes = []
+            for term in self.observation_terms:
+                space = term.get_observation_space()
+                assert isinstance(space, spaces.Box), "Only Box spaces are supported for stacking"
+                sizes.append(np.prod(space.shape))
+            total_size = int(sum(sizes))
+            self.observation_space = spaces.Box(low=-np.inf, high=np.inf, shape=(total_size,), dtype=np.float32)
         return self.observation_space
 
 
@@ -111,7 +157,7 @@ class DictObservationManager(ObservationManager):
             self.obs_space = spaces.Dict(space_dict)
         return self.obs_space
 
-    def get_observation(self, obs: dict[str, Union[np.ndarray, "SimStateData"]]) -> dict[str, np.ndarray]:
+    def get_observation(self, obs: dict[str, Union[np.ndarray, SimStateData]]) -> dict[str, np.ndarray]:
         assert self.obs_space is not None, "Observation space not initialized."
         observations = {}
         for term in self.observation_terms:
