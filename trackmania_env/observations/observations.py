@@ -24,7 +24,7 @@ def get_observation_manager(cfg : TrainConfig, wrap_obs_in_test : bool = False, 
                                         convert_torch=obs_manager_cfg.convert_torch,
                                         img_width=obs_manager_cfg.img_width, 
                                         img_height=obs_manager_cfg.img_height,
-                                        normalize_obs = normalize)
+                                        normalize = normalize)
         
         case "sophy": 
             obs_manager = SophyObsManager(colorspace=obs_manager_cfg.colorspace,
@@ -47,7 +47,7 @@ def get_observation_manager(cfg : TrainConfig, wrap_obs_in_test : bool = False, 
         case _: # This is the default (equivalent to 'else')
             raise ValueError(f"Observationmanager {name} not known.")    
     
-    if wrap_obs_in_test:
+    if False:
         obs_manager = ObservationTest(obs_mangager=obs_manager,
                                         colorspace=obs_manager_cfg.colorspace,
                                         convert_torch=obs_manager_cfg.convert_torch,
@@ -56,5 +56,5 @@ def get_observation_manager(cfg : TrainConfig, wrap_obs_in_test : bool = False, 
                                         normalize_obs = normalize,
                                         log_directory="logs/observations", log_frequency=1)
         
-    obs_manager.grayscaleimgs_as_uint8(grayscale_imgs_as_uint8)
+    #obs_manager.grayscaleimgs_as_uint8(grayscale_imgs_as_uint8)
     return obs_manager

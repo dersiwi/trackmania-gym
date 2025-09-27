@@ -61,8 +61,8 @@ class ImageObservationTerm(ObservationTerm):
         Colorspace.BGRA: BGRAImgConverter,
     }
 
-    def __init__(self,convert_torch, normalize, name="image",colorspace=Colorspace.GRAYSCALE,img_width:int = 128, img_height:int = 128, dtype=np.uint8):
-        super().__init__(name,convert_torch, normalize)
+    def __init__(self,normalize=False, name="image",colorspace=Colorspace.GRAYSCALE,img_width:int = 128, img_height:int = 128, dtype=np.uint8):
+        super().__init__(name, normalize)
 
         try:
             Img_Converter_Class = self._COLORSPACE_TO_CLASS[colorspace]

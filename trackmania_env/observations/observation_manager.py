@@ -13,9 +13,8 @@ class ObservationTerm(ABC):
     Base class for observation terms.
     """
     # TODO do we really need the convert torch ?
-    def __init__(self, name: str, convert_torch: bool, normalize: bool):
+    def __init__(self, name: str,normalize: bool):
         self.name = name
-        self.convert_torch = convert_torch
         self.normalize = normalize
         self.env: Optional[gym.Env] = None
         self.observation_space: Optional[Space] = None
@@ -46,18 +45,13 @@ class Obs_Float_Stacker(ObservationTerm):
     Combines multiple ObservationTerms into a single stacked float vector.
     """
     # TODO think of turning this into an obsmanager maybe
-    def __init__(self, 
-                 observation_terms: list[ObservationTerm],
-                 name: str = "floats",
-                 convert_torch: bool = True,
-                 normalize: bool = False):
-        super().__init__(name=name, convert_torch=convert_torch, normalize=normalize)
+    def __init__(self, observation_terms: list[ObservationTerm], name: str = "floats",normalize: bool = False):
+        super().__init__(name=name,normalize=normalize)
         self.observation_terms = observation_terms
         self.observation_space = None 
 
         for term in self.observation_terms:
             term.normalize = normalize
-            term.convert_torch = False 
 
     def set_env(self, env: gym.Env):
         self.env = env
@@ -72,7 +66,6 @@ class Obs_Float_Stacker(ObservationTerm):
         return np.concatenate(obs_list, axis=-1)
 
     def _normalize(self, obs: np.ndarray) -> np.ndarray:
-        # Optional: normalize each term individually before stacking, or normalize here
         # This is a bit confusing but the normalisation already happens in _get_obs
         return obs  
 
@@ -87,7 +80,7 @@ class Obs_Float_Stacker(ObservationTerm):
             self.observation_space = spaces.Box(low=-np.inf, high=np.inf, shape=(total_size,), dtype=np.float32)
         return self.observation_space
 
-
+# TODO convert the observation in torch here 
 class ObservationManager(ABC):
     def __init__(self, convert_torch: bool = True, normalize: bool = False):
         """
@@ -130,10 +123,6 @@ class ObservationManager(ABC):
     def set_normalize(self):
         raise NotImplementedError
 
-    @abstractmethod
-    def set_convert_torch(self):
-        raise NotImplementedError
-
 
 class DictObservationManager(ObservationManager):
     """
@@ -170,6 +159,3 @@ class DictObservationManager(ObservationManager):
         for term in self.observation_terms:
             term.normalize = self.normalize
 
-    def set_convert_torch(self):
-        for term in self.observation_terms:
-            term.convert_torch = self.convert_torch

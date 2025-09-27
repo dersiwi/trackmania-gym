@@ -43,7 +43,7 @@ class TMNF_Single_Agent_Env(gym.Env):
     """The reinforcement learning environment for Trackmania Nations Forever"""
 
     metadata = {"render.modes": ["human", "rgb_array"], "video.frames_per_second": 30}
-    
+    # TODO converting to toch should happen here and not in obsterms
     # init, step and reset have to be implemented for the class to be gym compatible
     def __init__(
             self,
@@ -116,7 +116,7 @@ class TMNF_Single_Agent_Env(gym.Env):
 
 
         # define observation and action space for gym
-        self.observation_space = obs_manager.get_observation_dict()
+        self.observation_space = obs_manager.get_observation_space()
         self.action_space = gym.spaces.Discrete(len(ACTION_MAP))
 
         self.__send_command_to_process_wrapper(IPCCommands.get_cmd_command(self.__ipc_cmd_id, 
