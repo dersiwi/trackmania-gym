@@ -5,6 +5,8 @@ MAX_HEIGHT_DIFERENCE = 7
 TYPING = False
 MAX_LATERAL_DISTANCE = 12 # maximal lateral difference of the car to the road-center, this is an estimate.
 
+MAX_SPEED = 1000.0
+
 class ObsNormalizationFactors:
 
     speed_norm = 1000.0

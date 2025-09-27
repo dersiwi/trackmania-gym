@@ -29,6 +29,9 @@ class ObservationTerm(ABC):
     @abstractmethod
     def _normalize(self, obs: np.ndarray) -> np.ndarray:
         raise NotImplementedError()
+    
+    # thaught about making this an abstract method but then i had do implement it in every sub class and most of them do nothing on reset
+    def reset(self): pass
 
     def get_observation(
         self, game_states: dict[str, Union[np.ndarray, SimStateData]], **kwargs) -> tuple[str, np.ndarray]:
@@ -122,6 +125,10 @@ class ObservationManager(ABC):
     @abstractmethod
     def set_normalize(self):
         raise NotImplementedError
+    
+    @abstractmethod
+    def reset(self):
+        raise NotImplementedError
 
 
 class DictObservationManager(ObservationManager):
@@ -159,3 +166,6 @@ class DictObservationManager(ObservationManager):
         for term in self.observation_terms:
             term.normalize = self.normalize
 
+    def reset(self):
+        for term in self.observation_terms:
+            term.reset()
