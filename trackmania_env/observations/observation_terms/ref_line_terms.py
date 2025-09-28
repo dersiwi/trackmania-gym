@@ -77,7 +77,7 @@ class LateralDistance(ObservationTerm):
         reference_line = self.env.reference_line
         next_idx, _, _ = reference_line.get_distance_to_next_point()
         lateral_distance : np.ndarray = reference_line.calculate_lateral_difference(next_idx, game_states[IPCFields.SIMSTATE].position)
-        return lateral_distance
+        return np.array(lateral_distance,dtype=np.float32)
     
 class RelativeDistance(ObservationTerm):
     def __init__(self,name="relative distance",normalize = True):
@@ -95,4 +95,4 @@ class RelativeDistance(ObservationTerm):
     def _get_obs(self, game_states:  dict[str, Union[np.ndarray, SimStateData]], **kwargs):
         reference_line = self.env.reference_line
         _, _, drel = reference_line.get_distance_to_next_point()
-        return drel
+        return np.array(drel,np.float32)

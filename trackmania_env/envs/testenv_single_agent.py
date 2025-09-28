@@ -190,7 +190,7 @@ class LinuxKeyboardWrapper:
             "nach-rechts": Key.right,
             "esc": Key.esc,
             "shift": Key.shift,
-            "r" : KeyCode.from_char(KEYS.RESET)
+            "k" : KeyCode.from_char(KEYS.RESET)
         }
 
         # Keep track of currently pressed keys

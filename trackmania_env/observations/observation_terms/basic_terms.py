@@ -22,8 +22,9 @@ class SpeedTerm(ObservationTerm):
     def _normalize(self, obs: float) -> float:
         return obs / ObsNormalizationFactors.speed_norm
 
-    def _get_obs(self, game_states: dict[str, Union[np.ndarray, SimStateData]], **kwargs) -> float:
-        return float(game_states[IPCFields.SIMSTATE].display_speed)
+    def _get_obs(self, game_states: dict[str, Union[np.ndarray, SimStateData]], **kwargs) -> np.ndarray:
+        return np.array([game_states[IPCFields.SIMSTATE].display_speed], dtype=np.float32)
+
 
 class SurfaceFloats(ObservationTerm):
     """

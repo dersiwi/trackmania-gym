@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import Optional, Union
+from typing import Optional, Tuple, Union
 import numpy as np
 import gymnasium as gym
 from gymnasium import spaces
@@ -18,6 +18,7 @@ class ObservationTerm(ABC):
         self.normalize = normalize
         self.env: Optional[gym.Env] = None
         self.observation_space: Optional[Space] = None
+        self.info : dict[str,any] = {}
 
     def set_env(self, env: gym.Env):
         self.env = env
@@ -90,11 +91,13 @@ class ObservationManager(ABC):
         Base manager class for handling multiple ObservationTerm instances.
         """
         self.env: Optional[gym.Env] = None
-        self.pos_buffer = None  # Read-only
+        self.pos_buffer = None  # Read-only TODO for what do we need this here ?
         self.refline_manager: Optional[ReferenceLineManager] = None
 
-        self.obs_space: Optional[Space] = None
-        self.observation_terms: list[ObservationTerm] = []
+        self.obs_space: Optional[Space] = None # the observations space in gymnasium definition
+        self.observation_terms: list[ObservationTerm] = [] 
+        self.observation = None # this is what get_observation returns
+        self.info: dict[str,any] = {} # for debugging purposes
 
         self.normalize = normalize
         self.convert_torch = convert_torch
@@ -108,13 +111,16 @@ class ObservationManager(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def get_observation(self, obs: dict[str, Union[np.ndarray, SimStateData]]) -> dict[str, np.ndarray]:
+    def get_observation(self, obs: dict[str, Union[np.ndarray, SimStateData]]) -> Tuple[dict[str, np.ndarray],dict[str,any]]:
         """
-        obs are here raw_observation meaning 
+        the function parameter obs is here raw_observation meaning 
         raw_obs = {
             "ssD" : ...
             "image" : ...
         }
+        this function returns a tuple (obs,info) where obs are the observations and 
+        info are additional infos which could be used for debugging
+
         """
         raise NotImplementedError
 
@@ -139,6 +145,7 @@ class DictObservationManager(ObservationManager):
     def __init__(self,observation_terms: list[ObservationTerm],convert_torch: bool = True,normalize: bool = False):
         super().__init__(convert_torch, normalize)
         self.observation_terms = observation_terms
+        self.observation: dict[str,np.ndarray] = {} 
 
     def set_obs_term_env(self):
         assert self.env is not None, "Environment must be set before assigning to terms."
@@ -153,14 +160,14 @@ class DictObservationManager(ObservationManager):
             self.obs_space = spaces.Dict(space_dict)
         return self.obs_space
 
-    def get_observation(self, obs: dict[str, Union[np.ndarray, SimStateData]]) -> dict[str, np.ndarray]:
+    def get_observation(self, obs: dict[str, Union[np.ndarray, SimStateData]]) -> Tuple[dict[str, np.ndarray],dict[str,any]]:
         assert self.obs_space is not None, "Observation space not initialized."
-        observations = {}
         for term in self.observation_terms:
             name, computed_obs = term.get_observation(obs)
             assert name in self.obs_space.spaces, f"Observation '{name}' not in obs_space."
-            observations[name] = computed_obs
-        return observations
+            self.info.update(term.info) 
+            self.observation[name] = computed_obs
+        return self.observation,self.info
 
     def set_normalize(self):
         for term in self.observation_terms:
