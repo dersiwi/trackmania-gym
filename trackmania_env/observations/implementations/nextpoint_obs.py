@@ -1,6 +1,7 @@
 from __future__ import annotations
 import traceback
-from trackmania_env.observations.observation_manager import ObservationManager,DictObservationManager,ObservationTerm,Obs_Float_Stacker
+from trackmania_env.observations.observation_manager import ObservationManager,DictObservationManager
+from trackmania_env.observations.observation_term import Obs_Float_Stacker
 from trackmania_env.observations.observation_terms.img_terms import ImageObservationTerm
 from gymnasium import spaces
 import numpy as np

@@ -12,9 +12,9 @@ from trackmania_env.observations.observation_term import ObservationTerm
 
 # TODO convert the observation in torch here 
 class ObservationManager(ABC):
-    def __init__(self,observation_terms: List[ObservationTerm], convert_torch: bool = True, normalize: bool = False):
+    def __init__(self,observation_terms: Union[ObservationTerm,List[ObservationTerm]], convert_torch: bool = True, normalize: bool = False):
         """
-        Base manager class for handling multiple ObservationTerm instances.
+        Base manager class.
         """
 
         self.observation_terms: List[ObservationTerm] = observation_terms
@@ -24,13 +24,19 @@ class ObservationManager(ABC):
         # Environment-related attributes
         self.env: Optional[gym.Env] = None
         self.refline_manager: Optional[ReferenceLineManager] = None
-        self.pos_buffer = None  # TODO: purpose of this buffer exactly here? Do some Observation terms need that
+        self.pos_buffer = None  # TODO: purpose of this buffer exactly here? Do some Observation terms need that ?
 
         # Observation state
         self.obs_space: Optional[Space] = None  # Gym-style observation space
         self.observation = None                 # Final structured observation
         self.info: Dict[str, Any] = {}          # Debugging info
 
+    def get_observation_space(self) -> Space:
+        """
+        Returns the observation space, typically a gym.spaces.Dict or Box.
+        """
+        return self.obs_space
+    
     def set_env(self, env: gym.Env):
         """
         Sets the environment and propagates it to observation terms.
@@ -38,7 +44,7 @@ class ObservationManager(ABC):
         self.env = env
         self.set_obs_term_env()
 
-    def get_observation(self, obs: Dict[str, Union[np.ndarray, SimStateData]]) -> Tuple[Dict[str, np.ndarray],Dict[str,any]]:
+    def get_observation(self, obs: Dict[str, Union[np.ndarray, SimStateData]]) -> Tuple[Dict[str, np.ndarray],Dict[str,Any]]:
         """
         Processes raw input like {"image": np.ndarray , "sim_state": SimStateData(...)} into a structured observation
         and debug info using `_get_observation`. Checks format with `check_return_obs`.
@@ -62,19 +68,12 @@ class ObservationManager(ABC):
         raise NotImplementedError
     
     @abstractmethod
-    def _get_observation(self,obs: Dict[str, Union[np.ndarray, SimStateData]]) -> Tuple[Dict[str, np.ndarray],Dict[str,any]]:
+    def _get_observation(self,obs: Dict[str, Union[np.ndarray, SimStateData]]) -> Tuple[Dict[str, np.ndarray],Dict[str,Any]]:
         """
         Internal method that processes raw observations into structured data.
         """
         raise NotImplementedError
     
-    @abstractmethod
-    def get_observation_space(self) -> Space:
-        """
-        Returns the observation space, typically a gym.spaces.Dict or Box.
-        """
-        raise NotImplementedError
-
     @abstractmethod
     def set_normalize(self):
         """
@@ -85,12 +84,32 @@ class ObservationManager(ABC):
     @abstractmethod
     def reset(self):
         """
-        Reset any internal state (e.g., buffers or stateful observation terms).
+        Reset Any internal state (e.g., buffers or stateful observation terms).
         """
         raise NotImplementedError
-    
 
-class DictObservationManager(ObservationManager):
+class CompositeObservationManager(ObservationManager, ABC):
+    """
+    Abstract base class for managers that produce composite observations
+    from multiple ObservationTerms.
+    """
+    def __init__(self, observation_terms: List[ObservationTerm], convert_torch = True, normalize = False):
+        super().__init__(observation_terms, convert_torch, normalize)
+    
+    def set_obs_term_env(self):
+        assert self.env is not None, "Environment must be set before assigning to terms."
+        for term in self.observation_terms:
+            term.set_env(self.env)
+
+    def set_normalize(self):
+        for term in self.observation_terms:
+            term.normalize = self.normalize
+
+    def reset(self):
+        for term in self.observation_terms:
+            term.reset()
+
+class DictObservationManager(CompositeObservationManager):
     """
     Observation manager for Dictionary-based observation spaces.
     """
@@ -101,15 +120,8 @@ class DictObservationManager(ObservationManager):
         self.obs_space : spaces.Dict = spaces.Dict({term.name: term.get_observation_space() for term in self.observation_terms})
         self.observation: Dict[str,np.ndarray] = {} 
    
-    def set_obs_term_env(self):
-        assert self.env is not None, "Environment must be set before assigning to terms."
-        for term in self.observation_terms:
-            term.set_env(self.env)
 
-    def get_observation_space(self) -> Space:
-        return self.obs_space
-
-    def _get_observation(self, obs: Dict[str, Union[np.ndarray, SimStateData]]) -> Tuple[Dict[str, np.ndarray],Dict[str,any]]:
+    def _get_observation(self, obs: Dict[str, Union[np.ndarray, SimStateData]]) -> Tuple[Dict[str, np.ndarray],Dict[str,Any]]:
         assert self.obs_space is not None, "Observation space not initialized."
         for term in self.observation_terms:
             name, computed_obs = term.get_observation(obs)
@@ -118,13 +130,6 @@ class DictObservationManager(ObservationManager):
             self.observation[name] = computed_obs
         return self.observation,self.info
 
-    def set_normalize(self):
-        for term in self.observation_terms:
-            term.normalize = self.normalize
-
-    def reset(self):
-        for term in self.observation_terms:
-            term.reset()
 
     def check_return_obs(self, obs: Dict[str, np.ndarray]) -> bool:
         """
