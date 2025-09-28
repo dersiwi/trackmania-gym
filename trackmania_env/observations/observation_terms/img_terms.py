@@ -3,7 +3,7 @@ import numpy as np
 
 from gymnasium.spaces import Box
 
-from trackmania_env.observations.observation_manager import ObservationTerm
+from trackmania_env.observations.observation_term import ObservationTerm
 from game_interaction.ipc_fields import IPCFields
 
 
