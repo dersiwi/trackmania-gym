@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 from collections import Counter
-from typing import Dict, List, Optional, Tuple, Union
+from typing import Any, Dict, List, Optional, Tuple, Union
 import numpy as np
 import gymnasium as gym
 from gymnasium import spaces
@@ -93,19 +93,24 @@ class ObservationManager(ABC):
         """
         self.check_overriding_obs(observation_terms)
 
-        self.env: Optional[gym.Env] = None
-        self.pos_buffer = None  # Read-only TODO for what do we need this here ?
-        self.refline_manager: Optional[ReferenceLineManager] = None
-
-        self.obs_space: Optional[Space] = None # the observations space in gymnasium definition
         self.observation_terms: List[ObservationTerm] = observation_terms
-        self.observation = None # this is what get_observation returns
-        self.info: Dict[str,any] = {} # for debugging purposes
-
-        self.normalize = normalize
         self.convert_torch = convert_torch
+        self.normalize = normalize
+
+        # Environment-related attributes
+        self.env: Optional[gym.Env] = None
+        self.refline_manager: Optional[ReferenceLineManager] = None
+        self.pos_buffer = None  # TODO: purpose of this buffer exactly here? Do some Observation terms need that
+
+        # Observation state
+        self.obs_space: Optional[Space] = None  # Gym-style observation space
+        self.observation = None                 # Final structured observation
+        self.info: Dict[str, Any] = {}          # Debugging info
 
     def set_env(self, env: gym.Env):
+        """
+        Sets the environment and propagates it to observation terms.
+        """
         self.env = env
         self.set_obs_term_env()
 
@@ -125,52 +130,55 @@ class ObservationManager(ABC):
                 "Each observation term must have a unique name to avoid overriding."
             )
     
-    @abstractmethod
-    def check_return_obs(self, obs: Union[np.ndarray, Dict[str, np.ndarray]]):
-        """Sanity check for whether the returned obs are defined like the observation space"""
-        pass
-
-    @abstractmethod
-    def set_obs_term_env(self):
-        raise NotImplementedError
-    
-    @abstractmethod
-    def _get_observation(self,obs: Dict[str, Union[np.ndarray, SimStateData]]) -> Tuple[Dict[str, np.ndarray],Dict[str,any]]:
-        raise NotImplementedError
-    
-    @abstractmethod
     def get_observation(self, obs: Dict[str, Union[np.ndarray, SimStateData]]) -> Tuple[Dict[str, np.ndarray],Dict[str,any]]:
         """
-        This function takes observation input (e.g., images, sim states), calls the internal
-        _get_observation to process it, and checks that the returned observation conforms
-        to the expected format.
-        Params:
-            obs will always look like this:
-            {
-                "image": np.ndarray,
-                "sim_state": SimStateData(...)
-            }
-        Returns:
-            Tuple[Dict[str, np.ndarray], Dict[str, Any]]: 
-                - The processed observation dictionary.
-                - A dictionary of additional information for debugging or logging.
- 
+        Processes raw input like {"image": np.ndarray , "sim_state": SimStateData(...)} into a structured observation
+        and debug info using `_get_observation`. Checks format with `check_return_obs`.
         """
         obs, info = self._get_observation(obs)
         self.check_return_obs(obs)
         return obs,info
-
+    
+    @abstractmethod
+    def check_return_obs(self, obs: Union[np.ndarray, Dict[str, np.ndarray]]):
+        """
+        Sanity-check that the returned observation matches the observation space format.
+        """
+        raise NotImplementedError
 
     @abstractmethod
+    def set_obs_term_env(self):
+        """
+        Propagates the environment to each observation term.
+        """
+        raise NotImplementedError
+    
+    @abstractmethod
+    def _get_observation(self,obs: Dict[str, Union[np.ndarray, SimStateData]]) -> Tuple[Dict[str, np.ndarray],Dict[str,any]]:
+        """
+        Internal method that processes raw observations into structured data.
+        """
+        raise NotImplementedError
+    
+    @abstractmethod
     def get_observation_space(self) -> Space:
+        """
+        Returns the observation space, typically a gym.spaces.Dict or Box.
+        """
         raise NotImplementedError
 
     @abstractmethod
     def set_normalize(self):
+        """
+        Optionally enable or configure observation normalization.
+        """
         raise NotImplementedError
     
     @abstractmethod
     def reset(self):
+        """
+        Reset any internal state (e.g., buffers or stateful observation terms).
+        """
         raise NotImplementedError
     
 
