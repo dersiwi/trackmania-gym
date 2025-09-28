@@ -68,7 +68,7 @@ class Obs_Float_Stacker(ObservationTerm):
         for term in self.observation_terms:
             _, obs = term.get_observation(game_states)
             obs_List.append(obs.ravel())  # flatten in case of multidimensional obs
-        return np.concatenate(obs_List, axis=-1)
+        return np.concatenate(obs_List, axis=-1,dtype=np.float32)
 
     def _normalize(self, obs: np.ndarray) -> np.ndarray:
         # This is a bit confusing but the normalisation already happens in _get_obs
@@ -91,7 +91,6 @@ class ObservationManager(ABC):
         """
         Base manager class for handling multiple ObservationTerm instances.
         """
-        self.check_overriding_obs(observation_terms)
 
         self.observation_terms: List[ObservationTerm] = observation_terms
         self.convert_torch = convert_torch
@@ -114,22 +113,6 @@ class ObservationManager(ABC):
         self.env = env
         self.set_obs_term_env()
 
-    def check_overriding_obs(self, obs_terms: List[ObservationTerm]):
-        """
-        Check if there are observation terms with duplicate names.
-        This is important because duplicates could override each other 
-        later in processing, leading to unexpected behavior.
-        """
-        obs_term_names = [t.name for t in obs_terms]
-        name_counts = Counter(obs_term_names)
-        duplicates = [name for name, count in name_counts.items() if count > 1]
-    
-        if duplicates:
-            raise ValueError(
-                f"Duplicate observation terms found: {duplicates}. "
-                "Each observation term must have a unique name to avoid overriding."
-            )
-    
     def get_observation(self, obs: Dict[str, Union[np.ndarray, SimStateData]]) -> Tuple[Dict[str, np.ndarray],Dict[str,any]]:
         """
         Processes raw input like {"image": np.ndarray , "sim_state": SimStateData(...)} into a structured observation
@@ -182,28 +165,23 @@ class ObservationManager(ABC):
         raise NotImplementedError
     
 
-
-
 class DictObservationManager(ObservationManager):
     """
     Observation manager for Dictionary-based observation spaces.
     """
-
     def __init__(self,observation_terms: List[ObservationTerm],convert_torch: bool = True,normalize: bool = False):
-        super().__init__(convert_torch, normalize)
-        self.observation: Dict[str,np.ndarray] = {} 
+        self.check_overriding_obs(observation_terms)
 
+        super().__init__(observation_terms,convert_torch, normalize)
+        self.obs_space : spaces.Dict = spaces.Dict({term.name: term.get_observation_space() for term in self.observation_terms})
+        self.observation: Dict[str,np.ndarray] = {} 
+   
     def set_obs_term_env(self):
         assert self.env is not None, "Environment must be set before assigning to terms."
         for term in self.observation_terms:
             term.set_env(self.env)
 
     def get_observation_space(self) -> Space:
-        if self.obs_space is None:
-            space_Dict = {
-                term.name: term.get_observation_space() for term in self.observation_terms
-            }
-            self.obs_space = spaces.Dict(space_Dict)
         return self.obs_space
 
     def _get_observation(self, obs: Dict[str, Union[np.ndarray, SimStateData]]) -> Tuple[Dict[str, np.ndarray],Dict[str,any]]:
@@ -232,7 +210,7 @@ class DictObservationManager(ObservationManager):
 
         """
         for key, value in obs.items():
-            assert key in self.obs_space, f"Unexpected key in observation: '{key}'"
+            assert key in self.obs_space.spaces, f"Unexpected key in observation: '{key}'"
 
             expected_space = self.obs_space[key]
 
@@ -246,4 +224,20 @@ class DictObservationManager(ObservationManager):
             assert value.dtype == expected_space.dtype, (
                 f"Dtype mismatch for key '{key}': "
                 f"expected {expected_space.dtype}, got {value.dtype}"
+            )
+        
+    def check_overriding_obs(self, obs_terms: List[ObservationTerm]):
+        """
+        Check if there are observation terms with duplicate names.
+        This is important because duplicates could override each other 
+        later in processing, leading to unexpected behavior.
+        """
+        obs_term_names = [t.name for t in obs_terms]
+        name_counts = Counter(obs_term_names)
+        duplicates = [name for name, count in name_counts.items() if count > 1]
+    
+        if duplicates:
+            raise ValueError(
+                f"Duplicate observation terms found: {duplicates}. "
+                "Each observation term must have a unique name to avoid overriding."
             )
