@@ -1,7 +1,7 @@
 from __future__ import annotations
 import traceback
 from trackmania_env.observations.observation_manager import ObservationManager,DictObservationManager
-from trackmania_env.observations.observation_term import Obs_Float_Stacker
+from trackmania_env.observations.observation_term import GroupedObservationTerm
 from trackmania_env.observations.observation_terms.img_terms import ImageObservationTerm
 from gymnasium import spaces
 import numpy as np
@@ -29,7 +29,7 @@ class NextPointObsManager(DictObservationManager):
         super().__init__(
             [
                 ImageObservationTerm(name="image",colorspace=colorspace, img_width=img_width, img_height=img_height,dtype=np.uint8),
-                Obs_Float_Stacker(
+                GroupedObservationTerm(
                     name= "floats",
                     observation_terms= [
                         NextReflinePoint(ref_line_lookahead,ref_line_stride),
