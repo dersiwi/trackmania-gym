@@ -12,7 +12,7 @@ from trackmania_env.observations.observation_term import ObservationTerm
 
 # TODO convert the observation in torch here 
 class ObservationManager(ABC):
-    def __init__(self,observation_terms: Union[ObservationTerm,List[ObservationTerm]], convert_torch: bool = True, normalize: bool = False):
+    def __init__(self,observation_terms: Union[ObservationTerm,List[ObservationTerm]], convert_torch: bool = True, normalize: bool = False, debug:bool = False):
         """
         Base manager class.
         """
@@ -20,7 +20,7 @@ class ObservationManager(ABC):
         self.observation_terms = observation_terms
         self.convert_torch = convert_torch
         self.normalize = normalize
-        self.set_normalize()
+        self.debug = debug
 
         # Environment-related attributes
         self.env: Optional[gym.Env] = None
@@ -31,6 +31,10 @@ class ObservationManager(ABC):
         self.obs_space: Optional[Space] = None  # Gym-style observation space
         self.observation = None                 # Final structured observation
         self.info: Dict[str, Any] = {}          # Debugging info
+
+        self._validated = False # One-time validation flag
+
+        self.set_normalize()
 
     def get_observation_space(self) -> Space:
         """
@@ -54,9 +58,17 @@ class ObservationManager(ABC):
         self.check_return_obs(obs)
         return obs,info
     
+    def check_return_obs(self, obs: Union[np.ndarray, Dict[str, np.ndarray]]):
+        """
+        Sanity-check that the returned observation matches the observation space format.
+        """
+        if self.debug or not self._validated:
+            self._check_return_obs(obs)
+            self._validated = True
+    
     # NOTE in the future this typing for the params could be off
     @abstractmethod
-    def check_return_obs(self, obs: Union[np.ndarray, Dict[str, np.ndarray]]):
+    def _check_return_obs(self, obs: Union[np.ndarray, Dict[str, np.ndarray]]):
         """
         Sanity-check that the returned observation matches the observation space format.
         """
@@ -131,7 +143,7 @@ class DictObservationManager(CompositeObservationManager):
         return self.observation,self.info
 
 
-    def check_return_obs(self, obs: Dict[str, np.ndarray]) -> bool:
+    def _check_return_obs(self, obs: Dict[str, np.ndarray]) -> bool:
         """
         Checks that the returned observation matches the expected observation space.
 
