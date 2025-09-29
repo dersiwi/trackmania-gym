@@ -17,9 +17,10 @@ class ObservationManager(ABC):
         Base manager class.
         """
 
-        self.observation_terms: List[ObservationTerm] = observation_terms
+        self.observation_terms = observation_terms
         self.convert_torch = convert_torch
         self.normalize = normalize
+        self.set_normalize()
 
         # Environment-related attributes
         self.env: Optional[gym.Env] = None
@@ -53,6 +54,7 @@ class ObservationManager(ABC):
         self.check_return_obs(obs)
         return obs,info
     
+    # NOTE in the future this typing for the params could be off
     @abstractmethod
     def check_return_obs(self, obs: Union[np.ndarray, Dict[str, np.ndarray]]):
         """
@@ -115,12 +117,10 @@ class DictObservationManager(CompositeObservationManager):
     """
     def __init__(self,observation_terms: List[ObservationTerm],convert_torch: bool = True,normalize: bool = False):
         self.check_overriding_obs(observation_terms)
-
         super().__init__(observation_terms,convert_torch, normalize)
         self.obs_space : spaces.Dict = spaces.Dict({term.name: term.get_observation_space() for term in self.observation_terms})
-        self.observation: Dict[str,np.ndarray] = {} 
+        self.observation: Dict[str, Optional[np.ndarray]] = {key: None for key in self.obs_space.spaces}
    
-
     def _get_observation(self, obs: Dict[str, Union[np.ndarray, SimStateData]]) -> Tuple[Dict[str, np.ndarray],Dict[str,Any]]:
         assert self.obs_space is not None, "Observation space not initialized."
         for term in self.observation_terms:

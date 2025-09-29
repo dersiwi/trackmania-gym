@@ -7,6 +7,7 @@ from gymnasium.spaces import Space
 
 from tminterface.structs import SimStateData
 
+# TODO should we include the option for setting the dtype ? via passing it as a param through the constructor 
 class ObservationTerm(ABC):
     """
     Base class for observation terms.
@@ -22,15 +23,8 @@ class ObservationTerm(ABC):
     def set_env(self, env: gym.Env):
         self.env = env
 
-    @abstractmethod
-    def _get_obs(self, game_states: Dict[str, Union[np.ndarray, SimStateData]], **kwargs) -> np.ndarray:
-        raise NotImplementedError()
-
-    @abstractmethod
-    def _normalize(self, obs: np.ndarray) -> np.ndarray:
-        raise NotImplementedError()
-    
-    # thaught about making this an abstract method but then i had do implement it in every sub class and most of them do nothing on reset
+    # thaught about making this an abstract method but then i had do implement it in every sub 
+    # class and most of them do nothing on reset
     def reset(self): pass
 
     def get_observation(
@@ -42,6 +36,15 @@ class ObservationTerm(ABC):
 
     def get_observation_space(self) -> Optional[Space]:
         return self.observation_space
+    
+    @abstractmethod
+    def _get_obs(self, game_states: Dict[str, Union[np.ndarray, SimStateData]], **kwargs) -> np.ndarray:
+        raise NotImplementedError()
+
+    @abstractmethod
+    def _normalize(self, obs: np.ndarray) -> np.ndarray:
+        raise NotImplementedError()
+    
 
 class Obs_Float_Stacker(ObservationTerm):
     """
@@ -51,7 +54,15 @@ class Obs_Float_Stacker(ObservationTerm):
     def __init__(self, observation_terms: List[ObservationTerm], name: str = "floats",normalize: bool = False):
         super().__init__(name=name,normalize=normalize)
         self.observation_terms = observation_terms
-        self.observation_space = None 
+
+        # compute observation space
+        sizes = []
+        for term in self.observation_terms:
+            space = term.get_observation_space()
+            assert isinstance(space, spaces.Box), "Only Box spaces are supported for stacking"
+            sizes.append(np.prod(space.shape))
+        total_size = int(sum(sizes))
+        self.observation_space = spaces.Box(low=-np.inf, high=np.inf, shape=(total_size,), dtype=np.float32)
 
         for term in self.observation_terms:
             term.normalize = normalize
@@ -65,20 +76,13 @@ class Obs_Float_Stacker(ObservationTerm):
         obs_List = []
         for term in self.observation_terms:
             _, obs = term.get_observation(game_states)
-            obs_List.append(obs.ravel())  # flatten in case of multidimensional obs
+            obs_List.append(obs.ravel())  # flatten 
         return np.concatenate(obs_List, axis=-1,dtype=np.float32)
 
     def _normalize(self, obs: np.ndarray) -> np.ndarray:
-        # This is a bit confusing but the normalisation already happens in _get_obs
+        # This is a bit confusing but the normalisation already happens in the obs terms itself in _get_obs
         return obs  
-
-    def get_observation_space(self) -> Space:
-        if self.observation_space is None:
-            sizes = []
-            for term in self.observation_terms:
-                space = term.get_observation_space()
-                assert isinstance(space, spaces.Box), "Only Box spaces are supported for stacking"
-                sizes.append(np.prod(space.shape))
-            total_size = int(sum(sizes))
-            self.observation_space = spaces.Box(low=-np.inf, high=np.inf, shape=(total_size,), dtype=np.float32)
-        return self.observation_space
+    
+    def reset(self):
+        for term in self.observation_terms:
+            term.reset()
