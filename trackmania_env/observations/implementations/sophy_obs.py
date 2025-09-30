@@ -8,7 +8,7 @@ IMAGE_SIZE = 64
 """Image size as specified in sophy paper."""
 
 class SophyObsManager(DictObservationManager):
-    def __init__(self, colorspace, convert_torch, normalize, img_width, img_height,maxlen_history:int = 3,lookahead_sec = 6,n_points = 60, img_dtype=np.uint8):
+    def __init__(self, colorspace, convert_torch, normalize, img_width, img_height,maxlen_history:int = 3,lookahead_sec = 6,n_points = 60, img_dtype=np.float32):
         """
         Initializes the GT Sophy-style observation manager (https://arxiv.org/pdf/2406.12563v1).
 
@@ -30,7 +30,7 @@ class SophyObsManager(DictObservationManager):
             f"Sophy was trained on {IMAGE_SIZE}x{IMAGE_SIZE} images. "
             "Please use square images of this size."
         )
-        
+
         super().__init__(
             observation_terms= [
                 ImageObservationTerm(colorspace= colorspace, img_height=img_height, img_width= img_width, dtype=img_dtype),

@@ -61,7 +61,7 @@ class ImageObservationTerm(ObservationTerm):
         Colorspace.BGRA: BGRAImgConverter,
     }
 
-    def __init__(self,normalize=False, name="image",colorspace=Colorspace.GRAYSCALE,img_width:int = 128, img_height:int = 128, dtype=np.uint8):
+    def __init__(self,normalize=False, name="image",colorspace=Colorspace.GRAYSCALE,img_width:int = 128, img_height:int = 128, dtype=np.float32,allow_unsafe_uint8_cast=False):
         super().__init__(name, normalize)
 
         try:
@@ -70,6 +70,7 @@ class ImageObservationTerm(ObservationTerm):
             raise ValueError(f"Unsupported colorspace: {colorspace}")
 
         self.dtype = dtype
+        self.allow_unsafe_uint8_cast = allow_unsafe_uint8_cast
         self.img_converter: ImgConverter = Img_Converter_Class()
         self.observation_space = Box(
             low=0,
@@ -86,4 +87,10 @@ class ImageObservationTerm(ObservationTerm):
 
     def _normalize(self, obs):
         # obs will be an image
+        if self.normalize and np.issubdtype(self.dtype, np.integer) and not self.allow_unsafe_uint8_cast:
+            raise ValueError(
+            "Storing normalized images as uint8 will lead to data loss. "
+            "Either disable normalization or set dtype to float32. "
+            "You can override this check with allow_unsafe_uint8_cast=True (at your own risk)."
+        )
         return (obs / 255).astype(self.dtype)

@@ -22,7 +22,7 @@ class NextPointObsManager(DictObservationManager):
             convert_torch= convert_torch,
             normalize= normalize,
             observation_terms= [
-                ImageObservationTerm(name="image",colorspace=colorspace, img_width=img_width, img_height=img_height,dtype=np.uint8),
+                ImageObservationTerm(name="image",colorspace=colorspace, img_width=img_width, img_height=img_height,dtype=np.float32),
                 GroupedObservationTerm(
                     name= "floats",
                     observation_terms= [
