@@ -3,7 +3,7 @@ from trackmania_env.observations.observation_test import ObservationTest
  
 from configs.config import TrainConfig, ObservationManagerConfig
 
-from trackmania_env.observations.implementations.linesight_obs_wrapper import get_linesight_obs_instance
+from trackmania_env.observations.implementations.linesight_obs_wrapper import LinesightObservationManager
 from trackmania_env.observations.implementations.nextpoint_obs import NextPointObsManager
 from trackmania_env.observations.implementations.sophy_obs import SophyObsManager
 from trackmania_env.observations.implementations.dyn_nextpoint_obs import DynamicNextPointObsManager
@@ -17,7 +17,24 @@ def get_observation_manager(cfg : TrainConfig, wrap_obs_in_test : bool = False, 
     name = obs_manager_cfg.name 
     match name:
         case "linesight":
-            obs_manager = get_linesight_obs_instance(cfg)
+            obs_manager = LinesightObservationManager(
+                colorspace = obs_manager_cfg.colorspace,
+                img_width  = obs_manager_cfg.img_width,
+                img_height = obs_manager_cfg.img_height,
+                convert_torch = obs_manager_cfg.convert_torch,
+                normalize     = normalize,
+                ref_line_path= cfg.gmi.reference_line,
+                map_path      = f"{cfg.platforms.map_dir}/{cfg.gmi.track}",
+                n_zone_centers_extrapolate_after_end_of_map = obs_manager_cfg.n_zone_centers_extrapolate_after_end_of_map,
+                distance_between_checkpoints                = obs_manager_cfg.distance_between_checkpoints,
+                road_width                                  = obs_manager_cfg.road_width,
+                n_zone_centers_in_inputs                    = obs_manager_cfg.n_zone_centers_in_inputs,
+                margin_to_announce_finish_meters            = obs_manager_cfg.margin_to_announce_finish_meters,
+                one_every_n_zone_centers_in_inputs          = obs_manager_cfg.one_every_n_zone_centers_in_inputs,
+                n_zone_centers_extrapolate_before_start_of_map = obs_manager_cfg.n_zone_centers_extrapolate_before_start_of_map,
+                n_prev_actions_in_inputs                    = obs_manager_cfg.n_prev_actions_in_inputs,
+                sync_virtual_and_real_checkpoints           = obs_manager_cfg.sync_virtual_and_real_checkpoints,
+            )
 
         case "nextpointobs":
             obs_manager = NextPointObsManager(colorspace=obs_manager_cfg.colorspace,
