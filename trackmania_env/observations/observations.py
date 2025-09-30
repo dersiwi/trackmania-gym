@@ -29,6 +29,7 @@ def get_observation_manager(cfg : TrainConfig, wrap_obs_in_test : bool = False, 
         case "sophy": 
             obs_manager = SophyObsManager(colorspace=obs_manager_cfg.colorspace,
                                         convert_torch=obs_manager_cfg.convert_torch,
+                                        normalize= normalize,
                                         img_width=obs_manager_cfg.img_width, 
                                         img_height=obs_manager_cfg.img_height,
                                         maxlen_history= obs_manager_cfg.maxlen_history,

@@ -32,6 +32,8 @@ class PropriocentricTerm(ObservationTerm):
         - h_d_t (R^n-1): History of delta (change in) steering values over the last n steps.
         """
         super().__init__(name, normalize)
+
+        self.maxlen_history = maxlen_history
         self.observation_space = gym.spaces.Box(
             low=-np.inf,
             high=np.inf,
@@ -39,7 +41,6 @@ class PropriocentricTerm(ObservationTerm):
             dtype=np.float32
         )
 
-        self.maxlen_history = maxlen_history
 
         self.last_velocity = np.array([0., 0., 0.], dtype=np.float32)
         self.last_time = 0
