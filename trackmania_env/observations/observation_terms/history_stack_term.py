@@ -70,3 +70,29 @@ class HistoryObservationTerm(ObservationTerm, ABC):
         Resets the internal queue to its initial state.
         """
         self.hist = deque([self.init_val] * self.maxlen_history, maxlen=self.maxlen_history)
+
+from trackmania_env.utils.actionmap import ACTION_MAP,REVERSE_ACTION_MAP
+
+class DiscreteActionHistoryTerm(HistoryObservationTerm):
+    """This observation terms stores only the history of action indicies and not the mappinf to key presses"""
+    def __init__(self,maxlen_history, normalize=False , name ="action idx history"):
+        super().__init__(name, normalize, maxlen_history)
+        self.observation_space = Box(
+            low= 0,
+            high= len(REVERSE_ACTION_MAP)-1,
+            shape= (self.maxlen_history,),
+            dtype= self.dtype
+        )
+
+    def _initial_value_and_dtype(self):
+        dtype = np.float32 #NOTE: could also be just int but most of the observations are floats
+        init_val = 0
+        return init_val,dtype
+    
+    def extract_obs(self, game_states):
+        action: Tuple[bool, bool, bool, bool] = game_states[IPCFields.ACTION]
+        action_ix = REVERSE_ACTION_MAP[action]
+        return action_ix
+    
+    def _queue_to_array(self):
+         return np.array(self.hist, dtype=self.dtype)

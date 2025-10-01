@@ -193,6 +193,7 @@ class TMNF_Single_Agent_Env(gym.Env):
         except TimeoutError as t:
             self.logger.error(f"Timeout error while waiting for images: {t}")
 
+        imgs_and_simstate[IPCFields.ACTION] = self.actions[-1] # TODO this is pretty ugly but current the easiest and best option to inlcude the action 
         return imgs_and_simstate
     
 
@@ -229,7 +230,7 @@ class TMNF_Single_Agent_Env(gym.Env):
         action = ACTION_MAP[action]
         self.actions.append(action)
         raw_obs = self.__send_command_to_process_wrapper(IPCCommands.step(self.__ipc_cmd_id, action))
-        
+        raw_obs[IPCFields.ACTION] = action 
 
         ssD : SimStateData = raw_obs[IPCFields.SIMSTATE]
         self.position_buffer.add(ssD.position)

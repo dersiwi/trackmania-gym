@@ -8,7 +8,7 @@ from trackmania_env.observations.observation_terms.linesight_terms import Linesi
 from trackmania_env.observations.observation_terms.img_terms import ImageObservationTerm
 from trackmania_env.observations.observation_terms.basic_terms import MobileStatesTerm
 from trackmania_env.observations.observation_term import GroupedObservationTerm
-
+from trackmania_env.observations.observation_terms.history_stack_term import DiscreteActionHistoryTerm
 class LinesightObservationManager(DictObservationManager):
     def __init__(
         self,
@@ -70,6 +70,7 @@ class LinesightObservationManager(DictObservationManager):
                     img_width  = img_width,
                 ),
                 GroupedObservationTerm(name= "floats", observation_terms= [
+                    DiscreteActionHistoryTerm(maxlen_history= n_prev_actions_in_inputs),
                     MobileStatesTerm(),
                     LinesightDynamicTerm(),
                     zone_center_features

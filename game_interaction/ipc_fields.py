@@ -7,6 +7,8 @@ class IPCFields:
     When the TMIProcessWrapper is run, its possible to send commands and ceie responses in dicts via the initiated queues.
     """
 
+    ACTION = "action"
+    
     IMG = "img"
     """Contains image aquired from game"""
 
