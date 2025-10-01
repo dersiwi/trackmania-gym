@@ -57,7 +57,7 @@ def get_observation_manager(cfg : TrainConfig, wrap_obs_in_test : bool = False, 
                                         convert_torch=obs_manager_cfg.convert_torch,
                                         img_width=obs_manager_cfg.img_width, 
                                         img_height=obs_manager_cfg.img_height,
-                                        normalize_obs = normalize,
+                                        normalize = normalize,
                                         lookahead_sec =  obs_manager_cfg.lookahead_sec,
                                         n_points=  obs_manager_cfg.n_points
             )
