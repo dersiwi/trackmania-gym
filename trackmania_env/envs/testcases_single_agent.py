@@ -22,6 +22,7 @@ import numpy as np
 import os
 from scipy.stats import norm
 import matplotlib
+import torch
 matplotlib.use("TkAgg")
 from matplotlib import pyplot as plt
 from trackmania_env.envs.testenv_single_agent import TestEnvironmentCallback, Live3dPlotEnvironmentCallback
@@ -620,7 +621,8 @@ class Plot_Obs_Images_Callback(NonBlockingPlot):
         super().__init__(plotter=Plot_Obs_Images())
 
     def _call_after_step(self, processed_obs, reward, terminated, truncated, info):
-        img_tensor = processed_obs["image"]
+        img = processed_obs["image"]
+        img_tensor = torch.from_numpy(img)
         self.queue.put(img_tensor)
 
 

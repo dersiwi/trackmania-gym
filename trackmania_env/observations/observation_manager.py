@@ -1,191 +1,185 @@
+from abc import ABC, abstractmethod
+from collections import Counter
+from typing import Any, Dict, List, Optional, Tuple, Union
 import numpy as np
-import torch
-
+import gymnasium as gym
 from gymnasium import spaces
+from gymnasium.spaces import Space
+
 from tminterface.structs import SimStateData
-from game_interaction.ipc_fields import IPCFields
-from utils.image_converter import ImageConverter
-from PIL import Image
-import os
-import traceback
+from trackmania_env.utils.reference_line_manager import ReferenceLineManager
+from trackmania_env.observations.observation_term import ObservationTerm
 
+# TODO convert the observation in torch here 
+class ObservationManager(ABC):
+    def __init__(self,observation_terms: Union[ObservationTerm,List[ObservationTerm]], convert_torch: bool = True, normalize: bool = False, debug:bool = False):
+        """
+        Base manager class.
+        """
 
-class ObservationTerm:
-    """This class contains observation terms for vecotr-like observations.
-    Each observation-term returns a numpy-array of shape [N,]."""
-
-    def __init__(self, dim : int, normalize : bool):
-        self.dim = dim
+        self.observation_terms = observation_terms
+        self.convert_torch = convert_torch
         self.normalize = normalize
-        self.env = None
+        self.debug = debug
 
-    def set_env(self, env):
-        from trackmania_env.envs.single_agent_env2 import TMNF_Single_Agent_Env
-        self.env : TMNF_Single_Agent_Env = env
-    
-    def _get_obs(self, game_states : SimStateData, **kwargs) -> np.ndarray:
-        raise NotImplementedError()
-    
-    def _normalize(self, obs) -> np.ndarray:
-        raise NotImplementedError()
+        # Environment-related attributes
+        self.env: Optional[gym.Env] = None
+        self.refline_manager: Optional[ReferenceLineManager] = None
+        self.pos_buffer = None  # TODO: purpose of this buffer exactly here? Do some Observation terms need that ?
 
-    def get_observation(self, game_states : SimStateData, **kwargs) -> np.ndarray:
-        obs = self._get_obs(game_states, **kwargs)
-        if self.normalize:
-            obs = self._normalize(obs)
-        return obs
+        # Observation state
+        self.obs_space: Optional[Space] = None  # Gym-style observation space
+        self.observation = None                 # Final structured observation
+        self.info: Dict[str, Any] = {}          # Debugging info
 
-class ObservationManager:
+        self._validated = False # One-time validation flag
 
-    class Colorspace:
-        GRAYSCALE = 0
-        RGB = 1
-        BGRA = 2
+        self.set_normalize()
 
-        REV_DICT = {"grayscale" : 0, "rgb" : 1, "rgba" : 2} #this is somewhat ugly but this way the config contains a readable string
-
-    def __init__(self, colorspace : str, convert_torch : bool, img_width : int, 
-                 img_height : int, img_dump_freq : int = 1000000, n_dump_imgs : int= 20, normalize_obs : bool = False):
+    def get_observation_space(self) -> Space:
         """
-        Initializes Observation-Manager
-        Args:
-            colorspace (str)    : string specifying the colorspace "grayscale", "rgb", "rgba"
-            convert_torch (bool): if true, observations are converted from numpy to torch-tensor    
-            img_width     (int)  : width of image
-            img_height    (int)  : height of image
-            obs_have_img  (bool) : If True, image is passed along with state-vector, if false, only state vector is returned by get_observation(). If set to -1, no images are dumped.7
-            img_dump_freq (int)  : Specifies a frequency in which n_dump_imgs are dumped in logs/observations/. The idea behind this is to manually control, if the states produced by
-                the environment match the expected. 
-            n_dump_imgs   (int)  : Amount of images that are dumped
+        Returns the observation space, typically a gym.spaces.Dict or Box.
         """
-        self.obs_have_img = True
-        self.colorspace : int = ObservationManager.Colorspace.REV_DICT[colorspace]
-        self.convert_torch : bool = convert_torch
-        self.img_width = img_width
-        self.img_height = img_height
-
-        self.normalize_state_vec : bool = normalize_obs
-
-        self.env = None
-        self.n_channels = 1 if self.colorspace == ObservationManager.Colorspace.GRAYSCALE else 3
-
-        self.info = {}
-
-        self.convert_grayscale_to_uint8 = False
-
-        self.img_dump_freq = img_dump_freq
-        self.n_dump_imgs = n_dump_imgs
-        self.n_imgs_dumped = 0
-        self.img_dir = "logs/control_imgs"
-        if self.img_dump_freq > -1:
-            os.makedirs(self.img_dir, exist_ok=True)
-
-        self.observation_terms : list[ObservationTerm] = []
-        self.statevector_dim = 0
-
-    def grayscaleimgs_as_uint8(self, val : bool):
-        """Sets self.convert_grayscale_to_uint8 to given value."""
-        self.convert_grayscale_to_uint8 = val
-
-    def set_obs_have_imgs(self, val : bool):
-        """Sets self.obs_have_imgs"""
-        self.obs_have_img = val
-
-    def set_env(self, environment):
-        from trackmania_env.envs.single_agent_env2 import TMNF_Single_Agent_Env
-        self.env : TMNF_Single_Agent_Env = environment
-        for term in self.observation_terms:
-            term.set_env(environment)
-
-
-    def get_values_from_state_dict(self, obs : SimStateData) -> np.ndarray:
-        """This method gets a raw-observation simstate-obejcet (@param : obs) and converts it into a flattened
-        vector, that is given to the feature-extractor network of the policy.
-        
-        Returns
-        -------
-        Vector of shape [N,] where N is the amount of non-image observation-fields."""
-        obsarray = [term.get_observation(obs) for term in self.observation_terms]
-        floatvec : np.ndarray = np.hstack(obsarray, dtype =  np.float32)
-        
-        assert floatvec.shape[0] == self.statevector_dim, f"Floatvector has size {floatvec.shape[0]}, however should be size {self.statevector_dim}"
-        return floatvec
+        return self.obs_space
     
+    def set_env(self, env: gym.Env):
+        """
+        Sets the environment and propagates it to observation terms.
+        """
+        self.env = env
+        self.set_obs_term_env()
 
-    def cnvt_imgs(self, images : np.ndarray) -> np.ndarray | torch.Tensor:
-        """Converts image given by simulation into specified colortype and normalizes them into [0,1]."""
-        if self.colorspace == ObservationManager.Colorspace.RGB:
-            imgs = ImageConverter.bgra_to_rgb(images)
-        elif self.colorspace == ObservationManager.Colorspace.GRAYSCALE:
-            imgs = ImageConverter.bgra_to_graysacle(images, self.convert_grayscale_to_uint8)
-        
-        if self.convert_torch:
-            imgs = torch.from_numpy(imgs)
+    def get_observation(self, obs: Dict[str, Union[np.ndarray, SimStateData]]) -> Tuple[Dict[str, np.ndarray],Dict[str,Any]]:
+        """
+        Processes raw input like {"image": np.ndarray , "sim_state": SimStateData(...)} into a structured observation
+        and debug info using `_get_observation`. Checks format with `check_return_obs`.
+        """
+        obs, info = self._get_observation(obs)
+        self.check_return_obs(obs)
+        return obs,info
+    
+    def check_return_obs(self, obs: Union[np.ndarray, Dict[str, np.ndarray]]):
+        """
+        Sanity-check that the returned observation matches the observation space format.
+        """
+        if self.debug or not self._validated:
+            self._check_return_obs(obs)
+            self._validated = True
+    
+    # NOTE in the future this typing for the params could be off
+    @abstractmethod
+    def _check_return_obs(self, obs: Union[np.ndarray, Dict[str, np.ndarray]]):
+        """
+        Sanity-check that the returned observation matches the observation space format.
+        """
+        raise NotImplementedError
 
-        # only normlalize if not conversion, otherwiese it'll be stored as float again.
-        if self.colorspace == ObservationManager.Colorspace.GRAYSCALE and self.convert_grayscale_to_uint8:
-            return imgs
-        else:
-            return imgs / 255.0
-
-    def get_observation_dict(self) -> spaces.Dict:
-        """Returns observation dict for environment according to initialization.
-        In most cases this is going to be a dictonray-observation space containing one 'image' field and one 'state'-field."""
-        self.statevector_dim = 0
-        for obsterm in self.observation_terms:
-            self.statevector_dim += obsterm.dim
-        if self.obs_have_img:
-            return spaces.Dict({
-                    "image": spaces.Box(low=0, high=1, shape=(self.n_channels, self.img_height, self.img_width), dtype=np.uint8),
-                    "state": spaces.Box(low=-np.inf, high=np.inf, shape=(self.statevector_dim,), dtype=np.float32),
-                })
-        else:
-            return spaces.Dict({"state": spaces.Box(low=-np.inf, high=np.inf, shape=(self.statevector_dim,), dtype=np.float32),})
-        
+    @abstractmethod
+    def set_obs_term_env(self):
+        """
+        Propagates the environment to each observation term.
+        """
+        raise NotImplementedError
+    
+    @abstractmethod
+    def _get_observation(self,obs: Dict[str, Union[np.ndarray, SimStateData]]) -> Tuple[Dict[str, np.ndarray],Dict[str,Any]]:
+        """
+        Internal method that processes raw observations into structured data.
+        """
+        raise NotImplementedError
+    
+    @abstractmethod
+    def set_normalize(self):
+        """
+        Optionally enable or configure observation normalization.
+        """
+        raise NotImplementedError
+    
+    @abstractmethod
     def reset(self):
-        """Resets the observation-manager. This is called if the environment is reset."""
-        pass
+        """
+        Reset Any internal state (e.g., buffers or stateful observation terms).
+        """
+        raise NotImplementedError
 
-    def _dump_imgs(self, img : np.ndarray | torch.Tensor):
-        """Dumps images periodically, according to self.img_dump_freq, self.n_imgs_dumped. This is to manually inspect the 
-        output of the observations from the environment to the agent. Can be turned off by setting self.img_dump_ferq = -1."""
-        try:
-            ImageConverter.save_image(img, filepath=os.path.join(self.img_dir, f"processed_img_{self.env.total_steps}.png"))
-        except Exception as e:
-            traceback.print_exc()
-
-        self.n_imgs_dumped += 1
-        if self.n_imgs_dumped >= self.n_dump_imgs:
-            self.n_imgs_dumped = 0
-        
-
+class CompositeObservationManager(ObservationManager, ABC):
+    """
+    Abstract base class for managers that produce composite observations
+    from multiple ObservationTerms.
+    """
+    def __init__(self, observation_terms: List[ObservationTerm], convert_torch = True, normalize = False):
+        super().__init__(observation_terms, convert_torch, normalize)
     
-    def get_observation(self, raw_observation : dict[str, np.ndarray | SimStateData]) -> tuple[np.ndarray | dict[str, np.ndarray] | torch.Tensor | dict[str, torch.Tensor],dict[str,any]]:
+    def set_obs_term_env(self):
+        assert self.env is not None, "Environment must be set before assigning to terms."
+        for term in self.observation_terms:
+            term.set_env(self.env)
+
+    def set_normalize(self):
+        for term in self.observation_terms:
+            term.normalize = self.normalize
+
+    def reset(self):
+        for term in self.observation_terms:
+            term.reset()
+
+class DictObservationManager(CompositeObservationManager):
+    """
+    Observation manager for Dictionary-based observation spaces.
+    """
+    def __init__(self,observation_terms: List[ObservationTerm],convert_torch: bool = True,normalize: bool = False):
+        self.check_overriding_obs(observation_terms)
+        super().__init__(observation_terms,convert_torch, normalize)
+        self.obs_space : spaces.Dict = spaces.Dict({term.name: term.get_observation_space() for term in self.observation_terms})
+        self.observation: Dict[str, Optional[np.ndarray]] = {key: None for key in self.obs_space.spaces}
+   
+    def _get_observation(self, obs: Dict[str, Union[np.ndarray, SimStateData]]) -> Tuple[Dict[str, np.ndarray],Dict[str,Any]]:
+        assert self.obs_space is not None, "Observation space not initialized."
+        for term in self.observation_terms:
+            name, computed_obs = term.get_observation(obs)
+            assert name in self.obs_space.spaces, f"Observation '{name}' not in obs_space."
+            self.info.update(term.info) 
+            self.observation[name] = computed_obs
+        return self.observation,self.info
+
+
+    def _check_return_obs(self, obs: Dict[str, np.ndarray]) -> bool:
         """
-        Takes raw observations from TMInterface and dissects them into image.
+        Checks that the returned observation matches the expected observation space.
 
-        - Uses self.get_values_from_state_dict() to convert SimStateData into a state-observation vector
-        - Uses self.normalize_state_vector() to normalize state vector observations, if specified
-        - Uses self.cvt_igms() to convert the images into correct format, normalization and torch, if specified.
+        Each key in `obs` must exist in `self.obs_space`, and each corresponding value
+        must have the same shape and dtype as defined in the space.
 
-        Returns
-        -------
-            - dictionary ["img", "state"], if self.obs_have_img; otherwise it returns only a state-vector
-            1) It converts both tensors to pytorch, if self.convert_torch, otherwise they are returned as numpy arrays.
-            2) If self.normalize_state_vec it uses self.normalize_state_vector() to normalize the observations
         """
-        state_observation_vector = self.get_values_from_state_dict(raw_observation[IPCFields.SIMSTATE])
-            
-        if self.convert_torch:
-            state_observation_vector = torch.from_numpy(state_observation_vector)
+        for key, value in obs.items():
+            assert key in self.obs_space.spaces, f"Unexpected key in observation: '{key}'"
 
+            expected_space = self.obs_space[key]
 
-        if self.obs_have_img:
-            imgs = self.cnvt_imgs(raw_observation[IPCFields.IMG])
-            if not self.img_dump_freq == -1 and (self.env.total_steps % self.img_dump_freq == 0 or self.n_imgs_dumped >= 1):
-                self._dump_imgs(imgs)
+            # Check shape
+            assert value.shape == expected_space.shape, (
+                f"Shape mismatch for key '{key}': "
+                f"expected {expected_space.shape}, got {value.shape}"
+            )
 
-            assert imgs.shape == (self.n_channels, self.img_height, self.img_width), f"Expected shape to be ({self.n_channels},{self.img_height}, {self.img_width}) but got {imgs.shape}"
-            return {"image" : imgs, "state" : state_observation_vector},self.info
-        else:
-            return {"state" : state_observation_vector} ,self.info
+            # Check dtype
+            assert value.dtype == expected_space.dtype, (
+                f"Dtype mismatch for key '{key}': "
+                f"expected {expected_space.dtype}, got {value.dtype}"
+            )
+        
+    def check_overriding_obs(self, obs_terms: List[ObservationTerm]):
+        """
+        Check if there are observation terms with duplicate names.
+        This is important because duplicates could override each other 
+        later in processing, leading to unexpected behavior.
+        """
+        obs_term_names = [t.name for t in obs_terms]
+        name_counts = Counter(obs_term_names)
+        duplicates = [name for name, count in name_counts.items() if count > 1]
+    
+        if duplicates:
+            raise ValueError(
+                f"Duplicate observation terms found: {duplicates}. "
+                "Each observation term must have a unique name to avoid overriding."
+            )

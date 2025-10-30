@@ -27,11 +27,7 @@ ACTION_MAP = [
         (False,True,True,True),
         ]
 
-def get_reverse_action_map() -> dict[tuple[bool, bool, bool, bool], int]:
-        REVERSE_ACTION_MAP = {}
-        for i, action in enumerate(ACTION_MAP):
-                REVERSE_ACTION_MAP[action] = i
-
-        return REVERSE_ACTION_MAP
-
+REVERSE_ACTION_MAP: dict[tuple[bool, bool, bool, bool], int] = {
+    action: i for i, action in enumerate(ACTION_MAP)
+}
 

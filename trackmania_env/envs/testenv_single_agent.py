@@ -1,6 +1,5 @@
 from trackmania_env.envs.single_agent_env2 import TMNF_Single_Agent_Env
-from trackmania_env.utils.actionmap import ACTION_MAP, get_reverse_action_map
-
+from trackmania_env.utils.actionmap import ACTION_MAP,REVERSE_ACTION_MAP
 
 import keyboard
 from typing import Callable
@@ -128,7 +127,6 @@ class TestEnvironment(TMNF_Single_Agent_Env):
         The run ends, if you press `esc`.
 
         """
-        REVERSE_ACTIONMAP = get_reverse_action_map()
         running = True
         no_actions_since_n_steps = 0 # indicates since how many steps no action was executed 
         while running:
@@ -160,7 +158,7 @@ class TestEnvironment(TMNF_Single_Agent_Env):
             
             reverse_action = (left, right, accelerate, brake)
             try:
-                action_index = REVERSE_ACTIONMAP[reverse_action]
+                action_index = REVERSE_ACTION_MAP[reverse_action]
             except KeyError:
                 print(f"Invalid action; key-combination : {KEYS.get_key_combo(*reverse_action)}")
 
@@ -190,7 +188,7 @@ class LinuxKeyboardWrapper:
             "nach-rechts": Key.right,
             "esc": Key.esc,
             "shift": Key.shift,
-            "r" : KeyCode.from_char(KEYS.RESET)
+            "k" : KeyCode.from_char(KEYS.RESET)
         }
 
         # Keep track of currently pressed keys
