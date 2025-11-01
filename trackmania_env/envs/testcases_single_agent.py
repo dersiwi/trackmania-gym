@@ -539,10 +539,11 @@ import multiprocessing as mp
 from queue import Empty
 from trackmania_env.plotting.core import NonBlockingPlot
 from trackmania_env.plotting.environment_plots import Plot_Obs_Images
+from trackmania_env.plotting.factory import PlottingFactory
 
 class Plot_Obs_Images_Callback(NonBlockingPlot):
     def __init__(self):
-        super().__init__(plotter=Plot_Obs_Images())
+        super().__init__(plotter=PlottingFactory(factory_name= "image",backend = "matplotlib").create())
 
     def _call_after_step(self, processed_obs, reward, terminated, truncated, info):
         img = processed_obs["image"]
