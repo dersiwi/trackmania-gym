@@ -1,8 +1,8 @@
-import matplotlib.pyplot as plt 
 import multiprocessing as mp
 from queue import Empty
 from trackmania_env.plotting.environment_plots import EnvPlotter
 from trackmania_env.envs.testcases_single_agent import TestEnvironmentCallback
+from abc import ABC, abstractmethod
 
 class PlotterProcess(mp.Process):
     def __init__(self, data_queue:mp.Queue, plotter:EnvPlotter):
@@ -47,3 +47,16 @@ class NonBlockingPlot(TestEnvironmentCallback):
         except Exception:
             pass
 
+class EnvPlotter(ABC):
+    """
+    Abstract base class for environment plotters.
+    Subclasses must implement setup_plot() and plot() methods.
+    """
+
+    @abstractmethod
+    def setup_plot(self):
+        pass
+
+    @abstractmethod
+    def plot(self,data):
+        pass

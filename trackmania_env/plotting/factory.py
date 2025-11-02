@@ -1,9 +1,11 @@
 from trackmania_env.plotting.core import EnvPlotter
 from typing import Type, Dict
-from trackmania_env.plotting.backends.backends import Plot_Obs_Images
+from trackmania_env.plotting.backends import matplot, pyqtgraph
+
 factories: Dict[str,dict[str,Type[EnvPlotter]]] = {
         "image" : {
-            "matplotlib" : Plot_Obs_Images,
+            "matplotlib" : matplot.Plot_Obs_Images,
+            "pyqtgraph" : pyqtgraph.Plot_Obs_Images,
             },
         }
 
