@@ -16,6 +16,9 @@ factories: Dict[str,dict[str,Type[EnvPlotter]]] = {
         "ref_line": {
             "matplotlib": matplot.Plot_RefLine,
             },
+        "rotation": {
+            "matplotlib": matplot.Rotation_Plotter
+            },
         }
 
 class PlottingFactory:

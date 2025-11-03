@@ -594,7 +594,7 @@ class Plot_ReferenceLine_Callback(NonBlockingPlot):
 
 class Plot_Rotation_Callback(NonBlockingPlot):
     def __init__(self,):
-        super().__init__(plotter=PrintRotation())
+        super().__init__(plotter=PlottingFactory(factory_name="rotation").create())
 
     def _call_after_step(self, processed_obs, reward, terminated, truncated, info):
         rot_matrix = np.array(info["rotation_matrix"])
