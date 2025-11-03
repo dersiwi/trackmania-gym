@@ -3,6 +3,7 @@ from scipy.stats import norm
 from trackmania_env.plotting.core import EnvPlotter
 import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
+from matplotlib.axes import Axes
 # from trackmania_env.utils.reference_line_manager import refline
 
 class Plot_Lateral_Distance(EnvPlotter):
@@ -23,29 +24,27 @@ class Plot_Lateral_Distance(EnvPlotter):
         # Use GridSpec to control layout
         gs = gridspec.GridSpec(2, 2, width_ratios=[2, 1], height_ratios=[1, 1])
 
-        # === Left side: Map View (ax_map) ===
+        # Left side: Map View 
         self.ax_map = self.fig.add_subplot(gs[:, 0])
         self.ax_map.set_title("XZ View (World Space)")
         self.ax_map.set_xlabel("X Axis")
         self.ax_map.set_ylabel("Z Axis")
         self.ax_map.set_aspect('equal')
         self.ax_map.plot(-1. * self.reference_line[:, 0], self.reference_line[:, 2], color='black', label="Reference Line")
-        
-        # Create dynamic artists for the map view (animated=True for blitting)
+        # Create dynamic artists for the map view 
         refline_origin = self.reference_line[0]
         self.map_cur_pos, = self.ax_map.plot(-1*refline_origin[0], refline_origin[2], marker='x', color='green', markersize=10, label="Position", animated=True)
         self.map_cur_ref_pos, = self.ax_map.plot(-1*refline_origin[0], refline_origin[2], marker='x', color='blue', markersize=10, label="Reference Point", animated=True)
         self.map_arrow = None # Arrow will be recreated
         self.ax_map.legend(loc="upper left")
 
-        # === Top-right: Bar Plot (ax_bar) ===
+        # Top-right: Bar Plot 
         self.ax_bar = self.fig.add_subplot(gs[0, 1])
         # Create the bar artist (animated=True)
         self.bar_container = self.ax_bar.bar(["Distance"], [0.0], color='magenta', animated=True)
         self.ax_bar.set_ylim(0, 10)
         self.ax_bar.set_ylabel("Euclidean Distance")
         self.ax_bar.set_title("Lateral Distance to Ref Point")
-        
         # Create a dynamic text artist for the changing value (animated=True)
         self.bar_value_text = self.ax_bar.text(
             0.5, 
@@ -58,7 +57,7 @@ class Plot_Lateral_Distance(EnvPlotter):
             color='black'
         )
 
-        # === Bottom-right: Gaussian PDF Plot (ax_gauss) ===
+        # Bottom-right: Gaussian PDF Plot 
         self.ax_gauss = self.fig.add_subplot(gs[1, 1])
         self.ax_gauss.plot(self.x_vals, self.y_vals, label='Gaussian PDF', color='blue')
         # Create dynamic artists (animated=True)
@@ -73,7 +72,7 @@ class Plot_Lateral_Distance(EnvPlotter):
         self.fig.tight_layout()
         self.fig.canvas.draw()
         
-        # --- Save initial backgrounds for blitting ---
+        # Save initial backgrounds for blitting 
         self.map_bg = self.fig.canvas.copy_from_bbox(self.ax_map.bbox)
         self.bar_bg = self.fig.canvas.copy_from_bbox(self.ax_bar.bbox)
         self.gauss_bg = self.fig.canvas.copy_from_bbox(self.ax_gauss.bbox)
@@ -88,14 +87,7 @@ class Plot_Lateral_Distance(EnvPlotter):
         diff_vec = ref_line_point - position
         lateral_distance = self.ref_line_manager.calculate_lateral_difference(next_refline_index, position)
         
-        # --- Check for Axes Redraw ---
-        old_ylim = self.ax_bar.get_ylim()
-        new_ylim_upper = max(10, lateral_distance + 2) # Calculate required upper limit with buffer
-        
-        # Determine if a full redraw is needed (limits expand)
-        need_hard_redraw = new_ylim_upper > old_ylim[1]
-        
-        # --- Update all dynamic artists ---
+        # Update all dynamic artists 
         
         # Map View
         if self.map_arrow:
@@ -110,38 +102,41 @@ class Plot_Lateral_Distance(EnvPlotter):
                                            length_includes_head=True, animated=True)
 
         # Bar Plot
-        self.bar_container[0].set_height(lateral_distance) # Correctly updates the bar height
-        self.bar_value_text.set_text(f"Value: {lateral_distance:.2f}") # Updates the fast text artist
+        self.bar_container[0].set_height(lateral_distance) 
+        self.bar_value_text.set_text(f"Value: {lateral_distance:.2f}") 
 
         # Gaussian Plot
         prob = self.gauss_dist.pdf(lateral_distance)
         self.gauss_vline.set_xdata([lateral_distance, lateral_distance])
         self.gauss_point.set_data([lateral_distance], [prob])
-
+        
+        # check for redraw/rescaling 
+        map_xlim,map_ylim,need_hard_redraw = self._check_and_expand_limits(self.ax_map,100)
+        if need_hard_redraw:
+            self.ax_map.set_ylim(*map_ylim)
+            self.ax_map.set_xlim(*map_xlim)
+        old_ylim = self.ax_bar.get_ylim()
+        new_ylim_upper = max(10, lateral_distance + 5) 
+        if new_ylim_upper > old_ylim[1]:
+            self.ax_bar.set_ylim(0, new_ylim_upper)
+            need_hard_redraw = True
 
         if need_hard_redraw:
-            # Full Redraw (Slower, but necessary for axes change)
-            
-            # Apply new limits
-            self.ax_bar.set_ylim(0, new_ylim_upper)
-            
-            # Full draw for everything (axes, grid, ticks, background elements)
+            # Full Redraw (Slower)
             self.fig.canvas.draw() 
-            
             # Re-capture the new backgrounds with the updated axes
             self.map_bg = self.fig.canvas.copy_from_bbox(self.ax_map.bbox)
             self.bar_bg = self.fig.canvas.copy_from_bbox(self.ax_bar.bbox)
             self.gauss_bg = self.fig.canvas.copy_from_bbox(self.ax_gauss.bbox)
-            
         else:
-            # Fast Blitting Logic (Axes limits are stable)
+            # Fast Blitting 
             
-            # 1. Restore the backgrounds
+            # Restore the backgrounds
             self.fig.canvas.restore_region(self.map_bg)
             self.fig.canvas.restore_region(self.bar_bg)
             self.fig.canvas.restore_region(self.gauss_bg)
             
-            # 2. Draw the dynamic artists over the restored background
+            # Draw the dynamic artists over the restored background
             # Map
             self.ax_map.draw_artist(self.map_cur_pos)
             self.ax_map.draw_artist(self.map_cur_ref_pos)
@@ -155,7 +150,7 @@ class Plot_Lateral_Distance(EnvPlotter):
             self.ax_gauss.draw_artist(self.gauss_vline)
             self.ax_gauss.draw_artist(self.gauss_point)
             
-            # 3. Blit the regions onto the canvas
+            # Blit the regions onto the canvas
             self.fig.canvas.blit(self.ax_map.bbox)
             self.fig.canvas.blit(self.ax_bar.bbox)
             self.fig.canvas.blit(self.ax_gauss.bbox)
@@ -164,3 +159,35 @@ class Plot_Lateral_Distance(EnvPlotter):
 
     def setup_plot(self):
         return super().setup_plot()
+
+    def _check_and_expand_limits(self, ax: Axes, buffer: float = 1.0) -> tuple[list[float],list[float],bool]:
+        ax.relim() 
+        
+        old_xlim = list(ax.get_xlim())
+        old_ylim = list(ax.get_ylim())
+        
+        # dataLim reflects the bounding box of all artists
+        new_data_xlim = ax.dataLim.intervalx
+        new_data_ylim = ax.dataLim.intervaly
+        
+        new_xlim = list(old_xlim)
+        new_ylim = list(old_ylim)
+        need_redraw = False
+
+        # Check X-limits (Left and Right)
+        if new_data_xlim[1] > old_xlim[1]:
+            new_xlim[1] = new_data_xlim[1] + buffer
+            need_redraw = True
+        if new_data_xlim[0] < old_xlim[0]:
+            new_xlim[0] = new_data_xlim[0] - buffer
+            need_redraw = True
+
+        # Check Y-limits (Lower and Upper)
+        if new_data_ylim[1] > old_ylim[1]:
+            new_ylim[1] = new_data_ylim[1] + buffer
+            need_redraw = True
+        if new_data_ylim[0] < old_ylim[0]:
+            new_ylim[0] = new_data_ylim[0] - buffer
+            need_redraw = True
+
+        return (new_xlim,new_ylim,need_redraw)
