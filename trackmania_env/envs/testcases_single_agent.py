@@ -540,10 +540,11 @@ from queue import Empty
 from trackmania_env.plotting.core import NonBlockingPlot
 from trackmania_env.plotting.environment_plots import Plot_Obs_Images
 from trackmania_env.plotting.factory import PlottingFactory
+from trackmania_env.envs.single_agent_env2 import TMNF_Single_Agent_Env
 
 class Plot_Obs_Images_Callback(NonBlockingPlot):
-    def __init__(self):
-        super().__init__(plotter=PlottingFactory(factory_name= "image",backend = "matplotlib").create())
+    def __init__(self,backend:str = "matplotlib"):
+        super().__init__(plotter=PlottingFactory(factory_name= "image",backend = backend).create())
 
     def _call_after_step(self, processed_obs, reward, terminated, truncated, info):
         img = processed_obs["image"]
@@ -553,8 +554,14 @@ class Plot_Obs_Images_Callback(NonBlockingPlot):
 
 BANNED =  ["nextpoint_reference_index"]
 class Plot_Rewards_Callback(NonBlockingPlot):
-    def __init__(self, key_to_plot=None, y_lim=(-1, 1), plot_total : bool = True):
-        super().__init__(plotter=Plot_Rewards(key_to_plot=key_to_plot, y_lim=y_lim, plot_total=plot_total))
+    def __init__(self,env:TMNF_Single_Agent_Env, keys_to_plot:list[str]=None, y_lim=(-1, 1), plot_total : bool = True,backend:str = "matplotlib"):
+        
+        reward_terms: list[str] = [r.name for r in  env.rew_calculator.reward_terms]
+        reward_terms.append("total") #TODO total is only created during runtime. for now it works but maybe come up with something better 
+        if keys_to_plot is not None:
+            assert set(keys_to_plot).issubset(reward_terms), f"{keys_to_plot} not found in reward terms"
+            reward_terms = keys_to_plot
+        super().__init__(plotter=PlottingFactory(factory_name="lines",backend= backend).create(keys_to_plot= reward_terms, title = "Rewards",ylabel= "Rewards"))
 
     def _call_after_step(self, processed_obs, reward, terminated, truncated, info):
         rewards = info["rewards"]
@@ -565,7 +572,7 @@ class Plot_Lateral_Distance_Callback(NonBlockingPlot):
     def __init__(self,reference_line_manager):
         self.data = {}
         super().__init__(plotter= Plot_Lateral_Distance(reference_line_manager))
-    
+
     def _call_after_step(self, processed_obs, reward, terminated, truncated, info):
         self.data["position"] = info["position"]
         self.data["next_refline_index"] = info["rewards"]["nextpoint_reference_index"]
@@ -575,7 +582,7 @@ class Plot_ReferenceLine_Callback(NonBlockingPlot):
     def __init__(self,reference_line):
         self.data = {}
         super().__init__(plotter=Plot_RefLine(reference_line))
-    
+
     def _call_after_step(self, processed_obs, reward, terminated, truncated, info):
         self.data["position"] = info["position"]
         self.data["orientation"] = info["orientation"]
@@ -586,7 +593,7 @@ class Plot_ReferenceLine_Callback(NonBlockingPlot):
 class Plot_Rotation_Callback(NonBlockingPlot):
     def __init__(self,):
         super().__init__(plotter=PrintRotation())
-    
+
     def _call_after_step(self, processed_obs, reward, terminated, truncated, info):
         rot_matrix = np.array(info["rotation_matrix"])
         self.queue.put(rot_matrix)
@@ -596,7 +603,7 @@ class Plot_1D_Values_Callback(NonBlockingPlot):
         self.keys_to_plot = keys_to_plot
         self.data = {}
         super().__init__(plotter=Plot_1D_Values(keys_to_plot=keys_to_plot, y_lim = y_lim))
-    
+
     def _call_after_step(self, processed_obs, reward, terminated, truncated, info):
         for key in self.keys_to_plot:
             assert key in info, f"The key '{key}' is not in the info dict"
@@ -615,7 +622,7 @@ class Plot_3D_Values_Callback(NonBlockingPlot):
         assert self.key_to_plot in info, f"The key '{self.key_to_plot}' is not in the info dict"
         val = np.asarray(info[self.key_to_plot])
         assert val.ndim == 1 and val.shape[0] == 3, \
-            f"The value for '{self.key_to_plot}' must be a 3D vector, got shape {val.shape}"
+                f"The value for '{self.key_to_plot}' must be a 3D vector, got shape {val.shape}"
 
         self.data[self.key_to_plot] = val
         self.queue.put(self.data)

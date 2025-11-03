@@ -7,6 +7,9 @@ factories: Dict[str,dict[str,Type[EnvPlotter]]] = {
             "matplotlib" : matplot.Plot_Obs_Images,
             "pyqtgraph" : pyqtgraph.Plot_Obs_Images,
             },
+        "lines" : {
+            "matplotlib": matplot.LinePlotter,
+            }
         }
 
 class PlottingFactory:

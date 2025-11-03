@@ -19,7 +19,7 @@ class PlotterProcess(mp.Process):
         """
         Run the plotting loop in a separate process.
         """
-        self.plotter.setup_plot()
+       # self.plotter.setup_plot()
 
         while True:
             try:
