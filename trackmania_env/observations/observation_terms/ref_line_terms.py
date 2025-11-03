@@ -38,6 +38,7 @@ class NextReflinePoint(ObservationTerm):
 
         refline: ReferenceLineManager = self.env.reference_line
         next_idx, _, _ = refline.get_distance_to_next_point()
+        self.info["next_refline_index"] = next_idx
 
         upcoming_refline_points: np.ndarray = refline.get_reference_line_points(
             begin_idx=next_idx,

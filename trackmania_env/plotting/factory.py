@@ -9,7 +9,10 @@ factories: Dict[str,dict[str,Type[EnvPlotter]]] = {
             },
         "lines" : {
             "matplotlib": matplot.LinePlotter,
-            }
+            },
+        "lateral_distance": {
+            "matplotlib" : matplot.Plot_Lateral_Distance,
+            },
         }
 
 class PlottingFactory:
