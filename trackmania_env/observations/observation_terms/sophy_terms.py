@@ -194,7 +194,8 @@ class GlobalFeaturesTerm(ObservationTerm):
         self.info.update({
             "comming_refline_points" : comming_refline_points,
             "orientation": orientation,
-            "position": position
+            "position": position,
+            "next_refline_index": next_idx,
         })
      
         return comming_refline_points.ravel().astype(np.float32) 

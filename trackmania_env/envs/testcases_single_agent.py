@@ -583,13 +583,13 @@ class Plot_Lateral_Distance_Callback(NonBlockingPlot):
 class Plot_ReferenceLine_Callback(NonBlockingPlot):
     def __init__(self,reference_line):
         self.data = {}
-        super().__init__(plotter=Plot_RefLine(reference_line))
+        super().__init__(plotter=PlottingFactory(factory_name="ref_line").create(reference_line= reference_line))
 
     def _call_after_step(self, processed_obs, reward, terminated, truncated, info):
         self.data["position"] = info["position"]
         self.data["orientation"] = info["orientation"]
         self.data["comming_refline_points"] = info["comming_refline_points"]
-        self.data["next_refline_index"] = info["rewards"]["nextpoint_reference_index"]
+        self.data["next_refline_index"] = info["next_refline_index"]
         self.queue.put(self.data)
 
 class Plot_Rotation_Callback(NonBlockingPlot):

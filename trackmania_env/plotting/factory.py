@@ -13,6 +13,9 @@ factories: Dict[str,dict[str,Type[EnvPlotter]]] = {
         "lateral_distance": {
             "matplotlib" : matplot.Plot_Lateral_Distance,
             },
+        "ref_line": {
+            "matplotlib": matplot.Plot_RefLine,
+            },
         }
 
 class PlottingFactory:

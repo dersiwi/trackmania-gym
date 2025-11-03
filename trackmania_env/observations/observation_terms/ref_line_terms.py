@@ -57,6 +57,8 @@ class NextReflinePoint(ObservationTerm):
             (upcoming_refline_points - car_position).T
         ).T  # Shape: (n_refline_points, 3)
 
+        self.info["comming_refline_points"] = rel_points
+        self.info["orientation"] = car_orientation
         return rel_points
 
 class LateralDistance(ObservationTerm):
