@@ -1,11 +1,12 @@
 from trackmania_env.plotting.core import EnvPlotter
 from typing import Type, Dict
-from trackmania_env.plotting.backends import matplot, pyqtgraph
+from trackmania_env.plotting.backends import matplot, pyqtgraph, tmnf_cv2
 
 factories: Dict[str,dict[str,Type[EnvPlotter]]] = {
         "image" : {
             "matplotlib" : matplot.Plot_Obs_Images,
             "pyqtgraph" : pyqtgraph.Plot_Obs_Images,
+            "cv2": tmnf_cv2.Plot_Obs_Images,
             },
         "lines" : {
             "matplotlib": matplot.LinePlotter,
