@@ -38,7 +38,7 @@ def main(cfg : TrainConfig):
     # tm_env.add_env_test_calback(plot_callback.Plot_ReferenceLine_Callback(reference_line= tm_env.reference_line.reference_line))
 
     # Plotting lateral distance 
-    # tm_env.add_env_test_calback(plot_callback.Plot_Lateral_Distance_Callback(reference_line_manager=tm_env.reference_line))
+    tm_env.add_env_test_calback(plot_callback.Plot_Lateral_Distance_Callback(reference_line_manager=tm_env.reference_line))
     
     # Plotting Images
     # obs_manager = cfg.rl_env.obs_manager 
@@ -52,7 +52,7 @@ def main(cfg : TrainConfig):
     # tm_env.add_env_test_calback(plot_callback.Plot_1D_Values_Callback(keys_to_plot= keys_to_plot))
 
     #Plotting a specified 3D value 
-    tm_env.add_env_test_calback(plot_callback.Plot_3D_Value_Callback(key_to_plot="velocity"))
+    # tm_env.add_env_test_calback(plot_callback.Plot_3D_Value_Callback(key_to_plot="velocity"))
 
     tm_env.step_with_manual_input()
     

@@ -94,38 +94,3 @@ class Plot_3D_Value_Callback(NonBlockingPlot):
                 f"The value for '{self.key_to_plot}' must be a 3D vector, got shape {val.shape}"
         for i in range(len(self.keys_to_plot)) : self.data[self.keys_to_plot[i]] = val[i]
         self.queue.put(self.data)
-
-# TODO i dont know if we really need this anymore 
-class PrintVectorToNextReferencePoint(Live3dPlotEnvironmentCallback):
-    def __init__(self):
-        self.quiver = None
-        super().__init__()
-
-
-
-    def _setup_plot(self):
-        self.ax.set_xlim([-2, 2])
-        self.ax.set_ylim([-2, 2])
-        self.ax.set_zlim([-2, 2])
-        self.ax.set_xlabel("X")
-        self.ax.set_ylabel("Y")
-        self.ax.set_zlabel("Z")
-        self.ax.set_title("Live Rotation Matrix Axes")
-        # Initial dummy arrows
-        self.quiver = self.ax.quiver(0, 0, 0, 1, 0, 0, color='r', label="X-axis")
-        self.quiver = self.ax.quiver(0, 0, 0, 0, 1, 0, color='g', label="Y-axis")
-        self.quiver = self.ax.quiver(0, 0, 0, 0, 0, 1, color='b', label="Z-axis")
-        self.ax.legend()
-
-
-
-    def _call_after_step(self, processed_obs, reward, terminated, truncated, info):
-        
-        self.ax.cla()
-        self._setup_plot()
-
-        origin = np.array([0, 0, 0])
-
-        self.ax.quiver(*origin, *info["comming_refline_points"][0], color='r', label="X-axis")
-        self.fig.canvas.draw()
-        plt.pause(0.001)
