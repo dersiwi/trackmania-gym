@@ -144,7 +144,7 @@ class GameInstanceManagerWindows(GameInstanceManager):
             for hwnd in get_hwnds_for_pid(self.tm_process_id):
                 if win32gui.GetWindowText(hwnd).startswith("Track"):
                     self.tm_window_id = hwnd
-                    print(f"Found Trackmania process id: {self.tm_window_id=}")
+                    print(f"Found Trackmania window id: {self.tm_window_id=}")
                     return
             if time.time() - begin > 10:
                 raise WindowsError("Could not find window within 10s.")
@@ -157,28 +157,32 @@ class GameInstanceManagerWindows(GameInstanceManager):
 
         If process is not found within 10s after launching, ProcessLookupError is thrown.
         """
-        tmi_process_id = int(subprocess.check_output(self.__get_launch_string()).decode().split("\r\n")[1])
-        start_time = time.time()
-        while self.tm_process_id is None:
-            tm_processes = list(
-                filter(
-                    lambda s: s.startswith("TmForever"),
-                    subprocess.check_output(["powershell", "-Command", "Get-WmiObject Win32_Process | Select-Object Caption, ParentProcessId, ProcessId"]).decode().split("\r\n"),
 
-                    #subprocess.check_output("wmic process get Caption,ParentProcessId,ProcessId").decode().split("\r\n"),
-                )
-            )
-            for process in tm_processes:
-                name, parent_id, process_id = process.split()
-                parent_id = int(parent_id)
-                process_id = int(process_id)
-                if parent_id == tmi_process_id:
-                    self.tm_process_id = process_id
-                    print(f"Found Trackmania process id: {self.tm_process_id=}")
+        
+        output = subprocess.check_output(self.__get_launch_string()).decode()
+        tmi_process_id = int(output.split("\r\n")[1].strip())
+
+        try:
+            loader_proc = psutil.Process(tmi_process_id)
+        except psutil.NoSuchProcess:
+            raise ProcessLookupError(f"TMLoader process {tmi_process_id} exited too early")
+
+        start_time = time.time()
+        while True:
+            children = loader_proc.children(recursive=True)
+            for child in children:
+                if "TmForever" in child.name():
+                    self.tm_process_id = child.pid
+                    print(f"Found Trackmania process id: {self.tm_process_id}")
                     return
 
+            if not loader_proc.is_running():
+                raise ProcessLookupError("TMLoader exited before TmForever started.")
+
             if time.time() - start_time > 10:
-                raise ProcessLookupError("Could not find process after more than 10s of searching.")
+                raise ProcessLookupError("Could not find Trackmania process after 10s.")
+
+            time.sleep(0.5)
 
     def launch_game(self):
         self.tm_process_id = None
@@ -195,18 +199,7 @@ class GameInstanceManagerWindows(GameInstanceManager):
 
     def _get_gameprocess_killcommand(self) -> str:
         return f"taskkill /PID {self.tm_process_id} /f"
-
-    """def request_map(self, map_path: str, zone_centers: npt.NDArray):
-        self.latest_map_path_requested = map_path
-        map_path = map_path.replace("/", "\\")
-        map_loader.hide_personal_record_replay(map_path, True)
-        self.iface.execute_command(f"map {map_path}")
-        self.UI_disabled = False
-        (
-            self.next_real_checkpoint_positions,
-            self.max_allowable_distance_to_real_checkpoint,
-        ) = map_loader.sync_virtual_and_real_checkpoints(zone_centers, map_path)"""
-
+    
     def _set_window_focus(self):
         if not self.game_activated:
             shell = win32com.client.Dispatch("WScript.Shell")
@@ -284,23 +277,25 @@ class GameInstanceMangerLinux(GameInstanceManager):
         except psutil.NoSuchProcess:
             return False
 
-    def __get_tmnf_process_id(self, timeout : int, pid_before : set):
-        launch_time = time.time()
-        while True:
-            time.sleep(0.25)
-            pid_after = set(self._get_tm_pids())
-            new_pids = pid_after - pid_before
-            if new_pids:
-                if len(new_pids) == 1:
-                    self.tm_process_id = new_pids.pop()
-                    break
-                else:
-                    print(f"[WARN] Multiple new PIDs detected: {new_pids}")
-                    self.tm_process_id = list(new_pids)[0]  # just pick the first one?
-                    break
+    def __get_tmnf_process_id(self, launcher_proc: psutil.Process, timeout: int = 10):
+        """Waits for the Trackmania process (TmForever.exe) to appear as a child of the Wine/TMLoader process."""
+        start = time.time()
+        while time.time() - start < timeout:
+            try:
+                children = launcher_proc.children(recursive=True)
+            except psutil.NoSuchProcess:
+                raise TimeoutError("Launcher process exited before Trackmania started.")
 
-            if time.time() - launch_time > timeout:
-                raise TimeoutError(f"TMNF process did not launch within {timeout} seconds.")
+            for child in children:
+                name = child.name().lower()
+                if "tmforever" in name or "trackmania" in name:
+                    self.tm_process_id = child.pid
+                    print(f"Found Trackmania PID: {self.tm_process_id}")
+                    return
+
+            time.sleep(0.25)
+
+        raise TimeoutError(f"TMNF process did not launch within {timeout} seconds.")
             
     def __get_launch_cmds(self):
         return [
@@ -325,9 +320,9 @@ class GameInstanceMangerLinux(GameInstanceManager):
             process = subprocess.Popen(launch_cmds, env=GameInstanceMangerLinux.xvfb_launch_dict)
         else:
             process = subprocess.Popen(launch_cmds)
-        self.__get_tmnf_process_id(timeout, pid_before)
+        launcher_process = psutil.Process(process.pid)
+        self.__get_tmnf_process_id(launcher_process, timeout)
         self._get_tm_window_id()
-
         self._release_lock()
         return self.tm_process_id
 
