@@ -191,3 +191,206 @@ class Plot_Lateral_Distance(EnvPlotter):
             need_redraw = True
 
         return (new_xlim,new_ylim,need_redraw)
+
+class Plot_Lateral_Distance2(Plot_Lateral_Distance):
+    """Same as the normal Plot_Lateral_Distance but with only the map view."""
+    def __init__(self, reference_line_manager):
+
+        self.ref_line_manager = reference_line_manager
+        self.reference_line = self.ref_line_manager.reference_line
+
+        self.fig, self.ax = plt.subplots(figsize=(12, 8))
+        
+        self.ax.set_title("XZ View (World Space)")
+        self.ax.set_xlabel("X Axis")
+        self.ax.set_ylabel("Z Axis")
+        self.ax.set_aspect('equal')
+
+        self.ax.plot(-1. * self.reference_line[:, 0],
+                     self.reference_line[:, 2],
+                     color='black', label="Reference Line")
+
+        refline_origin = self.reference_line[0]
+        self.map_cur_pos, = self.ax.plot(-1 * refline_origin[0],
+                                         refline_origin[2],
+                                         marker='x', color='green',
+                                         markersize=10, label="Position",
+                                         animated=True)
+        self.map_cur_ref_pos, = self.ax.plot(-1 * refline_origin[0],
+                                             refline_origin[2],
+                                             marker='x', color='blue',
+                                             markersize=10,
+                                             label="Reference Point",
+                                             animated=True)
+        self.map_arrow = None  # Arrow will be recreated each frame
+
+        self.lateral_text = self.ax.text(0.02, 0.5, "", transform=self.ax.transAxes,
+                                         fontsize=12, color='red',
+                                         ha='left', va='top', animated=True)
+
+        self.ax.legend(loc="upper left")
+        self.fig.tight_layout()
+        self.fig.canvas.draw()
+
+        self.map_bg = self.fig.canvas.copy_from_bbox(self.ax.bbox)
+
+        plt.show(block=False)
+
+    def plot(self, info):
+        position = info["position"]
+        next_refline_index = info["next_refline_index"]
+        ref_line_point = self.reference_line[next_refline_index]
+        diff_vec = ref_line_point - position
+
+        lateral_distance = self.ref_line_manager.calculate_lateral_difference(
+            next_refline_index, position
+        )
+
+        self.map_cur_pos.set_data([-1 * position[0]], [position[2]])
+        self.map_cur_ref_pos.set_data([-1 * ref_line_point[0]], [ref_line_point[2]])
+
+        self.lateral_text.set_text(f"Lateral Distance: {lateral_distance:.2f} m")
+
+        if self.map_arrow:
+            self.map_arrow.remove()
+        self.map_arrow = self.ax.arrow(-1. * position[0], position[2],
+                                       -1. * diff_vec[0], diff_vec[2],
+                                       head_width=0.5, head_length=1.0,
+                                       fc='magenta', ec='magenta',
+                                       length_includes_head=True, animated=True)
+
+        # Check if we need to rescale
+        map_xlim, map_ylim, need_hard_redraw = self._check_and_expand_limits(self.ax, 100)
+
+        if need_hard_redraw:
+            # Full redraw
+            self.ax.set_xlim(*map_xlim)
+            self.ax.set_ylim(*map_ylim)
+            self.fig.canvas.draw()
+            self.map_bg = self.fig.canvas.copy_from_bbox(self.ax.bbox)
+        else:
+            self.fig.canvas.restore_region(self.map_bg)
+            self.ax.draw_artist(self.map_cur_pos)
+            self.ax.draw_artist(self.map_cur_ref_pos)
+            self.ax.draw_artist(self.map_arrow)
+            self.ax.draw_artist(self.lateral_text)
+            self.fig.canvas.blit(self.ax.bbox)
+
+        self.fig.canvas.flush_events()
+
+class Plot_Lateral_Distance_MapAndGraph(Plot_Lateral_Distance):
+    """
+    A simplified Plot_Lateral_Distance that shows:
+    - Left: Map view (XZ world space)
+    - Right: Lateral distance as a function of time
+    """
+
+    def __init__(self, reference_line_manager):
+
+        self.ref_line_manager = reference_line_manager
+        self.reference_line = self.ref_line_manager.reference_line
+        self.lateral_history = []
+
+        self.fig = plt.figure(figsize=(12, 6))
+        gs = gridspec.GridSpec(1, 2, width_ratios=[2, 1])
+
+        self.ax_map = self.fig.add_subplot(gs[0, 0])
+        self.ax_map.set_title("XZ View (World Space)")
+        self.ax_map.set_xlabel("X Axis")
+        self.ax_map.set_ylabel("Z Axis")
+        self.ax_map.set_aspect('equal')
+
+        self.ax_map.plot(-1. * self.reference_line[:, 0],
+                         self.reference_line[:, 2],
+                         color='black', label="Reference Line")
+
+        refline_origin = self.reference_line[0]
+        self.map_cur_pos, = self.ax_map.plot(-1 * refline_origin[0],
+                                             refline_origin[2],
+                                             marker='x', color='green',
+                                             markersize=10, label="Position",
+                                             animated=True)
+        self.map_cur_ref_pos, = self.ax_map.plot(-1 * refline_origin[0],
+                                                 refline_origin[2],
+                                                 marker='x', color='blue',
+                                                 markersize=10,
+                                                 label="Reference Point",
+                                                 animated=True)
+        self.map_arrow = None
+        self.ax_map.legend(loc="upper left")
+
+        self.ax_graph = self.fig.add_subplot(gs[0, 1])
+        self.ax_graph.set_title("Lateral Distance Over Time")
+        self.ax_graph.set_xlabel("Step")
+        self.ax_graph.set_ylabel("Lateral Distance (m)")
+
+        self.graph_line, = self.ax_graph.plot([], [], color='magenta',
+                                              label='Lateral Distance',
+                                              animated=True)
+        self.ax_graph.legend(loc="upper left")
+
+        self.fig.tight_layout()
+        self.fig.canvas.draw()
+
+        self.map_bg = self.fig.canvas.copy_from_bbox(self.ax_map.bbox)
+        self.graph_bg = self.fig.canvas.copy_from_bbox(self.ax_graph.bbox)
+
+        plt.show(block=False)
+
+    def plot(self, info):
+        position = info["position"]
+        next_refline_index = info["next_refline_index"]
+        ref_line_point = self.reference_line[next_refline_index]
+        diff_vec = ref_line_point - position
+
+        lateral_distance = self.ref_line_manager.calculate_lateral_difference(
+            next_refline_index, position
+        )
+        self.lateral_history.append(lateral_distance)
+
+        if self.map_arrow:
+            self.map_arrow.remove()
+        self.map_cur_pos.set_data([-1 * position[0]], [position[2]])
+        self.map_cur_ref_pos.set_data([-1 * ref_line_point[0]], [ref_line_point[2]])
+        self.map_arrow = self.ax_map.arrow(-1. * position[0], position[2],
+                                           -1. * diff_vec[0], diff_vec[2],
+                                           head_width=0.5, head_length=1.0,
+                                           fc='magenta', ec='magenta',
+                                           length_includes_head=True,
+                                           animated=True)
+
+        x_vals = np.arange(len(self.lateral_history))
+        self.graph_line.set_data(x_vals, self.lateral_history)
+
+        # Auto-expand axes as needed
+        need_redraw = False
+        old_xlim = self.ax_graph.get_xlim()
+        old_ylim = self.ax_graph.get_ylim()
+
+        if len(x_vals) > 0 and x_vals[-1] > old_xlim[1]:
+            self.ax_graph.set_xlim(0, x_vals[-1] + 150)
+            need_redraw = True
+
+        if max(self.lateral_history) > old_ylim[1]:
+            self.ax_graph.set_ylim(0, max(self.lateral_history) + 5)
+            need_redraw = True
+
+        if need_redraw:
+            self.fig.canvas.draw()
+            self.map_bg = self.fig.canvas.copy_from_bbox(self.ax_map.bbox)
+            self.graph_bg = self.fig.canvas.copy_from_bbox(self.ax_graph.bbox)
+        else:
+            self.fig.canvas.restore_region(self.map_bg)
+            self.fig.canvas.restore_region(self.graph_bg)
+
+            self.ax_map.draw_artist(self.map_cur_pos)
+            self.ax_map.draw_artist(self.map_cur_ref_pos)
+            self.ax_map.draw_artist(self.map_arrow)
+
+            self.ax_graph.draw_artist(self.graph_line)
+
+            self.fig.canvas.blit(self.ax_map.bbox)
+            self.fig.canvas.blit(self.ax_graph.bbox)
+
+        self.fig.canvas.flush_events()
+

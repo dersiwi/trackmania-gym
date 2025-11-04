@@ -36,7 +36,7 @@ class Plot_Rewards_Callback(NonBlockingPlot):
 class Plot_Lateral_Distance_Callback(NonBlockingPlot):
     def __init__(self,reference_line_manager,backend:str = "matplotlib"):
         self.data = {}
-        super().__init__(plotter= PlottingFactory(factory_name="lateral_distance",backend = backend).create(reference_line_manager=reference_line_manager))
+        super().__init__(plotter= PlottingFactory(factory_name="lateral_distance3",backend = backend).create(reference_line_manager=reference_line_manager))
 
     def _call_after_step(self, processed_obs, reward, terminated, truncated, info):
         self.data["position"] = info["position"]
