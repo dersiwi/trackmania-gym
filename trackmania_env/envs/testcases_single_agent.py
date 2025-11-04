@@ -545,19 +545,19 @@ from trackmania_env.plotting.factory import PlottingFactory
 from trackmania_env.envs.single_agent_env2 import TMNF_Single_Agent_Env
 
 class Plot_Obs_Images_Callback(NonBlockingPlot):
-    def __init__(self,backend:str = "matplotlib"):
-        super().__init__(plotter=PlottingFactory(factory_name= "image",backend = backend).create())
+    def __init__(self, img_size:tuple[int,int], color_space:str, backend:str = "matplotlib"):
+        super().__init__(plotter=PlottingFactory(factory_name= "image",backend = backend).create(img_size = img_size, color_space = color_space))
 
     def _call_after_step(self, processed_obs, reward, terminated, truncated, info):
         img = processed_obs["image"]
-        img_tensor = torch.from_numpy(img)
-        self.queue.put(img_tensor)
+        assert isinstance(img, np.ndarray), "image must be a NumPy ndarray"
+        self.queue.put(img)
 
 
 BANNED =  ["nextpoint_reference_index"]
 class Plot_Rewards_Callback(NonBlockingPlot):
     def __init__(self,env:TMNF_Single_Agent_Env, keys_to_plot:list[str]=None, y_lim=(-1, 1), plot_total : bool = True,backend:str = "matplotlib"):
-        
+
         reward_terms: list[str] = [r.name for r in  env.rew_calculator.reward_terms]
         reward_terms.append("total") #TODO total is only created during runtime. for now it works but maybe come up with something better 
         if keys_to_plot is not None:
