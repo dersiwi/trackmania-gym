@@ -4,8 +4,8 @@ matplotlib.use("TkAgg")
 from matplotlib import pyplot as plt
 
 from trackmania_env.callbacks.core import TestEnvironmentCallback, Live3dPlotEnvironmentCallback
-from trackmania_env.plotting.core import NonBlockingPlot
-from trackmania_env.plotting.factory import PlottingFactory
+from plotting.core import NonBlockingPlot
+from plotting.factory import PlottingFactory
 from trackmania_env.envs.single_agent_env2 import TMNF_Single_Agent_Env
 
 class Plot_Obs_Images_Callback(NonBlockingPlot):

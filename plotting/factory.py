@@ -1,6 +1,6 @@
-from trackmania_env.plotting.core import EnvPlotter
+from plotting.core import EnvPlotter
 from typing import Type, Dict
-from trackmania_env.plotting.backends import matplot, pyqtgraph, tmnf_cv2
+from plotting.backends import matplot, pyqtgraph, tmnf_cv2
 
 factories: Dict[str,dict[str,Type[EnvPlotter]]] = {
         "image" : {

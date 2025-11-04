@@ -1,4 +1,4 @@
-from trackmania_env.plotting.core import EnvPlotter
+from plotting.core import EnvPlotter
 import cv2
 import numpy as np
 class Plot_Obs_Images(EnvPlotter):

@@ -1,6 +1,6 @@
 import numpy as np
 from scipy.stats import norm
-from trackmania_env.plotting.core import EnvPlotter
+from plotting.core import EnvPlotter
 import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
 from matplotlib.axes import Axes
