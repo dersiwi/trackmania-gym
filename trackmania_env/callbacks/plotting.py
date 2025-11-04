@@ -17,7 +17,6 @@ class Plot_Obs_Images_Callback(NonBlockingPlot):
         assert isinstance(img, np.ndarray), "image must be a NumPy ndarray"
         self.queue.put(img)
 
-
 BANNED =  ["nextpoint_reference_index"]
 class Plot_Rewards_Callback(NonBlockingPlot):
     def __init__(self,env:TMNF_Single_Agent_Env, keys_to_plot:list[str]=None, y_lim=(-1, 1), plot_total : bool = True,backend:str = "matplotlib"):
@@ -68,7 +67,7 @@ class Plot_1D_Values_Callback(NonBlockingPlot):
     def __init__(self, keys_to_plot, y_lim = None):
         self.keys_to_plot = keys_to_plot
         self.data = {}
-        super().__init__(plotter=Plot_1D_Values(keys_to_plot=keys_to_plot, y_lim = y_lim))
+        super().__init__(plotter=PlottingFactory(factory_name="lines").create(keys_to_plot=keys_to_plot, ylim = y_lim, title = "Bunch of 1D Values",ylabel = ""))
 
     def _call_after_step(self, processed_obs, reward, terminated, truncated, info):
         for key in self.keys_to_plot:

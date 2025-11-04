@@ -9,7 +9,6 @@ from game_interaction.run_multiprocess_wrapper import start_process_and_wait_for
 from trackmania_env.envs.enivonrments import get_environment
 
 from trackmania_env.envs.testenv_single_agent import TestEnvironment
-import trackmania_env.envs.testcases_single_agent as testcases
 
 import trackmania_env.callbacks.plotting as plot_callback
 import trackmania_env.callbacks.printing as print_callback
@@ -46,7 +45,11 @@ def main(cfg : TrainConfig):
     # tm_env.add_env_test_calback(plot_callback.Plot_Obs_Images_Callback(img_size= (obs_manager.img_width,obs_manager.img_height), color_space= obs_manager.colorspace, backend ="matplotlib"))
     
     # Plotting Rewards 
-    tm_env.add_env_test_calback(plot_callback.Plot_Rewards_Callback(env = tm_env))
+    # tm_env.add_env_test_calback(plot_callback.Plot_Rewards_Callback(env = tm_env))
+
+    # Plotting arbitrary 1D values
+    keys_to_plot = ["last_has_any_lateral_contact_time","gas","display_speed"]
+    tm_env.add_env_test_calback(plot_callback.Plot_1D_Values_Callback(keys_to_plot= keys_to_plot))
 
     tm_env.step_with_manual_input()
     
