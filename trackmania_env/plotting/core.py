@@ -1,6 +1,6 @@
 import multiprocessing as mp
 from queue import Empty
-from trackmania_env.envs.testcases_single_agent import TestEnvironmentCallback
+from trackmania_env.callbacks.core import TestEnvironmentCallback
 from abc import ABC, abstractmethod
 
 class EnvPlotter(ABC):
