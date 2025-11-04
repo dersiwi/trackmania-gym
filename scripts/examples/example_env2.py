@@ -48,8 +48,11 @@ def main(cfg : TrainConfig):
     # tm_env.add_env_test_calback(plot_callback.Plot_Rewards_Callback(env = tm_env))
 
     # Plotting arbitrary 1D values
-    keys_to_plot = ["last_has_any_lateral_contact_time","gas","display_speed"]
-    tm_env.add_env_test_calback(plot_callback.Plot_1D_Values_Callback(keys_to_plot= keys_to_plot))
+    # keys_to_plot = ["last_has_any_lateral_contact_time","gas","display_speed"]
+    # tm_env.add_env_test_calback(plot_callback.Plot_1D_Values_Callback(keys_to_plot= keys_to_plot))
+
+    #Plotting a specified 3D value 
+    tm_env.add_env_test_calback(plot_callback.Plot_3D_Value_Callback(key_to_plot="velocity"))
 
     tm_env.step_with_manual_input()
     
