@@ -102,6 +102,36 @@ class ObservationManager(ABC):
         """
         raise NotImplementedError
 
+class BoxObservationManager(ObservationManager):
+    """
+    Observation Manager who only can handle box-based observation spaces.
+    """
+    def __init__(self, observation_term: ObservationTerm , convert_torch: bool = True, normalize: bool = False, debug: bool = False):
+        assert isinstance(observation_term.observation_space,spaces.Box)
+        super().__init__(observation_term, convert_torch, normalize, debug)
+        self.obs_space: spaces.Box = self.observation_terms.observation_space
+
+    def _check_return_obs(self, obs: Union[np.ndarray, Dict[str, np.ndarray]]):
+        assert isinstance(obs, np.ndarray), f"Expected np.ndarray, got {type(obs)} instead."
+        assert self.obs_space.shape == obs.shape, (
+        f"Observation shape mismatch: expected {self.obs_space.shape}, got {obs.shape}."
+        )
+
+    def set_obs_term_env(self):
+        assert self.env is not None, "Environment must be set before assigning to terms."
+        self.observation_terms.set_env(self.env)
+
+    def _get_observation(self, obs: Dict[str, Union[np.ndarray, SimStateData]]) -> Tuple[Dict[str, np.ndarray], Dict[str, Any]]:
+        _, computed_obs = self.observation_terms.get_observation(obs)
+        self.info.update(self.observation_terms.info)
+        return computed_obs,self.info
+
+    def set_normalize(self):
+        self.observation_terms.normalize = self.normalize 
+
+    def reset(self):
+        self.observation_terms.reset()
+
 class CompositeObservationManager(ObservationManager, ABC):
     """
     Abstract base class for managers that produce composite observations
