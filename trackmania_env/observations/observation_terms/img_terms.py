@@ -75,7 +75,7 @@ class ImageObservationTerm(ObservationTerm):
         except KeyError:
             raise ValueError(f"Unsupported colorspace: {colorspace}")
 
-        self.num_channels = self._COLORSPACE_TO_NUM[self.color_space]
+        self.num_channels = self._COLORSPACE_TO_NUM[colorspace]
         self.dtype = dtype
         self.allow_unsafe_uint8_cast = allow_unsafe_uint8_cast
         self.img_converter: ImgConverter = Img_Converter_Class()

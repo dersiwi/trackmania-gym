@@ -104,7 +104,7 @@ class PrebuiltnetImplementation(PrebuiltNet):
                  out_dim=21,
                  pretrained=False,
                  trainable_backbone=False,
-                weights_name = "DEFAULT"):
+                weights_name = "DEFAULT",**kwargs):
         super().__init__(modeltype)
 
         if model_name not in self.model_weights:

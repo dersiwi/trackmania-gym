@@ -120,8 +120,8 @@ def get_models(
         
     vision_model = hydra.utils.instantiate(cfg.models) if secure_attribute_retrieval(lambda : cfg.rl_env.env.obs_have_imgs, True) else None
     algorithm_params = OmegaConf.to_container(cfg.sb3.algorithm_params, resolve=True)
-  
-    policy_type, policy_kwargs = get_policy(observation_space = tm_env.observation_space, policy_cfg = cfg.policy, device = device, vision_model = vision_model)
+    vision_model_kwargs = OmegaConf.to_container(cfg.models.args, resolve= True) if secure_attribute_retrieval(lambda : cfg.models.args, False) else {}
+    policy_type, policy_kwargs = get_policy(observation_space = tm_env.observation_space, policy_cfg = cfg.policy, device = device, vision_model = vision_model, vision_model_kwargs= vision_model_kwargs)
 
     model_args = dict(
     policy = policy_type,

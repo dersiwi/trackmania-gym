@@ -6,14 +6,16 @@ from neuronal_networks.custom_extractor import AsyncActorCriticPolicy
 import torch.nn as nn
 import hydra
 from omegaconf import OmegaConf, DictConfig, ListConfig
-from gymnasium.spaces import Dict
+from gymnasium import spaces 
 
-
+from functools import partial
+from typing import Dict, Optional, Any
 def get_policy(
     observation_space,
     policy_cfg,
     device: str,
-    vision_model: nn.Module,
+    vision_model: partial[nn.Module],
+    vision_model_kwargs: Optional[Dict[str, Any]] = None,
 ) -> tuple[str | BasePolicy, dict | None]:
     """
     Constructs a policy definition compatible with SB3 algorithms.
@@ -35,6 +37,7 @@ def get_policy(
 
         return dict(
             vision_model=vision_model,
+            vision_model_kwargs = vision_model_kwargs,
             out_dim=out_dim,
             device=device,
             float_model=float_model,
@@ -61,12 +64,12 @@ def get_policy(
             critic_obs = OmegaConf.to_object(ListConfig(policy_cfg.critic.observations))
 
             policy_features_extractor = make_tmn_extractor(
-                observation_space=Dict({k: v for k, v in observation_space.items() if k in actor_obs}),
+                observation_space=spaces.Dict({k: v for k, v in observation_space.items() if k in actor_obs}),
                 **_build_extractor_kwargs(policy_cfg.actor)
             )
 
             value_features_extractor = make_tmn_extractor(
-                observation_space=Dict({k: v for k, v in observation_space.items() if k in critic_obs}),
+                observation_space=spaces.Dict({k: v for k, v in observation_space.items() if k in critic_obs}),
                 **_build_extractor_kwargs(policy_cfg.critic)
             )
 

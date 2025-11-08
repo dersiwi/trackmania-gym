@@ -1,22 +1,28 @@
-
-from typing import Optional, List, Type
+from typing import Optional, List, Type, Dict, Any
 import torch
 import torch.nn as nn
 import gymnasium as gym
 from stable_baselines3.common.preprocessing import is_image_space
 from stable_baselines3.common.torch_layers import create_mlp
 
+import functools
+
 def build_vision_model(
-    vision_model_cls: Type[nn.Module],
+    vision_model_cls: functools.partial[nn.Module],
     space: gym.Space,
     out_dim: int,
     device: str,
+    vision_model_kwargs: Optional[Dict[str, Any]] = None,
 ) -> nn.Module:
     """Instantiate and validate a vision model."""
-    if not (isinstance(vision_model_cls, type) and issubclass(vision_model_cls, nn.Module)):
-        raise TypeError("vision_model must be a PyTorch nn.Module class, not an instance.")
-
-    model = vision_model_cls().to(device)
+    if not isinstance(vision_model_cls, functools.partial):
+        raise TypeError("vision_model_cls must be functools.partial instance")
+    
+    vision_model_kwargs = vision_model_kwargs if vision_model_kwargs else {}
+    vision_model_kwargs.setdefault("img_shape", space.shape)
+    vision_model_kwargs.setdefault("out_dim", out_dim)
+    vision_model_kwargs.pop("args", None)
+    model = vision_model_cls(**vision_model_kwargs).to(device)
 
     dummy_input = torch.zeros(1, *space.shape, device=device)
     with torch.no_grad():
@@ -32,7 +38,8 @@ def build_box_extractor(
     space: gym.Space,
     out_dim: int,
     device: str,
-    vision_model_cls: Optional[Type[nn.Module]] = None,
+    vision_model_cls: Optional[Type[nn.Module]] = None, 
+    vision_model_kwargs: Optional[Dict[str, Any]] = None,
     float_model: Optional[List[int]] = None,
     activation_fn: Type[nn.Module] = nn.ReLU,
     last_activation_fn: Type[nn.Module] = nn.Tanh,
@@ -46,7 +53,7 @@ def build_box_extractor(
     if is_image_space(observation_space= space, check_channels=check_channels, normalized_image=normalized_image):
         if vision_model_cls is None:
             raise ValueError("vision_model_cls must be provided for image spaces.")
-        return build_vision_model(vision_model_cls, space, out_dim, device)
+        return build_vision_model(vision_model_cls=vision_model_cls,space=space, out_dim =out_dim, device = device, vision_model_kwargs=vision_model_kwargs)
 
     # Otherwise, handle vector (float) inputs
     input_dim = space.shape[0]

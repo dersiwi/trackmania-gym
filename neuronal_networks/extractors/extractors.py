@@ -1,5 +1,5 @@
 from .utils import build_box_extractor
-from typing import Optional, List, Type, Dict
+from typing import Optional, List, Type, Dict, Any
 import torch
 import torch.nn as nn
 import gymnasium as gym
@@ -23,6 +23,7 @@ class TMN_Box_Extractor(BaseFeaturesExtractor):
         self,
         observation_space: gym.spaces.Box,
         vision_model: Optional[Type[nn.Module]] = None,
+        vision_model_kwargs: Optional[Dict[str, Any]] = None,
         out_dim: int = 64,
         device: str = "cpu",
         normalized_image: bool = False,
@@ -39,6 +40,7 @@ class TMN_Box_Extractor(BaseFeaturesExtractor):
             out_dim=out_dim,
             device=device,
             vision_model_cls=vision_model,
+            vision_model_kwargs= vision_model_kwargs,
             float_model=float_model,
             activation_fn=activation_fn,
             last_activation_fn=last_activation_fn,
@@ -67,6 +69,7 @@ class TMN_Dict_Extractor(BaseFeaturesExtractor):
         self,
         observation_space: gym.spaces.Dict,
         vision_model: Optional[Type[nn.Module]] = None,
+        vision_model_kwargs: Optional[Dict[str, Any]] = None,
         out_dim: int = 64,
         device: str = "cpu",
         normalized_image: bool = False,
@@ -86,6 +89,7 @@ class TMN_Dict_Extractor(BaseFeaturesExtractor):
                 out_dim=out_dim,
                 device=device,
                 vision_model_cls=vision_model,
+                vision_model_kwargs= vision_model_kwargs,
                 float_model=float_model,
                 activation_fn=activation_fn,
                 last_activation_fn=last_activation_fn,

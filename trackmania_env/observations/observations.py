@@ -4,7 +4,7 @@ from trackmania_env.observations.observation_test import ObservationTest
 from configs.config import TrainConfig, ObservationManagerConfig
 
 from trackmania_env.observations.implementations.linesight_obs_wrapper import LinesightObservationManager
-from trackmania_env.observations.implementations.nextpoint_obs import NextPointObsManager
+from trackmania_env.observations.implementations.nextpoint_obs import NextPointObsManager, BoxNextPointObsManager
 from trackmania_env.observations.implementations.sophy_obs import SophyObsManager
 from trackmania_env.observations.implementations.dyn_nextpoint_obs import DynamicNextPointObsManager
 
@@ -48,7 +48,7 @@ def get_observation_manager(cfg : TrainConfig, wrap_obs_in_test : bool = False,
             )
 
         case "nextpointobs":
-            obs_manager = NextPointObsManager(colorspace=obs_manager_cfg.colorspace,
+            obs_manager = BoxNextPointObsManager(colorspace=obs_manager_cfg.colorspace,
                                         convert_torch=obs_manager_cfg.convert_torch,
                                         img_width=obs_manager_cfg.img_width, 
                                         img_height=obs_manager_cfg.img_height,
