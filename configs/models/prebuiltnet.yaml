@@ -28,8 +28,9 @@
 
 _partial_: True
 _target_: neuronal_networks.vision_encoder.prebuilt_nets.PrebuiltnetImplementation
-model_name: "vit_b_16"
-modeltype : "vit"
-pretrained: True
-trainable_backbone: True
-weights_name: "DEFAULT"
+args:
+  model_name: "vit_b_16"
+  modeltype : "vit"
+  pretrained: True
+  trainable_backbone: True
+  weights_name: "DEFAULT"

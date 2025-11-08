@@ -1,3 +1,4 @@
 _partial_ : True
 _target_ : neuronal_networks.vision_encoder.conv_NNs.LinesightVisionModel
-img_head_channels : [1,16,32,64,32]
+args:
+  img_head_channels : [1,16,32,64,32]
