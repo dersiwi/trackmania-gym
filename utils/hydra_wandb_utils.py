@@ -26,6 +26,8 @@ from trackmania_env.envs.single_agent_env2 import TMNF_Single_Agent_Env
 from configs.config import TrainConfig
 from typing import Callable
 
+from neuronal_networks.extractors import make_tmn_extractor
+
 def secure_attribute_retrieval(getter : Callable, default : any = None):
     """Securely returns an attribute from the config.
     Args:
@@ -115,10 +117,8 @@ def get_models(
 
     Returns vision model as well as the algorithm."""
     device = cfg.platforms.device
-    if secure_attribute_retrieval(lambda : cfg.rl_env.env.obs_have_imgs, True):
-        vision_model = get_vision_model(cfg, tm_env.observation_space["image"].shape , cfg.extractors_out_dim)
-    else:
-        vision_model = None
+        
+    vision_model = hydra.utils.instantiate(cfg.models) if secure_attribute_retrieval(lambda : cfg.rl_env.env.obs_have_imgs, True) else None
     algorithm_params = OmegaConf.to_container(cfg.sb3.algorithm_params, resolve=True)
   
     policy_type, policy_kwargs = get_policy(observation_space = tm_env.observation_space, policy_cfg = cfg.policy, device = device, vision_model = vision_model)
@@ -154,7 +154,7 @@ def get_models(
     
     
 
-    return vision_model, model
+    return model
 
 
 def init_and_login_wandb(cfg : TrainConfig, wandbdir : str = "wandb",run_id = None, resume = None ) -> tuple[Run | None, str]:

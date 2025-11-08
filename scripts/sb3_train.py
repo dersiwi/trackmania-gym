@@ -40,7 +40,7 @@ def main(cfg : TrainConfig, run_id : Optional[str] = None):
         tm_env.init_environment()
         
         # get algorithm and start learning process
-        vision_model, model = get_models(cfg, tm_env, print_params = True, run_id=baaf.get_tensorboard_login_identifier())
+        model = get_models(cfg, tm_env, print_params = True, run_id=baaf.get_tensorboard_login_identifier())
 
         model.learn(**cfg.learn_args, callback=baaf.get_callbacks_for_training(tm_env))
 

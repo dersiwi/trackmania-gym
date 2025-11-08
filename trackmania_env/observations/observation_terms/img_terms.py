@@ -61,6 +61,12 @@ class ImageObservationTerm(ObservationTerm):
         Colorspace.BGRA: BGRAImgConverter,
     }
 
+    _COLORSPACE_TO_NUM = {
+        Colorspace.GRAYSCALE: 1,
+        Colorspace.RGB: 3,
+        Colorspace.BGRA: 4,
+    }
+
     def __init__(self,normalize=False, name="image",colorspace=Colorspace.GRAYSCALE,img_width:int = 128, img_height:int = 128, dtype=np.float32,allow_unsafe_uint8_cast=False):
         super().__init__(name, normalize)
 
@@ -69,6 +75,7 @@ class ImageObservationTerm(ObservationTerm):
         except KeyError:
             raise ValueError(f"Unsupported colorspace: {colorspace}")
 
+        self.num_channels = self._COLORSPACE_TO_NUM[self.color_space]
         self.dtype = dtype
         self.allow_unsafe_uint8_cast = allow_unsafe_uint8_cast
         self.img_converter: ImgConverter = Img_Converter_Class()
@@ -83,6 +90,9 @@ class ImageObservationTerm(ObservationTerm):
         # NOTE maybe think of doing the rescaling of the img here but i am not sure sicne the img rescaling does TMI on its own
         img = game_states[IPCFields.IMG] 
         img = self.img_converter.cnvt_img(img)
+        # NOTE: when we are sure this work we will removw the assert
+        assert img.shape[0] == self.num_channels , f"Expected {self.num_channels} color channels, got {img.shape[0]}"
+
         return img.astype(dtype=self.dtype)
 
     def _normalize(self, obs):

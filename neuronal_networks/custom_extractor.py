@@ -2,6 +2,7 @@ from functools import partial
 from typing import Callable, Union, List, Optional, Dict, Type, Tuple
 
 import gymnasium as gym
+from sympy.strategies.rl import subs
 import torch 
 from torch import nn
 import numpy as np
@@ -9,13 +10,58 @@ import numpy as np
 from stable_baselines3.common.policies import ActorCriticPolicy
 from stable_baselines3.common.type_aliases import Schedule
 from stable_baselines3.common.distributions import Distribution
-from stable_baselines3.common.preprocessing import preprocess_obs
-from stable_baselines3.common.torch_layers import BaseFeaturesExtractor,MlpExtractor
+from stable_baselines3.common.preprocessing import preprocess_obs, is_image_space
+from stable_baselines3.common.torch_layers import BaseFeaturesExtractor,MlpExtractor, create_mlp
 from stable_baselines3.common.utils import get_device 
 
-class TMN_Extractor(BaseFeaturesExtractor):
+def build_vision_model(
+    vision_model_cls: type[nn.Module],
+    subspace: gym.Space,
+    out_dim: int,
+    device: str,
+) -> nn.Module:
     """
-    Implementation of a custom feature extractor https://stable-baselines3.readthedocs.io/en/master/guide/custom_policy.html#multiple-inputs-and-dictionary-observations
+    Helper function to instantiate and validate a vision model.
+
+    Args:
+        vision_model_cls: A PyTorch nn.Module *class* (not instance).
+        subspace: The image observation space for this key.
+        out_dim: Expected output dimension of the vision model.
+        device: Device to move the model to.
+
+    Returns:
+        Instantiated vision model (nn.Module) placed on the given device.
+    """
+    # Check that the vision_model is indeed a subclass of nn.Module
+    if not (isinstance(vision_model_cls, type) and issubclass(vision_model_cls, nn.Module)):
+         raise TypeError("vision_model must be a PyTorch nn.Module class, not an instance.")
+    # Instantiate the model
+    model = vision_model_cls().to(device)
+
+    # Check output shape
+    dummy_input = torch.zeros(1, *subspace.shape, device=device)
+    with torch.no_grad():
+        dummy_output = model(dummy_input)
+
+    if dummy_output.ndim != 2:
+        raise ValueError(
+            f"Vision model output must have shape (N, D), but got {dummy_output.shape}"
+        )
+
+    vision_model_out_dim = dummy_output.shape[1]
+    if vision_model_out_dim != out_dim:
+        raise ValueError(
+            f"Vision model output dimension ({vision_model_out_dim}) "
+            f"does not match expected out_dim ({out_dim})."
+        )
+
+    return model
+
+
+class TMN_Dict_Extractor(BaseFeaturesExtractor):
+    """
+    Implementation of a custom feature extractor 
+    https://stable-baselines3.readthedocs.io/en/master/guide/custom_policy.html#multiple-inputs-and-dictionary-observations
 
     Combined feature extractor for the TrackMania environment observation space.
     This extractor is designed to work with observations containing  only vectors and image inputs. 
@@ -27,53 +73,48 @@ class TMN_Extractor(BaseFeaturesExtractor):
     :param observation_space: Gym Dict space describing the full observation structure.
     :param vision_model: A neural network used to extract features from image observations.
     :param out_dim: The number of dimension each extractor should project on to
-    :param normalized_image: If True, assumes that image inputs are already normalized.
-"""
+    :param normalized_image: If True, assumes that image inputs are already normalized.        
+    :param float_model (list[int]): Optional list defining MLP layer sizes for vector inputs.
+    :param activation_fn (type[nn.Module]): Activation function class for MLPs.
+    :param last_activation_fn (type[nn.Module]): Activation for final MLP layer.
+    """
 
     def __init__(
         self,
         observation_space: gym.spaces.Dict,
-        vision_model,
+        vision_model: type[torch.nn.Module],
         out_dim:int = 64,
         device= "cpu",
         normalized_image: bool = False,
         float_model: list[int] = None,
         activation_fn: type[nn.Module]= nn.ReLU,
         last_activation_fn: type[nn.Module]= nn.Tanh ) -> None:
+
         super().__init__(observation_space, features_dim=1)
 
         total_concat_size = 0
         extractors: dict[str, nn.Module] = {}
-        for key, subspace in observation_space.spaces.items():
+        for key, subspace in  observation_space.spaces.items(): 
 
-            if key == "image":
-                vision_model.to(device)
+            if is_image_space(subspace,check_channels= True, normalized_image = normalized_image):
+                vision_model = build_vision_model(vision_model_cls= vision_model,subspace= subspace,out_dim= out_dim,device = device)  
                 extractors[key] = vision_model
-                # check ouput dimension of vision model 
-                dummy_input = (torch.zeros(1, *subspace.shape)).to(device) 
-                dummy_output = vision_model(dummy_input)
-                vision_model_out_dim = dummy_output.shape[1]
-                assert vision_model_out_dim == out_dim
-                total_concat_size += vision_model_out_dim
+                total_concat_size += out_dim
             else:
-
                 if float_model:
-                    float_net: list[nn.Module] = []
-                    last_layer_dim = subspace.shape[0]
-                    for l in float_model:
-                        float_net.append(nn.Linear(last_layer_dim, l))
-                        float_net.append(activation_fn())
-                        last_layer_dim = l
-                    float_net.append(nn.Linear(last_layer_dim, out_dim))
-                    float_net.append(last_activation_fn())
-                    extractors[key]= nn.Sequential(*float_net)
+                    model_list = create_mlp(
+                        input_dim= subspace.shape[0],
+                        output_dim= out_dim,
+                        net_arch= float_model
+                        )
                 else:
-                    hidden_dim = subspace.shape[0] // 2 if subspace.shape[0] > out_dim else subspace.shape[0] * 2
-                    extractors[key] = nn.Sequential(
-                    nn.Linear(subspace.shape[0], hidden_dim, device=device),
-                    nn.Linear(hidden_dim, out_dim, device=device)
-                    )
 
+                    hidden_dim = subspace.shape[0] // 2 if subspace.shape[0] > out_dim else subspace.shape[0] * 2
+                    model_list = [
+                            nn.Linear(subspace.shape[0], hidden_dim, device=device),
+                            nn.Linear(hidden_dim, out_dim, device=device)
+                            ]
+                extractors[key] = nn.Sequential(*model_list)
                 total_concat_size += out_dim
 
         # Update the features dim manually
@@ -87,15 +128,15 @@ class TMN_Extractor(BaseFeaturesExtractor):
             encoded_tensor_list.append(tensor)
          # Return a (B, self._features_dim) PyTorch tensor, where B is batch dimension.
         return torch.cat(encoded_tensor_list, dim=1)
-    
+
 class AsyncMLPExtractor(nn.Module):
     def __init__(
-        self,
-        feature_dim: Union[int, dict[str, int]],
-        net_arch: Union[list[int], dict[str, list[int]]],
-        activation_fn: type[nn.Module],
-        device: Union[torch.device, str] = "auto",
-    ):
+            self,
+            feature_dim: Union[int, dict[str, int]],
+            net_arch: Union[list[int], dict[str, list[int]]],
+            activation_fn: type[nn.Module],
+            device: Union[torch.device, str] = "auto",
+            ):
         super().__init__()  # skip MlpExtractor's __init__, we override
 
         device = get_device(device)
@@ -157,17 +198,17 @@ class AsyncActorCriticPolicy(ActorCriticPolicy):
             activation_fn: Type[nn.Module] = nn.Tanh,
             *args,
             **kwargs,
-    ):
+            ):
         super(AsyncActorCriticPolicy, self).__init__(
-            observation_space,
-            action_space,
-            lr_schedule,
-            net_arch,
-            activation_fn,
-            # Pass remaining arguments to base class
-            *args,
-            **kwargs,
-        )
+                observation_space,
+                action_space,
+                lr_schedule,
+                net_arch,
+                activation_fn,
+                # Pass remaining arguments to base class
+                *args,
+                **kwargs,
+                )
 
         # non-shared features extractors for the actor and the critic
         self.policy_features_extractor:BaseFeaturesExtractor = policy_features_extractor
@@ -176,7 +217,7 @@ class AsyncActorCriticPolicy(ActorCriticPolicy):
 
         self.features_dim = {'pi': self.policy_features_extractor.features_dim,
                              'vf': self.value_features_extractor.features_dim}
-        
+
         # NOTE: if the 2 features dims are different, your mlp_extractor must be able
         # to acceppt such dict AND ALSO an int, because the mlp_extractor will be first
         # created with wrong features_dim (coming from wrong, default, feratures extractor) which is an int.
@@ -215,12 +256,12 @@ class AsyncActorCriticPolicy(ActorCriticPolicy):
             # features_extractor/mlp values are
             # originally from openai/baselines (default gains/init_scales).
             module_gains = {
-                self.policy_features_extractor: np.sqrt(2),
-                self.value_features_extractor: np.sqrt(2),
-                self.mlp_extractor: np.sqrt(2),
-                self.action_net: 0.01,
-                self.value_net: 1,
-            }
+                    self.policy_features_extractor: np.sqrt(2),
+                    self.value_features_extractor: np.sqrt(2),
+                    self.mlp_extractor: np.sqrt(2),
+                    self.action_net: 0.01,
+                    self.value_net: 1,
+                    }
             for module, gain in module_gains.items():
                 module.apply(partial(self.init_weights, gain=gain))
 
@@ -230,10 +271,10 @@ class AsyncActorCriticPolicy(ActorCriticPolicy):
     def _build_mlp_extractor(self) -> None:
 
         self.mlp_extractor = AsyncMLPExtractor(   
-            feature_dim= self.features_dim,
-            net_arch=self.net_arch,
-            activation_fn=self.activation_fn,
-            device=self.device,)
+                                               feature_dim= self.features_dim,
+                                               net_arch=self.net_arch,
+                                               activation_fn=self.activation_fn,
+                                               device=self.device,)
 
     def extract_features(self, obs: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
         """
