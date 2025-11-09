@@ -15,12 +15,12 @@ from trackmania_env.observations.observation_terms.ref_line_terms import (
     LateralDistance,
 )
 
-class NextPointObsManager(DictObservationManager):
-    def __init__(self,colorspace:str, convert_torch, img_width, img_height, normalize,ref_line_lookahead:int = 10, ref_line_stride:int = 10 ):
-        assert ref_line_lookahead % ref_line_stride == 0
+def make_float_obs(name:str, ref_line_lookahead:int, ref_line_stride:int):
 
-        grouped_floats_obs = GroupedObservationTerm(
-            name="floats",
+    assert ref_line_lookahead % ref_line_stride == 0
+
+    return GroupedObservationTerm(
+            name= name,
             observation_terms=[
                 NextReflinePoint(ref_line_lookahead, ref_line_stride),
                 SpeedTerm(),
@@ -31,35 +31,23 @@ class NextPointObsManager(DictObservationManager):
             ]
         )
 
+class NextPointObsManager(DictObservationManager):
+    def __init__(self,colorspace:str, convert_torch, img_width, img_height, normalize,ref_line_lookahead:int = 10, ref_line_stride:int = 10 ):
         super().__init__(
             convert_torch=convert_torch,
             normalize=normalize,
             observation_terms=[
                 ImageObservationTerm(name="image", colorspace=colorspace, img_width=img_width, img_height=img_height, dtype=np.float32),
-                grouped_floats_obs
+                make_float_obs(name= "flaots", ref_line_stride= ref_line_stride, ref_line_lookahead= ref_line_lookahead)
             ]
         )
 
-class BoxNextPointObsManager(BoxObservationManager):
+class VisionLessNextPointObsManager(BoxObservationManager):
     """ This is the Box version of the NextPointObsManager"""
-    def __init__(self,colorspace:str, convert_torch, img_width, img_height, normalize,ref_line_lookahead:int = 10, ref_line_stride:int = 10 ):
-        assert ref_line_lookahead % ref_line_stride == 0
-
-        grouped_floats_obs = GroupedObservationTerm(
-            name="floats",
-            observation_terms=[
-                NextReflinePoint(ref_line_lookahead, ref_line_stride),
-                SpeedTerm(),
-                MobileStatesTerm(),
-                SurfaceFloats(),
-                LateralDistance(),
-                RelativeDistance(),
-            ]
-        )
-
+    def __init__(self, convert_torch, normalize, ref_line_lookahead:int = 10, ref_line_stride:int = 10 ):
         super().__init__(
             convert_torch=convert_torch,
             normalize=normalize,
-            observation_term= grouped_floats_obs
+            observation_term = make_float_obs(name= "flaots", ref_line_stride= ref_line_stride, ref_line_lookahead= ref_line_lookahead)
         )
 
