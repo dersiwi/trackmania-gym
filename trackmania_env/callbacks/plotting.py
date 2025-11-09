@@ -13,6 +13,10 @@ class Plot_Obs_Images_Callback(NonBlockingPlot):
         super().__init__(plotter=PlottingFactory(factory_name= "image",backend = backend).create(img_size = img_size, color_space = color_space))
 
     def _call_after_step(self, processed_obs, reward, terminated, truncated, info):
+        assert "image" in processed_obs, (
+            "No image observation found in the current environment. "
+            "This may be intentional if the environment does not provide visual observations."
+        )
         img = processed_obs["image"]
         assert isinstance(img, np.ndarray), "image must be a NumPy ndarray"
         self.queue.put(img)
