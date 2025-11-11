@@ -11,7 +11,7 @@ from omegaconf.errors import ConfigAttributeError
 from itertools import chain
 
 from tmn_sb3.policies.async_policy import AsyncActorCriticPolicy
-from neuronal_networks.lr_schedulers import LR_Scheduler
+from neural_networks.lr_schedulers import LR_Scheduler
 
 from sb3_contrib.qrdqn.qrdqn import QRDQN
 
@@ -26,9 +26,9 @@ from trackmania_env.envs.single_agent_env2 import TMNF_Single_Agent_Env
 from configs.config import TrainConfig
 from typing import Callable, Any, Dict
 
-from neuronal_networks.extractors.extractors import ExtractorConfig
+from neural_networks.extractors.extractors import ExtractorConfig
 
-from neuronal_networks.extractors import make_tmn_extractor
+from neural_networks.extractors import make_tmn_extractor
 
 from dataclasses import replace as data_cls_replace
 

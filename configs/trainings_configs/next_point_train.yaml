@@ -98,10 +98,10 @@ wandb_callbacks:
 
 models:
   _partial_: True
-  _target_: neuronal_networks.vision_encoder.conv_NNs.VisionModelSix
+  _target_: neural_networks.vision_encoder.conv_NNs.VisionModelSix
 
 lr_scheduler:
-  _target_: neuronal_networks.lr_schedulers.NoScheduler
+  _target_: neural_networks.lr_schedulers.NoScheduler
   initial_value: 2.5e-4 
 
 policy:

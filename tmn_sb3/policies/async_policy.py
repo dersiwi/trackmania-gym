@@ -310,7 +310,7 @@ class AsyncActorCriticPolicy(ActorCriticPolicy):
 
 from gymnasium import spaces
 from stable_baselines3.common.policies import BasePolicy
-from neuronal_networks.extractors import make_tmn_extractor
+from neural_networks.extractors import make_tmn_extractor
 
 def build_async_actor_critic_policy(
     observation_space: spaces.Dict,

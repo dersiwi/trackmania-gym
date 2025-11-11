@@ -1,2 +1,2 @@
-_target_: neuronal_networks.lr_schedulers.NoScheduler
+_target_: neural_networks.lr_schedulers.NoScheduler
 initial_value: 2.5e-4
