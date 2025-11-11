@@ -1,9 +1,42 @@
 from .utils import build_box_extractor
-from typing import Optional, List, Type, Dict, Any
+from typing import Optional, List, Type, Dict, Any, Union
 import torch
 import torch.nn as nn
 import gymnasium as gym
 from stable_baselines3.common.torch_layers import BaseFeaturesExtractor
+from dataclasses import dataclass, asdict
+
+
+@dataclass
+class ExtractorConfig:
+    """   
+    observation_space: Gym Dict space describing the full observation structure.
+    vision_model: A neural network used to extract features from image observations.
+    out_dim: The number of dimension each extractor should project on to
+    normalized_image: If True, assumes that image inputs are already normalized.        
+    float_model (list[int]): Optional list defining MLP layer sizes for vector inputs.
+    activation_fn (type[nn.Module]): Activation function class for MLPs.
+    last_activation_fn (type[nn.Module]): Activation for final MLP layer.
+    check_channnles (bool): Whether to do or not the check for the number of channels.
+        e.g., with frame-stacking, the observation space may have more channels than expected. 
+    """
+    # observation_space: gym.spaces.Space
+    vision_model: Union[nn.Module, Any]
+    vision_model_kwargs: Optional[Dict[str, Any]]
+    out_dim: int
+    normalized_image: bool
+    float_model: Optional[List[int]]
+    activation_fn: Type[nn.Module]
+    last_activation_fn: Type[nn.Module]
+    check_channels: bool
+    device: str
+
+    def to_dict(self, exclude_none: bool = True) -> Dict[str, Any]:
+        """Return all configuration parameters as a dict suitable for `**kwargs` unpacking."""
+        d = asdict(self)
+        if exclude_none:
+            return {k: v for k, v in d.items() if v is not None}
+        return d
 
 class TMN_Box_Extractor(BaseFeaturesExtractor):
     """Feature extractor for a single gym.Box observation (image or vector).

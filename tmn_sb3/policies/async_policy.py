@@ -1,8 +1,7 @@
 from functools import partial
-from typing import Callable, Union, List, Optional, Dict, Type, Tuple
+from typing import Callable, Union, List, Optional, Dict, Type, Tuple, Any
 
 import gymnasium as gym
-from sympy.strategies.rl import subs
 import torch 
 from torch import nn
 import numpy as np
@@ -10,126 +9,39 @@ import numpy as np
 from stable_baselines3.common.policies import ActorCriticPolicy
 from stable_baselines3.common.type_aliases import Schedule
 from stable_baselines3.common.distributions import Distribution
-from stable_baselines3.common.preprocessing import preprocess_obs, is_image_space
-from stable_baselines3.common.torch_layers import BaseFeaturesExtractor,MlpExtractor, create_mlp
+from stable_baselines3.common.preprocessing import preprocess_obs 
+from stable_baselines3.common.torch_layers import BaseFeaturesExtractor
 from stable_baselines3.common.utils import get_device 
 
-def build_vision_model(
-    vision_model_cls: type[nn.Module],
-    subspace: gym.Space,
-    out_dim: int,
-    device: str,
-) -> nn.Module:
+class AsyncMLPExtractor(nn.Module):
     """
-    Helper function to instantiate and validate a vision model.
+    This module defines separate MLP architectures for the actor and critic networks,
+    designed for asynchronous setups where the two networks may run or update
+    independently rather than sharing parameters or layers.
+
+    Despite the name, this class is **not** a Stable-Baselines3 (SB3) feature extractor.  
+    It only provides the MLP backbones for asynchronous actor–critic architectures.
 
     Args:
-        vision_model_cls: A PyTorch nn.Module *class* (not instance).
-        subspace: The image observation space for this key.
-        out_dim: Expected output dimension of the vision model.
-        device: Device to move the model to.
+        feature_dim (Union[int, dict[str, int]]): 
+            The dimensionality of the input features.  
+            If an integer, the same input size is used for both actor and critic.  
+            If a dictionary, it should contain separate keys "pi" (Actor) and "vf" (Critic)
+            specifying their respective input dimensions.
 
-    Returns:
-        Instantiated vision model (nn.Module) placed on the given device.
+        net_arch (Union[list[int], dict[str, list[int]]]): 
+            The network architecture configuration.  
+            If a list of integers, it defines a shared hidden layer structure.
+            If a dictionary, it should contain separate keys "pi" (Actor) and "vf" (Critic)
+            for their individual MLP layer sizes.
+
+        activation_fn (type[nn.Module]): 
+            The activation function to use (e.g., `nn.ReLU`, `nn.Tanh`, `nn.LeakyReLU`).
+
+        device (Union[torch.device, str], optional): 
+            The device on which to place the module (e.g., `"cpu"`, `"cuda"`, or `"auto"`).  
+            Defaults to `"auto"`.
     """
-    # Check that the vision_model is indeed a subclass of nn.Module
-    if not (isinstance(vision_model_cls, type) and issubclass(vision_model_cls, nn.Module)):
-         raise TypeError("vision_model must be a PyTorch nn.Module class, not an instance.")
-    # Instantiate the model
-    model = vision_model_cls().to(device)
-
-    # Check output shape
-    dummy_input = torch.zeros(1, *subspace.shape, device=device)
-    with torch.no_grad():
-        dummy_output = model(dummy_input)
-
-    if dummy_output.ndim != 2:
-        raise ValueError(
-            f"Vision model output must have shape (N, D), but got {dummy_output.shape}"
-        )
-
-    vision_model_out_dim = dummy_output.shape[1]
-    if vision_model_out_dim != out_dim:
-        raise ValueError(
-            f"Vision model output dimension ({vision_model_out_dim}) "
-            f"does not match expected out_dim ({out_dim})."
-        )
-
-    return model
-
-
-class TMN_Dict_Extractor(BaseFeaturesExtractor):
-    """
-    Implementation of a custom feature extractor 
-    https://stable-baselines3.readthedocs.io/en/master/guide/custom_policy.html#multiple-inputs-and-dictionary-observations
-
-    Combined feature extractor for the TrackMania environment observation space.
-    This extractor is designed to work with observations containing  only vectors and image inputs. 
-    It constructs a dedicated feature extractor for each key in the observation space
-
-    All extracted features are then concatenated and passed through an optional combined 
-    MLP (not shown here, but can be added after this module).
-
-    :param observation_space: Gym Dict space describing the full observation structure.
-    :param vision_model: A neural network used to extract features from image observations.
-    :param out_dim: The number of dimension each extractor should project on to
-    :param normalized_image: If True, assumes that image inputs are already normalized.        
-    :param float_model (list[int]): Optional list defining MLP layer sizes for vector inputs.
-    :param activation_fn (type[nn.Module]): Activation function class for MLPs.
-    :param last_activation_fn (type[nn.Module]): Activation for final MLP layer.
-    """
-
-    def __init__(
-        self,
-        observation_space: gym.spaces.Dict,
-        vision_model: type[torch.nn.Module],
-        out_dim:int = 64,
-        device= "cpu",
-        normalized_image: bool = False,
-        float_model: list[int] = None,
-        activation_fn: type[nn.Module]= nn.ReLU,
-        last_activation_fn: type[nn.Module]= nn.Tanh ) -> None:
-
-        super().__init__(observation_space, features_dim=1)
-
-        total_concat_size = 0
-        extractors: dict[str, nn.Module] = {}
-        for key, subspace in  observation_space.spaces.items(): 
-
-            if is_image_space(subspace,check_channels= True, normalized_image = normalized_image):
-                vision_model = build_vision_model(vision_model_cls= vision_model,subspace= subspace,out_dim= out_dim,device = device)  
-                extractors[key] = vision_model
-                total_concat_size += out_dim
-            else:
-                if float_model:
-                    model_list = create_mlp(
-                        input_dim= subspace.shape[0],
-                        output_dim= out_dim,
-                        net_arch= float_model
-                        )
-                else:
-
-                    hidden_dim = subspace.shape[0] // 2 if subspace.shape[0] > out_dim else subspace.shape[0] * 2
-                    model_list = [
-                            nn.Linear(subspace.shape[0], hidden_dim, device=device),
-                            nn.Linear(hidden_dim, out_dim, device=device)
-                            ]
-                extractors[key] = nn.Sequential(*model_list)
-                total_concat_size += out_dim
-
-        # Update the features dim manually
-        self._features_dim = total_concat_size
-        self.extractors = nn.ModuleDict(extractors)
-
-    def forward(self, observations: dict[str, torch.Tensor]) -> torch.Tensor:
-        encoded_tensor_list = []
-        for key, extractor in self.extractors.items():
-            tensor = extractor(observations[key])
-            encoded_tensor_list.append(tensor)
-         # Return a (B, self._features_dim) PyTorch tensor, where B is batch dimension.
-        return torch.cat(encoded_tensor_list, dim=1)
-
-class AsyncMLPExtractor(nn.Module):
     def __init__(
             self,
             feature_dim: Union[int, dict[str, int]],
@@ -186,7 +98,49 @@ class AsyncMLPExtractor(nn.Module):
         return self.value_net(features)
 
 class AsyncActorCriticPolicy(ActorCriticPolicy):
-    """ Example of Non-shared features extractor for actor critic style policies inspired by https://github.com/DLR-RM/stable-baselines3/issues/1066#issuecomment-1246866844"""
+    """
+    Asynchronous Actor–Critic policy with non-shared feature extractors.
+
+    This class implements a variant of the classic actor–critic architecture
+    where the **actor** and **critic** use independent feature extractors
+    (`policy_features_extractor` and `value_features_extractor`), enabling
+    fully asynchronous processing and representation learning.
+
+    The approach is inspired by:
+        https://github.com/DLR-RM/stable-baselines3/issues/1066#issuecomment-1246866844
+
+    Args:
+        observation_space (gym.spaces.Space):
+            The observation space of the environment.
+
+        action_space (gym.spaces.Space):
+            The action space of the environment.
+
+        lr_schedule (Callable[[float], float]):
+            Learning rate schedule function. The callable takes the remaining progress
+            (from 1.0 to 0.0) and returns the learning rate to use.
+
+        policy_features_extractor (BaseFeaturesExtractor):
+            The feature extractor used by the actor (policy) network.
+
+        value_features_extractor (BaseFeaturesExtractor):
+            The feature extractor used by the critic (value) network.
+
+        net_arch (Optional[List[Union[int, Dict[str, List[int]]]]], optional):
+            Network architecture specification for the MLP extractor.
+            Can be a shared list of layer sizes, or a dict with separate `"pi"` and `"vf"` keys.
+            Defaults to ``None``.
+
+        activation_fn (Type[nn.Module], optional):
+            Activation function class to use in the MLP extractor. 
+            Defaults to ``nn.Tanh``.
+
+        *args:
+            Additional positional arguments passed to ``ActorCriticPolicy``.
+
+        **kwargs:
+            Additional keyword arguments passed to ``ActorCriticPolicy``.
+    """
     def __init__(
             self,
             observation_space: gym.spaces.Space,
@@ -351,3 +305,79 @@ class AsyncActorCriticPolicy(ActorCriticPolicy):
         _, value_features = self.extract_features(obs)
         latent_vf = self.mlp_extractor.forward_critic(value_features)
         return self.value_net(latent_vf)
+
+### just some helper functions ###
+
+from gymnasium import spaces
+from stable_baselines3.common.policies import BasePolicy
+from neuronal_networks.extractors import make_tmn_extractor
+
+def build_async_actor_critic_policy(
+    observation_space: spaces.Dict,
+    actor_observations: List[str],
+    critic_observations: List[str],
+    actor_extractor_kwargs: Dict[str, Any],
+    critic_extractor_kwargs: Dict[str, Any],
+    net_arch: Optional[Union[List[int], Dict[str, List[int]]]] = None,
+    activation_fn: Type[nn.Module] = nn.ReLU,
+    normalize_images: bool = True,
+) -> Tuple[Type[BasePolicy], Dict[str, Any]]:
+    """
+    Build an asynchronous actor–critic policy configuration for SB3.
+
+    This helper isolates the creation of separate actor/critic feature extractors
+    and returns everything needed to instantiate an AsyncActorCriticPolicy.
+
+    Args:
+        observation_space (spaces.Dict):
+            Full observation space (must be a Dict space).
+        actor_observations (list[str]):
+            Keys of observations used by the actor network.
+        critic_observations (list[str]):
+            Keys of observations used by the critic network.
+        actor_extractor_kwargs (dict):
+            Keyword arguments passed to make_tmn_extractor() for the actor.
+        critic_extractor_kwargs (dict):
+            Keyword arguments passed to make_tmn_extractor() for the critic.
+        net_arch (list[int] | dict[str, list[int]], optional):
+            MLP architecture for actor/critic networks.
+        activation_fn (type[nn.Module]):
+            Activation function used inside the MLP extractor.
+        normalize_images (bool):
+            Whether to normalize image inputs.
+
+    Returns:
+        tuple[Type[AsyncActorCriticPolicy], dict]:
+            A tuple containing the policy class and its kwargs dictionary.
+    """
+
+    if not isinstance(observation_space, spaces.Dict):
+        raise ValueError("Async actor–critic requires a gym.spaces.Dict observation space.")
+
+    if actor_observations is None or critic_observations is None:
+        raise ValueError("You must specify both actor_observations and critic_observations.")
+
+    actor_space = spaces.Dict({
+        k: v for k, v in observation_space.spaces.items() if k in actor_observations
+    })
+    critic_space = spaces.Dict({
+        k: v for k, v in observation_space.spaces.items() if k in critic_observations
+    })
+
+    policy_features_extractor = make_tmn_extractor(
+        observation_space=actor_space,
+        **actor_extractor_kwargs,
+    )
+
+    value_features_extractor = make_tmn_extractor(
+        observation_space=critic_space,
+        **critic_extractor_kwargs,
+    )
+
+    return AsyncActorCriticPolicy, dict(
+        policy_features_extractor=policy_features_extractor,
+        value_features_extractor=value_features_extractor,
+        net_arch=net_arch,
+        activation_fn=activation_fn,
+        normalize_images=normalize_images,
+    )

@@ -63,7 +63,6 @@ def build_box_extractor(
             output_dim=out_dim,
             net_arch=float_model,
             activation_fn=activation_fn,
-            output_activation=last_activation_fn,
         )
     else:
         hidden_dim = input_dim // 2 if input_dim > out_dim else input_dim * 2

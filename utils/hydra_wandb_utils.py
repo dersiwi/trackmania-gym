@@ -1,3 +1,4 @@
+from functools import partial
 
 import torch.nn as nn
 import os
@@ -5,12 +6,11 @@ import hydra
 import wandb
 from wandb.wandb_run import Run
 
-from omegaconf import DictConfig, OmegaConf, open_dict
+from omegaconf import DictConfig, OmegaConf, open_dict, ListConfig
 from omegaconf.errors import ConfigAttributeError
 from itertools import chain
 
-from neuronal_networks.get_policy import get_policy
-from neuronal_networks.custom_extractor import AsyncActorCriticPolicy
+from tmn_sb3.policies.async_policy import AsyncActorCriticPolicy
 from neuronal_networks.lr_schedulers import LR_Scheduler
 
 from sb3_contrib.qrdqn.qrdqn import QRDQN
@@ -24,9 +24,15 @@ from trackmania_env.utils.return_tracker import ReturnLogCallback
 from trackmania_env.envs.single_agent_env2 import TMNF_Single_Agent_Env
 
 from configs.config import TrainConfig
-from typing import Callable
+from typing import Callable, Any, Dict
+
+from neuronal_networks.extractors.extractors import ExtractorConfig
 
 from neuronal_networks.extractors import make_tmn_extractor
+
+from dataclasses import replace as data_cls_replace
+
+from tmn_sb3.policies.async_policy import build_async_actor_critic_policy
 
 def secure_attribute_retrieval(getter : Callable, default : any = None):
     """Securely returns an attribute from the config.
@@ -51,7 +57,7 @@ def print_model_params(model : BaseAlgorithm):
     if isinstance(model.policy,AsyncActorCriticPolicy):
         for name, param in chain(
             model.policy.policy_features_extractor.named_parameters(),
-            model.policy.value_features_extractor.named_parameters(),
+model.policy.value_features_extractor.named_parameters(),
             model.policy.mlp_extractor.named_parameters()):
             print(name, param.shape)
     elif isinstance(model,QRDQN):
@@ -96,6 +102,36 @@ def get_vision_model(cfg : TrainConfig, img_shape, extractor_out_dim : int) -> n
     
     return vision_model
 
+def _create_base_extractor_config(
+    policy_cfg: DictConfig,
+    cfg: DictConfig,
+    tm_env: TMNF_Single_Agent_Env,
+    vision_model: partial[nn.Module],
+    vision_model_kwargs: Dict[str,Any],
+    device: str
+) -> ExtractorConfig:
+    """Creates a base ExtractorConfig with all shared/common parameters."""
+    
+    activation_fn_class = secure_attribute_retrieval(
+        lambda: hydra.utils.get_class(policy_cfg.activation_fn._target_), nn.ReLU
+    )
+    last_activation_fn_class = secure_attribute_retrieval(
+        lambda: hydra.utils.get_class(policy_cfg.last_activation_fn._target_), nn.Identity
+    )
+    
+    return ExtractorConfig(
+        vision_model=vision_model,
+        vision_model_kwargs=vision_model_kwargs, 
+        normalized_image=cfg.rl_env.env.normalize_images,
+        out_dim=secure_attribute_retrieval(lambda: policy_cfg.extractors_out_dim,64),
+        check_channels=cfg.rl_env.env.check_channels,
+        
+        float_model=secure_attribute_retrieval(lambda: policy_cfg.float_net, None), 
+        activation_fn=activation_fn_class,
+        last_activation_fn=last_activation_fn_class,
+        device = device 
+    )
+
 def get_models(
         cfg : TrainConfig,
         tm_env : TMNF_Single_Agent_Env,
@@ -103,25 +139,105 @@ def get_models(
         run_id:str = "test",
         load_model_path: str | None = None,
         load_replay_buffer_path: str | None = None
-        ) -> tuple[nn.Module, BaseAlgorithm | PPO]:
+        ) -> BaseAlgorithm:
 
-    """instanciates vision-model as well as sb3 algorithm according to parameters
-    
-    - cfg : config containing global configuration 
-    - run_id: identifier for the run which gets used for tensorboard login
-    - tm_env : gym-environment for algorithm
-    - print_params : If True, prints shapes of weights of neural network
+    """
+    This function builds a policy and creates the corresponding SB3 model (e.g., PPO, DQN, A2C, etc.) 
+    dynamically based on a configuration object. It supports asynchronous actor-critic models. Also:
 
-    Basically it does this : model = PPO("MultiInputPolicy", env= tm_env, policy_kwargs=policy_kwargs, verbose=1), 
-    in a fancy way.
+    - Supports both actor-critic and value-based methods.
+    - The model can be configured to share or separate feature extractors between actor and critic networks.
+    - Uses Hydra for instantiating models, schedulers, and other configurable components.
 
-    Returns vision model as well as the algorithm."""
+    Parameters
+    ----------
+    cfg : TrainConfig
+        Global training configuration containing all parameters related to models, 
+        environments, algorithms, and policies.
+    tm_env : TMNF_Single_Agent_Env
+        The Gymn environment used for training the agent.
+    print_params : bool, optional
+        If True, prints the shapes of the neural network weights for inspection.
+        Defaults to False.
+    run_id : str, optional
+        Identifier for the current run. Used for TensorBoard logging.
+        Defaults to "test".
+    load_model_path : str or None, optional
+        Path to a saved model. If provided, the model parameters 
+        are loaded into the instantiated model.
+    load_replay_buffer_path : str or None, optional
+        Path to a previously saved replay buffer. If provided and the algorithm 
+        is off-policy (e.g., DQN, SAC), the replay buffer is loaded as well.
+
+    Returns
+    -------
+    model : BaseAlgorithm
+        The fully constructed and configured Stable-Baselines3 algorithm ready for training or evaluation.
+    """
     device = cfg.platforms.device
-        
-    vision_model = hydra.utils.instantiate(cfg.models) if secure_attribute_retrieval(lambda : cfg.rl_env.env.obs_have_imgs, True) else None
+    normalized_images = cfg.rl_env.env.normalize_images
+
+    #Prepare Vision Model
+    vision_model = (
+        hydra.utils.instantiate(cfg.models) if secure_attribute_retrieval(lambda: cfg.rl_env.env.obs_have_imgs, True) else None) 
+
+    vision_model_kwargs = (
+        OmegaConf.to_container(cfg.models.args, resolve=True)
+        if secure_attribute_retrieval(lambda: cfg.models.args, False)
+        else {}
+    )
+
+    # extract algo params
     algorithm_params = OmegaConf.to_container(cfg.sb3.algorithm_params, resolve=True)
-    vision_model_kwargs = OmegaConf.to_container(cfg.models.args, resolve= True) if secure_attribute_retrieval(lambda : cfg.models.args, False) else {}
-    policy_type, policy_kwargs = get_policy(observation_space = tm_env.observation_space, policy_cfg = cfg.policy, device = device, vision_model = vision_model, vision_model_kwargs= vision_model_kwargs)
+
+    #Create policy related things like extractors 
+    policy_cfg = cfg.policy
+    policy_type = policy_cfg.type 
+    policy_kwargs = None
+
+    base_ext_config = _create_base_extractor_config(policy_cfg, cfg, tm_env, vision_model, vision_model_kwargs, device)
+
+    if policy_cfg.name in {"basic","dqn"}:
+
+        feature_extrac_kwargs = base_ext_config
+        policy_kwargs = dict(
+            features_extractor_class=make_tmn_extractor,
+            features_extractor_kwargs=feature_extrac_kwargs.to_dict(),
+            normalize_images= normalized_images,
+        )
+        # dqn style algos are not type of actor critic methods so they dont have that field
+        if policy_cfg.name != "dqn": policy_kwargs.update(dict(share_features_extractor=policy_cfg.share_features_extractor))
+
+    elif policy_cfg.name == "async_actor_critic": 
+
+        actor_config = data_cls_replace(
+            base_ext_config,
+            float_model=secure_attribute_retrieval(lambda: policy_cfg.actor.float_net, None),
+            activation_fn=hydra.utils.get_class(policy_cfg.actor.activation_fn._target_),
+            last_activation_fn=hydra.utils.get_class(policy_cfg.actor.last_activation_fn._target_),
+            out_dim =  policy_cfg.actor.extractors_out_dim,
+        )
+        
+        value_config = data_cls_replace(
+            base_ext_config,
+            float_model=secure_attribute_retrieval(lambda: policy_cfg.critic.float_net, None),
+            activation_fn=hydra.utils.get_class(policy_cfg.critic.activation_fn._target_),
+            last_activation_fn=hydra.utils.get_class(policy_cfg.critic.last_activation_fn._target_),
+            out_dim =  policy_cfg.critic.extractors_out_dim,
+        )
+        
+        policy_type, policy_kwargs = build_async_actor_critic_policy(
+                observation_space= tm_env.observation_space,
+                actor_observations=  OmegaConf.to_object(ListConfig(policy_cfg.actor.observations)),
+                actor_extractor_kwargs= actor_config.to_dict(),
+                critic_observations =  OmegaConf.to_object(ListConfig(policy_cfg.critic.observations)),
+                critic_extractor_kwargs= value_config.to_dict(),
+                net_arch= OmegaConf.to_object(DictConfig(policy_cfg.mlp_extractor.net_arch)) if secure_attribute_retrieval(lambda: policy_cfg.mlp_extractor.net_arch,False) else None,
+                activation_fn = hydra.utils.get_class(policy_cfg.mlp_extractor.activation_fn._target_) if secure_attribute_retrieval(lambda: policy_cfg.mlp_extractor.activation_fn._target_,False) else nn.Tanh,
+                normalize_images = normalized_images,
+                )
+
+    else: raise ValueError(f"Unknown policy name: {policy_cfg.name!r}") 
 
     model_args = dict(
     policy = policy_type,
@@ -130,7 +246,7 @@ def get_models(
     device = device,
     **algorithm_params
     )
-    # Only include policy_kwargs if they exist
+     # Only include policy_kwargs if they exist
     if policy_kwargs: model_args["policy_kwargs"] = policy_kwargs
 
     lr : LR_Scheduler = hydra.utils.instantiate(cfg.lr_scheduler)
@@ -152,8 +268,6 @@ def get_models(
             model.load_replay_buffer(load_replay_buffer_path)
             print(f"Loading replay buffer from {load_replay_buffer_path}...")
     
-    
-
     return model
 
 

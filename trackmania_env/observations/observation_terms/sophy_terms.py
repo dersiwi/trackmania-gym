@@ -19,7 +19,7 @@ class PropriocentricTerm(ObservationTerm):
     MAX_STEER_DELTA = 2 * np.pi / 6    # Assumed full swing delta between steps
     EPSILON = 1e-6                     # Tolerance for float comparisons
 
-    def __init__(self, name = "propriocentric features", normalize=False,maxlen_history:int = 3):
+    def __init__(self, name = "propriocentric_features", normalize=False,maxlen_history:int = 3):
         """
         Propriocentric features are derived from the car's local frame of reference 
         The extracted feature vector includes:
@@ -140,7 +140,7 @@ class PropriocentricTerm(ObservationTerm):
         self.angles : deque = deque([0.]*self.maxlen_history, maxlen=self.maxlen_history)
     
 class GlobalFeaturesTerm(ObservationTerm):
-    def __init__(self, name ="global features", normalize = False,lookahead_sec:int = 6,n_points:int = 60):
+    def __init__(self, name ="global_features", normalize = False,lookahead_sec:int = 6,n_points:int = 60):
         """
         Extracts global course point features from the input game states, following the method
         described in Wurman et al. (2022).
