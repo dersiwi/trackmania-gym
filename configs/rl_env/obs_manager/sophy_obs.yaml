@@ -1,3 +1,4 @@
+_target_: trackmania_env.observations.implementations.sophy_obs.SophyObsManager
 name: "sophy"
 
 # image related

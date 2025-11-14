@@ -17,7 +17,7 @@ from trackmania_env.observations.observation_terms.ref_line_terms import (
 from trackmania_env.observations.observation_terms.sophy_terms import GlobalFeaturesTerm
 
 class DynamicNextPointObsManager(DictObservationManager):
-    def __init__(self,colorspace:str, convert_torch, img_width, img_height, normalize, lookahead_sec = 6,n_points = 60):
+    def __init__(self,colorspace:str, convert_torch, img_width, img_height, normalize, lookahead_sec = 6,n_points = 60,**kwargs):
   
         grouped_floats_obs = GroupedObservationTerm(
             name="floats",

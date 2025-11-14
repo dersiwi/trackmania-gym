@@ -32,7 +32,7 @@ def make_float_obs(name:str, ref_line_lookahead:int, ref_line_stride:int):
         )
 
 class NextPointObsManager(DictObservationManager):
-    def __init__(self,colorspace:str, convert_torch, img_width, img_height, normalize,ref_line_lookahead:int = 10, ref_line_stride:int = 10 ):
+    def __init__(self,colorspace:str, convert_torch, img_width, img_height, normalize,ref_line_lookahead:int = 10, ref_line_stride:int = 10,**kwargs):
         super().__init__(
             convert_torch=convert_torch,
             normalize=normalize,
@@ -44,7 +44,7 @@ class NextPointObsManager(DictObservationManager):
 
 class VisionLessNextPointObsManager(BoxObservationManager):
     """ This is the Box version of the NextPointObsManager"""
-    def __init__(self, convert_torch, normalize, ref_line_lookahead:int = 10, ref_line_stride:int = 10 ):
+    def __init__(self, convert_torch, normalize, ref_line_lookahead:int = 10, ref_line_stride:int = 10,**kwargs):
         super().__init__(
             convert_torch=convert_torch,
             normalize=normalize,

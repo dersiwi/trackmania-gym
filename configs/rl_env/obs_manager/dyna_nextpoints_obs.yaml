@@ -1,3 +1,4 @@
+_target_: trackmania_env.observations.implementations.dyn_nextpoint_obs.DynamicNextPointObsManager
 name: "dyna_nextpoint"
 
 # image related
