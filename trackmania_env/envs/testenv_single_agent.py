@@ -1,13 +1,18 @@
 from trackmania_env.envs.single_agent_env2 import TMNF_Single_Agent_Env
-from trackmania_env.utils.actionmap import ACTION_MAP,REVERSE_ACTION_MAP
+from trackmania_env.utils.actionmap import REVERSE_ACTION_MAP
 from trackmania_env.callbacks.core import TestEnvironmentCallback
 
 import keyboard
 from typing import Callable
 import time
 from pynput.keyboard import Key, Listener,KeyCode
-import numpy as np
-from matplotlib import pyplot as plt
+
+from queue import Queue
+
+from trackmania_env.observations.observation_manager import ObservationManager 
+from trackmania_env.rewards.reward_calculation import RewradCalculator
+from trackmania_env.terminations.termination_manager import TerminationManager
+from trackmania_env.utils.reference_line_manager import ReferenceLineManager
 
 class KEYS:
     """Enum for keys used in TestEnvironment."""
@@ -37,8 +42,27 @@ class KEYS:
     
 class TestEnvironment(TMNF_Single_Agent_Env):
 
-    def __init__(self, command_queue, response_queue, obs_manager, reward_calculator,termination_manger, reference_line, env_cfg,platform =  "windows", gamma : float = 0.99, **kwargs):
-        super().__init__(command_queue, response_queue, obs_manager, reward_calculator, termination_manger, reference_line ,env_cfg=env_cfg, gamma=gamma)
+    def __init__(self, 
+                 command_queue: Queue, 
+                 response_queue: Queue, 
+                 obs_manager: ObservationManager, 
+                 reward_calculator: RewradCalculator, 
+                 termination_manger: TerminationManager, 
+                 reference_line: ReferenceLineManager, 
+                 reset_mode: str, 
+                 n_previous_actions: int, 
+                 position_buffer_size: int, 
+                 position_moved_threshold: float, 
+                 ignore_stuck_for_n_steps_after_reset: int, 
+                 game_speed: int, 
+                 countdown_speed: int, 
+                 waitforstep_timeout_in_s: float, 
+                 startposition_accuracy_threshold: float, 
+                 gamma: float, 
+                 platform = "windows",
+                 **kwargs):
+
+        super().__init__(command_queue, response_queue, obs_manager, reward_calculator, termination_manger, reference_line, reset_mode, n_previous_actions, position_buffer_size, position_moved_threshold, ignore_stuck_for_n_steps_after_reset, game_speed, countdown_speed, waitforstep_timeout_in_s, startposition_accuracy_threshold, gamma, **kwargs)
 
         self.platform = platform
         self.action_modifier : Callable = None

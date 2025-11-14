@@ -1,6 +1,7 @@
 
 
 # Hydra related imports
+import platform
 import hydra
 
 # gymnasium environment wrapper 
@@ -38,21 +39,28 @@ def get_environment(cfg : TrainConfig, control_queue : Queue, response_queue : Q
     reward_calculator = get_reward_calculator(reward_calculator_cfg = cfg.rl_env.reward_manager, normalize=cfg.rl_env.env.normalize_rewards)
     termination_manger = get_termination_manager(termination_cfg= cfg.rl_env.termination_manager)
 
-    constructor_kwargs = {
-    "command_queue": control_queue,
-    "response_queue": response_queue,
-    "obs_manager": obs_manager,
-    "reward_calculator": reward_calculator,
-    "termination_manger": termination_manger,
-    "reference_line": ReferenceLineManager(cfg.gmi.reference_line),
-    "env_cfg": cfg.rl_env.env,
-    "platform" : cfg.platforms.os,
-    "gamma" : cfg.sb3.algorithm_params.gamma # TODO : This is maybe not the greatest idea, as soon as we work with smth other than sb3 this has to go
-    }
-
-
+    env_cfg = cfg.rl_env.env  
+    constructor_kwargs = dict(
+        command_queue= control_queue,
+        response_queue= response_queue,
+        obs_manager= obs_manager,
+        reward_calculator= reward_calculator,
+        termination_manger= termination_manger,
+        reference_line= ReferenceLineManager(cfg.gmi.reference_line),
+        reset_mode= env_cfg.reset_mode,
+        n_previous_actions= env_cfg.n_previous_actions,
+        position_buffer_size= env_cfg.position_buffer_size,
+        position_moved_threshold= env_cfg.position_moved_threshold,
+        ignore_stuck_for_n_steps_after_reset= env_cfg.ignore_stuck_for_n_steps_after_reset,
+        game_speed= env_cfg.game_speed,
+        countdown_speed= env_cfg.countdown_speed,
+        waitforstep_timeout_in_s= env_cfg.waitforstep_timeout_in_s,
+        startposition_accuracy_threshold= env_cfg.startposition_accuracy_threshold,
+        gamma= cfg.sb3.algorithm_params.gamma # TODO : This is maybe not the greatest idea, as soon as we work with smth other than sb3 this has to go
+    ) 
 
     if cfg.rl_env.env.test or test:
+        constructor_kwargs.update(dict(platform = cfg.platforms.os))
         TM_ENV_CLASS = TestEnvironment
     else:
         TM_ENV_CLASS = TMNF_Single_Agent_Env
@@ -60,10 +68,6 @@ def get_environment(cfg : TrainConfig, control_queue : Queue, response_queue : Q
     tm_env = TM_ENV_CLASS(**constructor_kwargs)
     tm_env.orientationless_respawn_manager = OrientationlessRespawnManager(respawn_coordinates=OrientationlessRespawnManager.get_respawns_for_very_long_checkpoints())
     
-    reward_calculator.set_env(tm_env)
-    obs_manager.set_env(tm_env)
-    termination_manger.set_env(tm_env)
-
     if not test:
         # apply (Observation)-wrappers to the environment : only relevant for training with sb3
         for _, wrapper_conf in cfg.rl_env.wrappers.items():

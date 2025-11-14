@@ -19,7 +19,7 @@ class Sb3ExperimentManager(ExperimentManager):
     """
     
     def __init__(self, hydra_run_dir: str, cfg: TrainConfig, run_id=None, resume=None):
-        super().__init__(hydra_run_dir, cfg, run_id, resume)
+        super().__init__(hydra_run_dir,cfg, run_id, resume)
         self.callbacks: List[EventCallback] = []
 
     def get_callbacks(self) -> CallbackList:
@@ -37,7 +37,7 @@ class Final_Best_CP_Sb3_ExperimentManager(Sb3ExperimentManager):
     
     def __init__(
         self, 
-        hydra_run_dir: str, 
+        hydra_run_dir: str,
         cfg: TrainConfig, 
         env: Env,
         eval_freq:int,

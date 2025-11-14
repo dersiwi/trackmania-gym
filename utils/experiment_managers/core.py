@@ -55,7 +55,7 @@ class ExperimentManager:
 
     def after_training(self, model: Any = None):
         """Save final model, upload all queued artifacts, and close loggers."""
-        if not self.cfg.wandb.use:
+        if self.run is None:
             print("W&B disabled, skipping post-training artifact logging.")
             return
             
@@ -78,7 +78,7 @@ class ExperimentManager:
         """
         Logs all queued artifacts to W&B 
         """
-        if not self.run:
+        if self.run is None:
             print("W&B run not initialized, skipping artifact upload.")
             return
 
