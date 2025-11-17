@@ -67,14 +67,14 @@ class ImageObservationTerm(ObservationTerm):
         Colorspace.BGRA: 4,
     }
 
-    def __init__(self,normalize=False, name="image",colorspace=Colorspace.GRAYSCALE,img_width:int = 128, img_height:int = 128, dtype=np.float32,allow_unsafe_uint8_cast=False):
+    def __init__(self,normalize=True, name="image",colorspace=Colorspace.GRAYSCALE, img_width:int = 128, img_height:int = 128, dtype=np.float32, allow_unsafe_uint8_cast=False):
         super().__init__(name, normalize)
 
         try:
             Img_Converter_Class = self._COLORSPACE_TO_CLASS[colorspace]
         except KeyError:
             raise ValueError(f"Unsupported colorspace: {colorspace}")
-
+        assert self.normalize and np.issubdtype(self.dtype, np.integer) and not self.allow_unsafe_uint8_cast, "Storing normalized images as uint8 will lead to data loss, Either disable normalization or set dtype to float32, You can override this check with allow_unsafe_uint8_cast=True (at your own risk)."
         self.num_channels = self._COLORSPACE_TO_NUM[colorspace]
         self.dtype = dtype
         self.allow_unsafe_uint8_cast = allow_unsafe_uint8_cast
@@ -93,14 +93,7 @@ class ImageObservationTerm(ObservationTerm):
         # NOTE: when we are sure this work we will removw the assert
         assert img.shape[0] == self.num_channels , f"Expected {self.num_channels} color channels, got {img.shape[0]}"
 
-        return img.astype(dtype=self.dtype)
+        return img.astype(dtype=self.dtype), {}
 
     def _normalize(self, obs):
-        # obs will be an image
-        if self.normalize and np.issubdtype(self.dtype, np.integer) and not self.allow_unsafe_uint8_cast:
-            raise ValueError(
-            "Storing normalized images as uint8 will lead to data loss. "
-            "Either disable normalization or set dtype to float32. "
-            "You can override this check with allow_unsafe_uint8_cast=True (at your own risk)."
-        )
         return (obs / 255).astype(self.dtype)

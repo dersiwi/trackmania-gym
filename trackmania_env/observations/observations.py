@@ -6,11 +6,10 @@ from configs.config import TrainConfig
 def get_observation_manager_from_cfg(cfg : TrainConfig, 
                             wrap_obs_in_test : bool = False, 
                             normalize : bool = False, 
-                            grayscale_imgs_as_uint8 : bool = False
                            ) -> ObservationManager:
     """Instantiate ObservationManager directly from config using Hydra."""
     
-    obs_manager = hydra.utils.instantiate(
+    obs_manager : ObservationManager = hydra.utils.instantiate(
         cfg.rl_env.obs_manager,
         normalize=normalize 
     )

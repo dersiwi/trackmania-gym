@@ -7,6 +7,7 @@ from gymnasium.spaces import Box
 from trackmania_env.observations.observation_term import ObservationTerm
 from game_interaction.ipc_fields import IPCFields
 from tminterface.structs import SimStateData
+from trackmania_env.utils.actionmap import ACTION_MAP,REVERSE_ACTION_MAP
 
 class HistoryObservationTerm(ObservationTerm, ABC):
     """
@@ -56,7 +57,7 @@ class HistoryObservationTerm(ObservationTerm, ABC):
     def _get_obs(self, game_states: Dict[str, Union[np.ndarray, Any]], **kwargs) -> np.ndarray:
         new_obs = self.extract_obs(game_states)
         self.hist.append(new_obs)
-        return self._queue_to_array()
+        return self._queue_to_array(), {}
 
     def _normalize(self, obs: np.ndarray) -> np.ndarray:
         """
@@ -71,7 +72,6 @@ class HistoryObservationTerm(ObservationTerm, ABC):
         """
         self.hist = deque([self.init_val] * self.maxlen_history, maxlen=self.maxlen_history)
 
-from trackmania_env.utils.actionmap import ACTION_MAP,REVERSE_ACTION_MAP
 
 class DiscreteActionHistoryTerm(HistoryObservationTerm):
     """This observation terms stores only the history of action indicies and not the mappinf to key presses"""

@@ -172,7 +172,7 @@ class ZoneCenterFeatures(ObservationTerm):
         relative_zone_positions = (future_zone_slice - position).T
         zone_centers_local = orientation.dot(relative_zone_positions).T  # (count, 3)
         
-        return np.array(zone_centers_local, dtype=np.float32).ravel()
+        return np.array(zone_centers_local, dtype=np.float32).ravel(), {}
     
     
     def update_zone_idx(self,

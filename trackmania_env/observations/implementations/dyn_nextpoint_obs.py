@@ -22,7 +22,7 @@ class DynamicNextPointObsManager(DictObservationManager):
         grouped_floats_obs = GroupedObservationTerm(
             name="floats",
             observation_terms=[
-               GlobalFeaturesTerm(lookahead_sec=lookahead_sec, n_points=n_points, name=" dynamic refline"),
+               GlobalFeaturesTerm(lookahead_sec=lookahead_sec, n_points=n_points, name="Dynamic refline"),
                 SpeedTerm(),
                 MobileStatesTerm(),
                 SurfaceFloats(),
