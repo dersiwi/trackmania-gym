@@ -82,9 +82,9 @@ wandb_callbacks:
   verbose: 2
 models:
   _partial_: true
-  _target_: neuronal_networks.vision_encoder.conv_NNs.VisionModelSix
+  _target_: neural_networks.vision_encoder.conv_NNs.VisionModelSix
 lr_scheduler:
-  _target_: neuronal_networks.lr_schedulers.DropoffScheduler
+  _target_: neural_networks.lr_schedulers.DropoffScheduler
   initial_learning_rate: 0.00025
   scheduling_beginn: 0.5
   scheduling_type: linear

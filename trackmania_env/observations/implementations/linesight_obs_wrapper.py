@@ -28,6 +28,7 @@ class LinesightObservationManager(DictObservationManager):
         n_zone_centers_extrapolate_before_start_of_map: int = 20,
         n_prev_actions_in_inputs: int = 5,
         sync_virtual_and_real_checkpoints: bool = True,
+        **kwargs
     ):
         """
         Initializes the Linesight Observation Manager.

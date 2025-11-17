@@ -1,3 +1,4 @@
+_target_: trackmania_env.observations.implementations.nextpoint_obs.NextPointObsManager
 name: "nextpointobs"
 
 # image related

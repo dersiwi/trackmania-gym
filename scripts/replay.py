@@ -37,7 +37,7 @@ def main(cfg : TrainConfig):
         tm_env = get_environment(cfg, control_queue, response_queue)
         
         # get algorithm and start learning process
-        vision_model, model = get_models(cfg, tm_env, print_params = True,load_model_path= model_path)
+        model = get_models(cfg, tm_env, print_params = True,load_model_path= model_path)
         #model.policy.features_extractor.eval()
         # this should be sufficient 
         eval_policy = model.policy.eval()

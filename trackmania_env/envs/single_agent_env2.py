@@ -53,8 +53,16 @@ class TMNF_Single_Agent_Env(gym.Env):
             reward_calculator : RewradCalculator,
             termination_manger : TerminationManager,
             reference_line: ReferenceLineManager,
-            env_cfg : EnvConfig,
-            gamma : float = 0.99,
+            reset_mode:str,
+            n_previous_actions:int,
+            position_buffer_size:int,
+            position_moved_threshold:float,
+            ignore_stuck_for_n_steps_after_reset:int,
+            game_speed:int,
+            countdown_speed:int,
+            waitforstep_timeout_in_s:float,
+            startposition_accuracy_threshold:float,
+            gamma:float,
             **kwargs):
         
         """
@@ -78,7 +86,7 @@ class TMNF_Single_Agent_Env(gym.Env):
             game_speed (int)        : sets speed of game, as defined in https://donadigo.com/tminterface/variables
 
         """
-        self.n_prev_actions = env_cfg.n_previous_actions
+        self.n_prev_actions = n_previous_actions 
         self.actions : deque = deque([(False,False,False,False)] * self.n_prev_actions, maxlen=self.n_prev_actions)
         """list of actions that may be stored later."""
 
@@ -95,12 +103,12 @@ class TMNF_Single_Agent_Env(gym.Env):
 
         # variables used for resetting car(posiiton)
         self.start_position :np.ndarray= None
-        self.reset_mode = env_cfg.reset_mode
+        self.reset_mode = reset_mode 
         
-        self.position_buffer = PositionBuffer(env_cfg.position_buffer_size)
-        self.position_buffer_threshold = env_cfg.position_moved_threshold
+        self.position_buffer = PositionBuffer(position_buffer_size)
+        self.position_buffer_threshold = position_moved_threshold
 
-        self.ignore_stuck_for_n_steps_after_reset = env_cfg.ignore_stuck_for_n_steps_after_reset
+        self.ignore_stuck_for_n_steps_after_reset = ignore_stuck_for_n_steps_after_reset
 
         self.rew_calculator = reward_calculator
         self.obs_manager = obs_manager
@@ -121,20 +129,26 @@ class TMNF_Single_Agent_Env(gym.Env):
 
         self.__send_command_to_process_wrapper(IPCCommands.get_cmd_command(self.__ipc_cmd_id, 
                                                                                              TMInterfaceCommands.set_variable(TMInterfaceCommands.Variables.SPEED, 
-                                                                                                                              value=env_cfg.game_speed)))
+                                                                                                                              value=game_speed)))
         self.__send_command_to_process_wrapper(IPCCommands.get_cmd_command(self.__ipc_cmd_id, 
                                                                                                     TMInterfaceCommands.set_variable(TMInterfaceCommands.Variables.COUNTDOWN_SPEED, 
-                                                                                                                                    value=env_cfg.countdown_speed)))
+                                                                                                                                    value=countdown_speed)))
         # this is the defautl simstateData when the car first gets spawned. We will use this for the random reset
         self.default_ssD = None
         self.default_set = False
         self.first_reset = False
         
-        self.waitforstep_timeout = env_cfg.waitforstep_timeout_in_s
+        self.waitforstep_timeout = waitforstep_timeout_in_s
 
-        self.startposition_accuracy_threshold = env_cfg.startposition_accuracy_threshold
+        self.startposition_accuracy_threshold = startposition_accuracy_threshold
 
         self.info = {}
+
+        # NOTE: this always has to come last. 
+        # setting the environment for all of the managers who need it
+        self.obs_manager.set_env(self)
+        self.rew_calculator.set_env(self)
+        self.termination_manager.set_env(self)
 
     def set_respawn_manager(self, respawn_manager : OrientationlessRespawnManager):
         self.orientationless_respawn_manager = respawn_manager

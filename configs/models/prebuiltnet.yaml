@@ -27,9 +27,10 @@
 # for the available weights see https://docs.pytorch.org/vision/main/_modules/torchvision/models/vision_transformer.html#vit_b_16
 
 _partial_: True
-_target_: neuronal_networks.vision_encoder.prebuilt_nets.PrebuiltnetImplementation
-model_name: "vit_b_16"
-modeltype : "vit"
-pretrained: True
-trainable_backbone: True
-weights_name: "DEFAULT"
+_target_: neural_networks.vision_encoder.prebuilt_nets.PrebuiltnetImplementation
+args:
+  model_name: "vit_b_16"
+  modeltype : "vit"
+  pretrained: True
+  trainable_backbone: True
+  weights_name: "DEFAULT"

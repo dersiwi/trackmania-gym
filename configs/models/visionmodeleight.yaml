@@ -1,2 +1,2 @@
 _partial_: True
-_target_: neuronal_networks.vision_encoder.conv_NNs.VisionModelEight
+_target_: neural_networks.vision_encoder.conv_NNs.VisionModelEight

@@ -8,7 +8,8 @@ IMAGE_SIZE = 64
 """Image size as specified in sophy paper."""
 
 class SophyObsManager(DictObservationManager):
-    def __init__(self, colorspace, convert_torch, normalize, img_width, img_height,maxlen_history:int = 3,lookahead_sec = 6,n_points = 60, img_dtype=np.float32):
+    def __init__(self, colorspace, convert_torch, normalize, img_width, img_height,maxlen_history:int = 3,lookahead_sec = 6,n_points = 60, img_dtype=np.float32,**kwargs):
+        #NOTE: this with the kwargs is only so that we could easily use configs to instantiate
         """
         Initializes the GT Sophy-style observation manager (https://arxiv.org/pdf/2406.12563v1).
 

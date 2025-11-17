@@ -112,7 +112,12 @@ class GroupedObservationTerm(ObservationTerm):
             term.reset()
 
     def _get_obs(self, game_states: Dict[str, Union[np.ndarray, SimStateData]], **kwargs) -> np.ndarray:
-        obs_list = [term.get_observation(game_states)[1].ravel() for term in self.observation_terms]
+        obs_list = []
+        for term in self.observation_terms:
+            obs = term.get_observation(game_states)[1].ravel()
+            obs_list.append(obs)
+            self.info.update(term.info)
+
         return np.concatenate(obs_list, axis=-1).astype(np.float32)
 
     def _normalize(self, obs: np.ndarray) -> np.ndarray:

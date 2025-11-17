@@ -1,3 +1,4 @@
+_target_: trackmania_env.observations.implementations.linesight_obs_wrapper.LinesightObservationManager
 name: "linesight"
 
 img_width: 128
@@ -17,3 +18,5 @@ distance_between_checkpoints: 0.5
 road_width: 90  ## a little bit of margin, could be closer to 24 probably ? Don't take risks there are curvy roads
 sync_virtual_and_real_checkpoints : True
 n_prev_actions_in_inputs: 5
+ref_line_path: ${gmi.reference_line}
+map_path: "${platforms.map_dir}/${gmi.track}"

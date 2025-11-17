@@ -9,11 +9,14 @@ from game_interaction.run_multiprocess_wrapper import start_process_and_wait_for
 from trackmania_env.envs.enivonrments import get_environment
 
 from trackmania_env.envs.testenv_single_agent import TestEnvironment
-import trackmania_env.envs.testcases_single_agent as testcases
+
+import trackmania_env.callbacks.plotting as plot_callback
+import trackmania_env.callbacks.printing as print_callback
 
 from utils.hydra_wandb_utils import load_and_merge_platform
 
 import hydra
+
 from configs.config import TrainConfig
 
 _HYDRA_PARAMS = {
@@ -30,8 +33,27 @@ def main(cfg : TrainConfig):
     tm_env : TestEnvironment = get_environment(cfg, control_queue, response_queue, test=True)
 
     obs, info = tm_env.reset()
-    tm_env.add_env_test_calback(testcases.Plot_Rewards_Callback(plot_total=False))
-  
+
+    # Plotting referece line 
+    # tm_env.add_env_test_calback(plot_callback.Plot_ReferenceLine_Callback(reference_line= tm_env.reference_line.reference_line))
+
+    # Plotting lateral distance 
+    # tm_env.add_env_test_calback(plot_callback.Plot_Lateral_Distance_Callback(reference_line_manager=tm_env.reference_line))
+    
+    # Plotting Images
+    obs_manager = cfg.rl_env.obs_manager 
+    tm_env.add_env_test_calback(plot_callback.Plot_Obs_Images_Callback(img_size= (obs_manager.img_width,obs_manager.img_height), color_space= obs_manager.colorspace, backend ="matplotlib"))
+    
+    # Plotting Rewards 
+    # tm_env.add_env_test_calback(plot_callback.Plot_Rewards_Callback(env = tm_env))
+
+    # Plotting arbitrary 1D values
+    # keys_to_plot = ["last_has_any_lateral_contact_time","gas","display_speed"]
+    # tm_env.add_env_test_calback(plot_callback.Plot_1D_Values_Callback(keys_to_plot= keys_to_plot))
+
+    #Plotting a specified 3D value 
+    # tm_env.add_env_test_calback(plot_callback.Plot_3D_Value_Callback(key_to_plot="velocity"))
+
     tm_env.step_with_manual_input()
     
     control_queue.put(IPCCommands.get_end_syncloop_command(1000)) #1000 doesnt matter.

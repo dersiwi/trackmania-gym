@@ -38,6 +38,7 @@ class NextReflinePoint(ObservationTerm):
 
         refline: ReferenceLineManager = self.env.reference_line
         next_idx, _, _ = refline.get_distance_to_next_point()
+        self.info["next_refline_index"] = next_idx
 
         upcoming_refline_points: np.ndarray = refline.get_reference_line_points(
             begin_idx=next_idx,
@@ -56,6 +57,8 @@ class NextReflinePoint(ObservationTerm):
             (upcoming_refline_points - car_position).T
         ).T  # Shape: (n_refline_points, 3)
 
+        self.info["comming_refline_points"] = rel_points
+        self.info["orientation"] = car_orientation
         return rel_points
 
 class LateralDistance(ObservationTerm):
