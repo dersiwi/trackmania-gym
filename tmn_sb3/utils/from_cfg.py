@@ -122,25 +122,13 @@ def get_model_from_config(
     - The model can be configured to share or separate feature extractors between actor and critic networks.
     - Uses Hydra for instantiating models, schedulers, and other configurable components.
 
-    Parameters
-    ----------
-    cfg : TrainConfig
-        Global training configuration containing all parameters related to models, 
-        environments, algorithms, and policies.
-    tm_env : TMNF_Single_Agent_Env
-        The Gymn environment used for training the agent.
-    print_params : bool, optional
-        If True, prints the shapes of the neural network weights for inspection.
-        Defaults to False.
-    run_id : str, optional
-        Identifier for the current run. Used for TensorBoard logging.
-        Defaults to "test".
-    load_model_path : str or None, optional
-        Path to a saved model. If provided, the model parameters 
-        are loaded into the instantiated model.
-    load_replay_buffer_path : str or None, optional
-        Path to a previously saved replay buffer. If provided and the algorithm 
-        is off-policy (e.g., DQN, SAC), the replay buffer is loaded as well.
+    Args:
+        cfg (TrainConfig) : Global training configuration containing all parameters related to models,  environments, algorithms, and policies.
+        tm_env (TMNF_Single_Agent_Env) :             The Gymn environment used for training the agent.
+        print_params  (bool) : If True, prints the shapes of the neural network weights for inspection. Defaults to False.
+        run_id (str) : Identifier for the current run. Used for TensorBoard logging. Defaults to "test".
+        load_model_path (str) : Path to a saved model. If provided, the model parameters  are loaded into the instantiated model.
+        load_replay_buffer_path (str) : Path to a previously saved replay buffer. If provided and the algorithm  is off-policy (e.g., DQN, SAC), the replay buffer is loaded as well.
 
     Returns
     -------

@@ -10,14 +10,19 @@ from tminterface.structs import SimStateData
 from trackmania_env.utils.reference_line_manager import ReferenceLineManager
 from trackmania_env.observations.observation_term import ObservationTerm
 
-# TODO convert the observation in torch here 
-class ObservationManager(ABC):
-    def __init__(self,observation_terms: Union[ObservationTerm,List[ObservationTerm]], convert_torch: bool = True, normalize: bool = False, debug:bool = False):
-        """
-        Base manager class.
-        """
 
-        self.observation_terms = observation_terms
+class ObservationManager(ABC):
+    def __init__(self, observation_terms: list[ObservationTerm], convert_torch: bool = True, normalize: bool = False, debug:bool = False):
+        """
+        Base manager class
+        Args:
+            observation_terms (list[ObservationTerm])   : List of observation-terms implemented in this observation-manager
+            convert_torch (bool)                        : Convert the observation-terms to torch-before returning them
+        """
+        if not type(observation_terms) == list:
+            observation_terms = [observation_terms]
+
+        self.observation_terms : list[ObservationTerm] = observation_terms
         self.convert_torch = convert_torch
         self.normalize = normalize
         self.debug = debug
@@ -164,10 +169,10 @@ class DictObservationManager(CompositeObservationManager):
         self.observation: Dict[str, Optional[np.ndarray]] = {key: None for key in self.obs_space.spaces}
    
     def _get_observation(self, obs: Dict[str, Union[np.ndarray, SimStateData]]) -> Tuple[Dict[str, np.ndarray],Dict[str,Any]]:
-        assert self.obs_space is not None, "Observation space not initialized."
+
         for term in self.observation_terms:
             name, computed_obs = term.get_observation(obs)
-            assert name in self.obs_space.spaces, f"Observation '{name}' not in obs_space."
+
             self.info.update(term.info) 
             self.observation[name] = computed_obs
         return self.observation,self.info

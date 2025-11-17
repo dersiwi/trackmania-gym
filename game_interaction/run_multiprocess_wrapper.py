@@ -23,7 +23,7 @@ def run_wrapper(gmi, launch_game : bool, cmd_q : Queue, res_q : Queue, track : s
     wrapper.syncloop()
 
 
-def start_process_and_wait_for_startsignal(train_config : TrainConfig, image_width : int, image_height : int,lock: str = None) -> tuple[Process, Queue, Queue]:
+def start_process_and_wait_for_startsignal(train_config : TrainConfig, image_width : int, image_height : int,lock: str = None, port : int = 8775) -> tuple[Process, Queue, Queue]:
     """Starts a process that wrapps TMIProcessWrapper to communicate with Trackmania instance. Waits for established communication after launching process.
     If no connection can be found or no answer received, Queue.Empty-Error is thrown.
     
@@ -45,7 +45,7 @@ def start_process_and_wait_for_startsignal(train_config : TrainConfig, image_wid
         TMLoader_profile_name= train_config.gmi.tm_loader_profile_name,
         linux = train_config.platforms.os == "linux",
         headless= train_config.gmi.headless,
-        tmi_port= train_config.gmi.port,
+        tmi_port= port,
         lock=lock,)
 
     control_queue = Queue() # queue for commands to send to TMIProcessWrapper

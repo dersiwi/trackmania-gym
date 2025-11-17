@@ -16,6 +16,7 @@ class NextReflinePoint(ObservationTerm):
 
     def __init__(self,n_refline_points: int,reference_line_stride: int,normalize: bool = True,name: str = "static_ref_line_points"):
         super().__init__(name, normalize)
+        assert n_refline_points % reference_line_stride == 0
         self.n_refline_points = n_refline_points
         self.reference_line_stride = reference_line_stride
 

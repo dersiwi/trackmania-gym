@@ -15,9 +15,14 @@ from trackmania_env.observations.observation_terms.ref_line_terms import (
     LateralDistance,
 )
 
-def make_float_obs(name:str, ref_line_lookahead:int, ref_line_stride:int):
-
-    assert ref_line_lookahead % ref_line_stride == 0
+def make_float_obs(name:str, ref_line_lookahead:int, ref_line_stride:int) -> GroupedObservationTerm:
+    """Helper method coombining Multiple Float-Like observations    
+        - NextReflinePoint
+        - SpeedTerm
+        - MobileStatesTerm
+        - LateralDistance
+        - RelativeDistance
+    """
 
     return GroupedObservationTerm(
             name= name,

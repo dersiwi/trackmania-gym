@@ -30,14 +30,16 @@ class CrashProofEnvironment(gym.Env):
     once more; however truncated is set to True. The learner process can then call reset, in order to keep disruption to trajectory collection mininmal.   
     """
 
-    def __init__(self, train_cfg : TrainConfig):
+    def __init__(self, train_cfg : TrainConfig, port : int = 8775):
         """
         Args:
-            train_cfg (TrainConfig) : Configuration file used for initialization of enviroment  
+            train_cfg (TrainConfig) : Configuration file used for initialization of enviroment
+            port (int)              : TCP-port id for communication between TMInterface and ProcessWrapper
         """
         super().__init__()
 
         self.cfg : TrainConfig = train_cfg
+        self.port : int = port
         self.env : TMNF_Single_Agent_Env = None
 
         self.tmi_process : Process  = None
@@ -72,7 +74,8 @@ class CrashProofEnvironment(gym.Env):
         self.logger.info(f"Initializing environment for the {self.env_initalizations}-th time.")
         self.tmi_process, self.control_queue, self.response_queue = start_process_and_wait_for_startsignal(self.cfg, 
                                                                                             self.cfg.rl_env.obs_manager.img_width, 
-                                                                                            self.cfg.rl_env.obs_manager.img_height)
+                                                                                            self.cfg.rl_env.obs_manager.img_height,
+                                                                                            self.port)
         self.env = get_environment(self.cfg, self.control_queue, self.response_queue)
 
     def finalize_process(self, reinit : bool = True):
