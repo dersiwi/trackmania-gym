@@ -3,13 +3,13 @@ from collections import deque
 import numpy as np
 import gymnasium as gym
 
-from trackmania_env.observations.observation_term import ObservationTerm
+from trackmania_env.observations.observation_term import ObservationTerm, VectorlikeTerm
 from trackmania_env.utils import constants
 from game_interaction.ipc_fields import IPCFields
 from tminterface.structs import SimStateData, HmsDynaStateStruct
 from trackmania_env.utils.interpolation import interpolate_points
 
-class PropriocentricTerm(ObservationTerm):
+class PropriocentricTerm(VectorlikeTerm):
     # === Class-level constants ===
     MAX_LINEAR_SPEED = 1000.0          # Known upper bound of vehicle speed
     MAX_ACCEL = 50.0                   # Assumed reasonable bound for acceleration
@@ -31,7 +31,7 @@ class PropriocentricTerm(ObservationTerm):
         - h_a_t (R^n): History of the last n (default is 3) steering angles.
         - h_d_t (R^n-1): History of delta (change in) steering values over the last n steps.
         """
-        super().__init__(name, normalize)
+        super().__init__(name, normalize, 3*4 + 2*maxlen_history - 1)
 
         self.maxlen_history = maxlen_history
         self.observation_space = gym.spaces.Box(
@@ -86,7 +86,7 @@ class PropriocentricTerm(ObservationTerm):
         self.last_velocity = v_t
 
         # Debug info
-        self.info.update({
+        info = {
             "linear_velocity": v_t,
             "linear_acceleration": a_t,
             "angular_velocity": v_r_t,
@@ -95,7 +95,7 @@ class PropriocentricTerm(ObservationTerm):
             "steer": steer,
             "history_steering_angles": h_a_t,
             "history_steering_deltas": h_d_t,
-        })
+        }
 
         # Final proprioceptive observation
         propriocentric_features = np.hstack([
@@ -107,7 +107,7 @@ class PropriocentricTerm(ObservationTerm):
             h_d_t.ravel(),    # (n-1,)
         ]).astype(np.float32)
 
-        return propriocentric_features
+        return propriocentric_features, info
 
     def _normalize(self, obs):
         """Normalize proprioceptive features."""
@@ -139,7 +139,7 @@ class PropriocentricTerm(ObservationTerm):
         self.h_a_t = np.array([0.,0.,0.],dtype=np.float32)
         self.angles : deque = deque([0.]*self.maxlen_history, maxlen=self.maxlen_history)
     
-class GlobalFeaturesTerm(ObservationTerm):
+class GlobalFeaturesTerm(VectorlikeTerm):
     def __init__(self, name ="global_features", normalize = False,lookahead_sec:int = 6,n_points:int = 60):
         """
         Extracts global course point features from the input game states, following the method
@@ -155,7 +155,7 @@ class GlobalFeaturesTerm(ObservationTerm):
         giving a predictive spatial representation of the upcoming track segment.
         """
         #NOTE as for now we only return the center points no left and right
-        super().__init__(name, normalize)
+        super().__init__(name, normalize, n_points * 3)
         self.lookahead_sec = lookahead_sec
         self.n_points = n_points
         self.observation_space = gym.spaces.Box(
@@ -191,14 +191,14 @@ class GlobalFeaturesTerm(ObservationTerm):
         comming_refline_points = np.repeat(points, self.n_points, axis=0) if points.shape[0] == 1 else interpolate_points(n_points= self.n_points,points=points)
         comming_refline_points : np.ndarray = np.array(orientation).dot((comming_refline_points - np.array(position)).T).T
 
-        self.info.update({
+        info = {
             "comming_refline_points" : comming_refline_points,
             "orientation": orientation,
             "position": position,
             "next_refline_index": next_idx,
-        })
+        }
      
-        return comming_refline_points.ravel().astype(np.float32) 
+        return comming_refline_points.ravel().astype(np.float32), info
     
     def _normalize(self, obs):
         return obs

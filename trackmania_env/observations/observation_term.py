@@ -104,6 +104,23 @@ class ObservationTerm(ABC):
         raise NotImplementedError()
     
 
+class VectorlikeTerm(ObservationTerm, ABC):
+    """This is an observation term that is naturally in vector-from. A position e.g. lives naturally in a singular-column space. However an image naturally lives in 
+    image space. """
+    def __init__(self, name, normalize, dimension):
+        super().__init__(name, normalize)
+        self.dimension = dimension
+
+    def get_flatten_dim(self):
+        return self.dimension
+    
+    def flatten(self, processed_obs):
+        return processed_obs
+    
+    def get_native_shape(self):
+        return (self.dimension, )
+
+
 class GroupedObservationTerm(ObservationTerm):
     """
     Groups multiple ObservationTerms and outputs a single flat array under one name.

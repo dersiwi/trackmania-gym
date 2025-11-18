@@ -3,15 +3,12 @@ from trackmania_env.observations.observation_manager import ObservationManager
 from trackmania_env.observations.observation_test import ObservationTest
 from configs.config import TrainConfig
 
-def get_observation_manager_from_cfg(cfg : TrainConfig, 
-                            wrap_obs_in_test : bool = False, 
-                            normalize : bool = False, 
-                           ) -> ObservationManager:
+def get_observation_manager_from_cfg(cfg : TrainConfig, wrap_obs_in_test : bool = False, normalize : bool = False, ) -> ObservationManager:
     """Instantiate ObservationManager directly from config using Hydra."""
     
     obs_manager : ObservationManager = hydra.utils.instantiate(
         cfg.rl_env.obs_manager,
-        normalize=normalize 
+        normalize=normalize
     )
 
     if wrap_obs_in_test:
@@ -25,8 +22,5 @@ def get_observation_manager_from_cfg(cfg : TrainConfig,
             log_directory="logs/observations", 
             log_frequency=1
         )
-        
-    # if hasattr(obs_manager, 'grayscaleimgs_as_uint8'):
-    #     obs_manager.grayscaleimgs_as_uint8(grayscale_imgs_as_uint8)
 
     return obs_manager

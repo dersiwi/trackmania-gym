@@ -3,15 +3,15 @@ import numpy as np
 from gymnasium.spaces import Box
 from tminterface.structs import SimStateData, RealTimeState, SimulationWheel, SceneVehicleCar, Engine
 
-from trackmania_env.observations.observation_term import ObservationTerm
+from trackmania_env.observations.observation_term import ObservationTerm, VectorlikeTerm
 from trackmania_env.utils.constants import MAX_SPEED, ObsNormalizationFactors
 from trackmania_env.utils.contact_materials import physics_behavior_fromint, NUM_SURFACE_CATEGORIES
 from game_interaction.ipc_fields import IPCFields
 
 
-class SpeedTerm(ObservationTerm):
+class SpeedTerm(VectorlikeTerm):
     def __init__(self, name: str = "speed", normalize: bool = True):
-        super().__init__(name, normalize)
+        super().__init__(name, normalize, dimension=1)
         self.observation_space = Box(
             low=0.0,
             high=1.0 if normalize else MAX_SPEED,
@@ -26,12 +26,12 @@ class SpeedTerm(ObservationTerm):
         return np.array([game_states[IPCFields.SIMSTATE].display_speed], dtype=np.float32), {}
 
 
-class SurfaceFloats(ObservationTerm):
+class SurfaceFloats(VectorlikeTerm):
     """
     Returns a float vector representing the surface category each wheel is currently in contact with.
     """
     def __init__(self, name: str = "surface_floats", normalize: bool = True):
-        super().__init__(name, normalize)
+        super().__init__(name, normalize, 4)
         self.observation_space = Box(
             low=0.0,
             high=float(NUM_SURFACE_CATEGORIES + 1),
@@ -64,11 +64,11 @@ class SurfaceFloats(ObservationTerm):
 
         return np.array(surface_floats, dtype=np.float32), {}
 
-class MobileStatesTerm(ObservationTerm):
+class MobileStatesTerm(VectorlikeTerm):
     """Returns all relevant dynamic car states"""
 
     def __init__(self, name = "mobile states", normalize=True):
-        super().__init__(name,normalize)
+        super().__init__(name,normalize, 16)
         
         # Define lower and upper bounds for each of the 16 features
         low = np.array(

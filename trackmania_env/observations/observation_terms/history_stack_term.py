@@ -32,8 +32,8 @@ class HistoryObservationTerm(ObservationTerm, ABC):
             - An initial value of the same type as observations it will add
             - The NumPy dtype to use when converting to arrays
         Example:
-            return 0.0, np.float32
-            return np.zeros(3, dtype=np.float32), np.float32
+            >>> return 0.0, np.float32
+            >>> return np.zeros(3, dtype=np.float32), np.float32
         """
         raise NotImplementedError
 

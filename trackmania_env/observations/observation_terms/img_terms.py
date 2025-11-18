@@ -15,6 +15,7 @@ class ImgConverter:
 
     def __init__(self, colorspace : str):
         self._num_channels = ImgConverter.channel_map[colorspace]
+        self.colorspace = colorspace
         assert self.colorspace in ImgConverter.channel_map.keys(), f"Given colorspace '{colorspace}' did not match any implemented colorspaces." 
 
     def cnvt_img(self, img: np.ndarray) -> np.ndarray:
@@ -42,7 +43,6 @@ class ImageObservationTerm(ObservationTerm):
     def __init__(self,normalize = True, name="image", colorspace="grayscale", img_width : int = 128, img_height : int = 128, dtype=np.float32):
         super().__init__(name, normalize)
 
-        assert self.normalize and np.issubdtype(self.dtype, np.integer), "Storing normalized images as uint8 will lead to data loss, Either disable normalization or set dtype to float32"
         
         self.dtype = dtype
         self.img_converter = ImgConverter(colorspace)
@@ -56,6 +56,10 @@ class ImageObservationTerm(ObservationTerm):
             high= 1 if normalize else 255, 
             shape=(self.img_converter.num_channels,img_height,img_width), 
             dtype=self.dtype)
+        
+        if self.normalize and np.issubdtype(self.dtype, np.integer):
+            print(f"Storing normalized images as uint8 will lead to data loss, Either disable normalization or set dtype to float32. \nCurrent dtype : {self.dtype}")
+
 
     def _get_obs(self, game_states, **kwargs):
         #this will be a bgra img and already has the shape of img_height x img_width.
