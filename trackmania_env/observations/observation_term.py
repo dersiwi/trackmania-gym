@@ -7,7 +7,8 @@ from gymnasium.spaces import Space
 
 from tminterface.structs import SimStateData
 
-# TODO should we include the option for setting the dtype ? via passing it as a param through the constructor 
+
+
 class ObservationTerm(ABC):
     """
     Base class for individual observation terms used in Trackmania environments.
@@ -20,16 +21,18 @@ class ObservationTerm(ABC):
         """
         self.name = name
         self.normalize = normalize
-
-        self.env: Optional[gym.Env] = None
+        
+        from trackmania_env.envs.enivonrments import TMNF_Single_Agent_Env
+        self.env: TMNF_Single_Agent_Env = None
         self.observation_space: Optional[Space] = None
         self.info : Dict[str,Any] = {}
 
-    def set_env(self, env: gym.Env):
+    def set_env(self, env):
         """
         Assign the environment to the observation term.
         """
-        self.env = env
+        from trackmania_env.envs.single_agent_env2 import TMNF_Single_Agent_Env
+        self.env : TMNF_Single_Agent_Env = env
 
     def reset(self):
         """
@@ -46,7 +49,7 @@ class ObservationTerm(ABC):
         """
         return self.observation_space
     
-    def get_observation(self, game_states: Dict[str, Union[np.ndarray, SimStateData]], **kwargs) -> tuple[str, np.ndarray]:
+    def get_observation(self, game_states: Dict[str, Union[np.ndarray, SimStateData]], **kwargs) -> tuple[np.ndarray, dict]:
         """
         Public method to compute the observation, with optional normalization.
 
@@ -55,15 +58,15 @@ class ObservationTerm(ABC):
                 The input state dict {image, sim state}.
 
         Returns:
-            Tuple[str, np.ndarray]: A tuple (name, observation).
+            Tuple[str, np.ndarray]: A tuple (observation, info).
         """
-        obs = self._get_obs(game_states, **kwargs)
+        obs, info = self._get_obs(game_states, **kwargs)
         if self.normalize:
             obs = self._normalize(obs)
-        return self.name, obs
+        return obs, info
 
     @abstractmethod
-    def _get_obs(self, game_states: Dict[str, Union[np.ndarray, SimStateData]], **kwargs) -> np.ndarray:
+    def _get_obs(self, game_states: Dict[str, Union[np.ndarray, SimStateData]], **kwargs) -> tuple[np.ndarray, dict[str, str]]:
         """
         Compute the unnormalized observation.
         Must be implemented by all subclasses.
@@ -78,6 +81,28 @@ class ObservationTerm(ABC):
         """
         raise NotImplementedError()
     
+    @abstractmethod
+    def flatten(self, processed_obs: np.ndarray) -> np.ndarray:
+        """
+        Flattens observation into shape (dim,) where dim is the flattened dimension of the term
+        """
+        raise NotImplementedError()
+    
+    @abstractmethod
+    def get_flatten_dim(self) -> int:
+        """
+        Returns dim, which is the dimension of the flattened observation-term (@see flatten(self))
+        """
+        raise NotImplementedError()
+    
+    @abstractmethod
+    def get_native_shape(self) -> tuple:
+        """
+        Returns the native shape, such that this term, which has been previously flattened, could be turned back into its
+        native shape (for images e.g. this is C, H, W).
+        """
+        raise NotImplementedError()
+    
 
 class GroupedObservationTerm(ObservationTerm):
     """
@@ -85,7 +110,7 @@ class GroupedObservationTerm(ObservationTerm):
     Useful for stacking features into a single Box space.
     """
 
-    def __init__(self, observation_terms: List[ObservationTerm], name: str, normalize: bool = False):
+    def __init__(self, observation_terms: List[ObservationTerm], name: str, normalize: bool = True):
         super().__init__(name=name, normalize=normalize)
         self.observation_terms = observation_terms
 
@@ -114,11 +139,11 @@ class GroupedObservationTerm(ObservationTerm):
     def _get_obs(self, game_states: Dict[str, Union[np.ndarray, SimStateData]], **kwargs) -> np.ndarray:
         obs_list = []
         for term in self.observation_terms:
-            obs = term.get_observation(game_states)[1].ravel()
-            obs_list.append(obs)
-            self.info.update(term.info)
+            obs, info = term.get_observation(game_states)
+            obs_list.append(obs.ravel())
+            self.info.update(info)
 
-        return np.concatenate(obs_list, axis=-1).astype(np.float32)
+        return np.concatenate(obs_list, axis=-1).astype(np.float32), self.info
 
     def _normalize(self, obs: np.ndarray) -> np.ndarray:
         return obs  # Already normalized at term level

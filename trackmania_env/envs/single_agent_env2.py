@@ -43,7 +43,7 @@ class TMNF_Single_Agent_Env(gym.Env):
     """The reinforcement learning environment for Trackmania Nations Forever"""
 
     metadata = {"render.modes": ["human", "rgb_array"], "video.frames_per_second": 30}
-    # TODO converting to toch should happen here and not in obsterms
+
     # init, step and reset have to be implemented for the class to be gym compatible
     def __init__(
             self,
@@ -52,7 +52,7 @@ class TMNF_Single_Agent_Env(gym.Env):
             obs_manager : ObservationManager,
             reward_calculator : RewradCalculator,
             termination_manger : TerminationManager,
-            reference_line: ReferenceLineManager,
+            reference_line : ReferenceLineManager,
             reset_mode:str,
             n_previous_actions:int,
             position_buffer_size:int,
@@ -99,7 +99,7 @@ class TMNF_Single_Agent_Env(gym.Env):
         self.logger = logging.getLogger(self.__class__.__name__)
         
         # reference line 
-        self.reference_line = reference_line
+        self.reference_line : ReferenceLineManager = reference_line
 
         # variables used for resetting car(posiiton)
         self.start_position :np.ndarray= None
@@ -371,18 +371,12 @@ class TMNF_Single_Agent_Env(gym.Env):
         self.__send_command_to_process_wrapper(IPCCommands.get_cmd_command(self.__ipc_cmd_id, 
                                                                                     TMInterfaceCommands.teleport(self.start_position)))
     
-    def render(self, mode = "human") -> Optional[np.array]:
+    def render(self, mode = "rgb_array") -> Optional[np.array]:
         """
-        This defines the render method. It supports:
-            - mode="human": The environment is continuously rendered in the current 
-            display or terminal, usually for human consumption.
-            
+        This defines the render method. It supports:            
             - mode="rgb_array": Return a single frame representing the current state
             of the environment. A frame is a np.ndarray with shape (x, y, 3) .
         """
-        if mode == "human" :
-            # TODO should we actually do here some render things ?
-            return None
         if mode == "rgb_array":
             # TODO retun the actual frame
             return np.zeros(shape = self.img_shape)

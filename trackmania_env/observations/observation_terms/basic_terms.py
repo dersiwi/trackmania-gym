@@ -23,7 +23,7 @@ class SpeedTerm(ObservationTerm):
         return obs / ObsNormalizationFactors.speed_norm
 
     def _get_obs(self, game_states: dict[str, Union[np.ndarray, SimStateData]], **kwargs) -> np.ndarray:
-        return np.array([game_states[IPCFields.SIMSTATE].display_speed], dtype=np.float32)
+        return np.array([game_states[IPCFields.SIMSTATE].display_speed], dtype=np.float32), {}
 
 
 class SurfaceFloats(ObservationTerm):
@@ -62,7 +62,7 @@ class SurfaceFloats(ObservationTerm):
                 value = idx + 1 / (NUM_SURFACE_CATEGORIES + 1)  # +1 because sometimes its just no surface category (wheel is in the air.)
                 surface_floats.append(float(value))
 
-        return np.array(surface_floats, dtype=np.float32)
+        return np.array(surface_floats, dtype=np.float32), {}
 
 class MobileStatesTerm(ObservationTerm):
     """Returns all relevant dynamic car states"""
@@ -116,4 +116,4 @@ class MobileStatesTerm(ObservationTerm):
                 mobil.is_freewheeling, # Bool                                                       size: 1 15
             ],dtype=np.float32,)
 
-        return car_gear_and_wheels
+        return car_gear_and_wheels, {}
