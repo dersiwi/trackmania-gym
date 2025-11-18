@@ -6,7 +6,7 @@ from gymnasium import spaces
 from gymnasium.spaces import Space
 
 from tminterface.structs import SimStateData
-from trackmania_env.envs.enivonrments import TMNF_Single_Agent_Env
+
 
 
 class ObservationTerm(ABC):
@@ -21,16 +21,18 @@ class ObservationTerm(ABC):
         """
         self.name = name
         self.normalize = normalize
-
+        
+        from trackmania_env.envs.enivonrments import TMNF_Single_Agent_Env
         self.env: TMNF_Single_Agent_Env = None
         self.observation_space: Optional[Space] = None
         self.info : Dict[str,Any] = {}
 
-    def set_env(self, env: gym.Env):
+    def set_env(self, env):
         """
         Assign the environment to the observation term.
         """
-        self.env = env
+        from trackmania_env.envs.single_agent_env2 import TMNF_Single_Agent_Env
+        self.env : TMNF_Single_Agent_Env = env
 
     def reset(self):
         """

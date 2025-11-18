@@ -50,13 +50,15 @@ class ObservationManager(ABC):
         """
         Sets the environment and propagates it to observation terms.
         """
-        self.env = env
+        from trackmania_env.envs.single_agent_env2 import TMNF_Single_Agent_Env
+        self.env : TMNF_Single_Agent_Env = env
         for obsterm in self.observation_terms:
             obsterm.set_env(env)
 
     def get_observation(self, obs: Dict[str, Union[np.ndarray, SimStateData]]) -> Tuple[Dict[str, np.ndarray],Dict[str,Any]]:
         """
-        Processes raw input like {"image": np.ndarray , "sim_state": SimStateData(...)} into a structured observation.
+        Processes raw input like {"image": np.ndarray , "sim_state": SimStateData(...)} into a structured observation. NOTE: the raw
+        observations are never vectorized.
         """
         obsdict, info = self._get_obs_as_dict(obs)
         if not self.return_as_dict:
