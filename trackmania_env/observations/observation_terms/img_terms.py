@@ -1,4 +1,4 @@
-from abc import ABC,abstractmethod
+from __future__ import annotations
 import numpy as np
 
 from gymnasium.spaces import Box
@@ -7,82 +7,54 @@ from trackmania_env.observations.observation_term import ObservationTerm
 from game_interaction.ipc_fields import IPCFields
 
 
-class ImgConverter(ABC):
-    def __init__(self, num_channels: int):
-        self._num_channels = num_channels
+class ImgConverter:
+    GRAYSCALE = "grayscale"
+    RGB = "rgb"
+    BGRA = "bgra"
+    channel_map = {GRAYSCALE: 1,RGB: 3, BGRA: 4}
 
-    @abstractmethod
+    def __init__(self, colorspace : str):
+        self._num_channels = ImgConverter.channel_map[colorspace]
+        assert self.colorspace in ImgConverter.channel_map.keys(), f"Given colorspace '{colorspace}' did not match any implemented colorspaces." 
+
     def cnvt_img(self, img: np.ndarray) -> np.ndarray:
-        # the images tmnf interface returns are per default rgba
-        raise NotImplementedError
+        """ the images tmnf interface returns are per default rgba """
+        if self.colorspace == ImgConverter.GRAYSCALE_ID: 
+            b, g, r = img[:, :, 0], img[:, :, 1], img[:, :, 2]
+            gray : np.ndarray = 0.114 * b + 0.587 * g + 0.299 * r
+            gray = gray[np.newaxis, :, :]
+            return gray
+        
+        elif self.colorspace == ImgConverter.RGB_ID:
+            #Converts brga image to rgb image
+            rgb = img[:, :, :3][:, :, ::-1].copy()  # (H, W, 3) in RGB order
+            chw = np.transpose(rgb, (2, 1, 0))  # (H, W, C) -> (C, W, H)
+            return chw
+        else:
+            return img  #is already in RGBA format
 
     @property
     def num_channels(self):
         return self._num_channels
-
-class GrayScaleImgConverter(ImgConverter):
-    def __init__(self):
-        super().__init__(num_channels= 1)
-
-    def cnvt_img(self, img: np.ndarray) -> np.ndarray:
-        #Converts bgra image to grayscale
-        b, g, r = img[:, :, 0], img[:, :, 1], img[:, :, 2]
-        gray : np.ndarray = 0.114 * b + 0.587 * g + 0.299 * r
-        gray = gray[np.newaxis, :, :]
-        return gray
-
-class RGBImgConverter(ImgConverter):
-    def __init__(self):
-        super().__init__(num_channels= 3)
-
-    def cnvt_img(self, img: np.ndarray) -> np.ndarray:
-        #Converts brga image to rgb image
-        rgb = img[:, :, :3][:, :, ::-1].copy()  # (H, W, 3) in RGB order
-        chw = np.transpose(rgb, (2, 1, 0))  # (H, W, C) -> (C, W, H)
-        return chw
-
-class BGRAImgConverter(ImgConverter):
-    def __init__(self):
-        super().__init__(num_channels= 4)
-
-    def cnvt_img(self, img: np.ndarray) -> np.ndarray:
-        return img
     
 class ImageObservationTerm(ObservationTerm):
-    class Colorspace:
-        GRAYSCALE = "grayscale"
-        RGB = "rgb"
-        BGRA = "bgra"
 
-    # Mapping colorspaces to classes
-    _COLORSPACE_TO_CLASS = {
-        Colorspace.GRAYSCALE: GrayScaleImgConverter,
-        Colorspace.RGB: RGBImgConverter,
-        Colorspace.BGRA: BGRAImgConverter,
-    }
-
-    _COLORSPACE_TO_NUM = {
-        Colorspace.GRAYSCALE: 1,
-        Colorspace.RGB: 3,
-        Colorspace.BGRA: 4,
-    }
-
-    def __init__(self,normalize=True, name="image",colorspace=Colorspace.GRAYSCALE, img_width:int = 128, img_height:int = 128, dtype=np.float32, allow_unsafe_uint8_cast=False):
+    def __init__(self,normalize = True, name="image", colorspace="grayscale", img_width : int = 128, img_height : int = 128, dtype=np.float32):
         super().__init__(name, normalize)
 
-        try:
-            Img_Converter_Class = self._COLORSPACE_TO_CLASS[colorspace]
-        except KeyError:
-            raise ValueError(f"Unsupported colorspace: {colorspace}")
-        assert self.normalize and np.issubdtype(self.dtype, np.integer) and not self.allow_unsafe_uint8_cast, "Storing normalized images as uint8 will lead to data loss, Either disable normalization or set dtype to float32, You can override this check with allow_unsafe_uint8_cast=True (at your own risk)."
-        self.num_channels = self._COLORSPACE_TO_NUM[colorspace]
+        assert self.normalize and np.issubdtype(self.dtype, np.integer), "Storing normalized images as uint8 will lead to data loss, Either disable normalization or set dtype to float32"
+        
         self.dtype = dtype
-        self.allow_unsafe_uint8_cast = allow_unsafe_uint8_cast
-        self.img_converter: ImgConverter = Img_Converter_Class()
+        self.img_converter = ImgConverter(colorspace)
+        self.num_channels = self.img_converter.num_channels
+
+        self.img_width = img_width
+        self.img_height = img_height
+
         self.observation_space = Box(
             low=0,
-            high= 1 if normalize else 255,
-            shape=(self.img_converter.num_channels,img_height,img_width),
+            high= 1 if normalize else 255, 
+            shape=(self.img_converter.num_channels,img_height,img_width), 
             dtype=self.dtype)
 
     def _get_obs(self, game_states, **kwargs):
@@ -97,3 +69,13 @@ class ImageObservationTerm(ObservationTerm):
 
     def _normalize(self, obs):
         return (obs / 255).astype(self.dtype)
+    
+
+    def flatten(self, processed_obs):
+        return processed_obs.reshape(processed_obs[0] * processed_obs[1] * processed_obs[2])
+    
+    def get_flatten_dim(self):
+        return self.num_channels * self.img_height * self.img_width
+    
+    def get_native_shape(self):
+        return (self.num_channels , self.img_height , self.img_width)
