@@ -20,6 +20,7 @@ class SpaceTransformer:
         from trackmania_env.observations.observation_term import ObservationTerm
         self.obsterms : list[ObservationTerm] = obsterms
         self.expected_dim : int = sum([term.get_flatten_dim() for term in self.obsterms])
+        """Size of the flattened observation per environment"""
         self.expect_vectorized_obs = False
         self.n_envs = 1 # only used when expect_vectorized is True
 

@@ -1,13 +1,13 @@
 import numpy as np
 
-from trackmania_env.observations.observation_manager import DictObservationManager
+from trackmania_env.observations.observation_manager import ObservationManager
 from trackmania_env.observations.observation_terms.img_terms import ImageObservationTerm
 from trackmania_env.observations.observation_terms.sophy_terms import PropriocentricTerm,GlobalFeaturesTerm
 
 IMAGE_SIZE = 64
 """Image size as specified in sophy paper."""
 
-class SophyObsManager(DictObservationManager):
+class SophyObsManager(ObservationManager):
     def __init__(self, colorspace, convert_torch, normalize, img_width, img_height,maxlen_history:int = 3,lookahead_sec = 6,n_points = 60, img_dtype=np.float32,**kwargs):
         #NOTE: this with the kwargs is only so that we could easily use configs to instantiate
         """

@@ -3,13 +3,13 @@ This module includes code adapted and refactored from the Linesight-AI project
 (https://github.com/Linesight-RL/linesight). Credit to the original authors
 for the foundational implementation; refactloring changes made here.
 """
-from trackmania_env.observations.observation_manager import DictObservationManager
+from trackmania_env.observations.observation_manager import ObservationManager
 from trackmania_env.observations.observation_terms.linesight_terms import LinesightDynamicTerm,ZoneCenterFeatures
 from trackmania_env.observations.observation_terms.img_terms import ImageObservationTerm
 from trackmania_env.observations.observation_terms.basic_terms import MobileStatesTerm
 from trackmania_env.observations.observation_term import GroupedObservationTerm
 from trackmania_env.observations.observation_terms.history_stack_term import DiscreteActionHistoryTerm
-class LinesightObservationManager(DictObservationManager):
+class LinesightObservationManager(ObservationManager):
     def __init__(
         self,
         colorspace: str,

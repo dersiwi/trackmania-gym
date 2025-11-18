@@ -1,6 +1,6 @@
 import numpy as np
 
-from trackmania_env.observations.observation_manager import DictObservationManager, BoxObservationManager
+from trackmania_env.observations.observation_manager import ObservationManager
 from trackmania_env.observations.observation_term import GroupedObservationTerm
 
 from trackmania_env.observations.observation_terms.img_terms import ImageObservationTerm
@@ -36,7 +36,7 @@ def make_float_obs(name:str, ref_line_lookahead:int, ref_line_stride:int) -> Gro
             ]
         )
 
-class NextPointObsManager(DictObservationManager):
+class NextPointObsManager(ObservationManager):
     def __init__(self,colorspace:str, convert_torch, img_width, img_height, normalize,ref_line_lookahead:int = 10, ref_line_stride:int = 10,**kwargs):
         super().__init__(
             convert_torch=convert_torch,
@@ -47,7 +47,7 @@ class NextPointObsManager(DictObservationManager):
             ]
         )
 
-class VisionLessNextPointObsManager(BoxObservationManager):
+class VisionLessNextPointObsManager(ObservationManager):
     """ This is the Box version of the NextPointObsManager"""
     def __init__(self, convert_torch, normalize, ref_line_lookahead:int = 10, ref_line_stride:int = 10,**kwargs):
         super().__init__(
