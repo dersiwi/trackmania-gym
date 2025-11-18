@@ -30,7 +30,7 @@ class CrashProofEnvironment(gym.Env):
     once more; however truncated is set to True. The learner process can then call reset, in order to keep disruption to trajectory collection mininmal.   
     """
 
-    def __init__(self, train_cfg : TrainConfig, port : int = 8775):
+    def __init__(self, train_cfg : TrainConfig, port : int = 8775, return_obs_as_dict : bool = True):
         """
         Args:
             train_cfg (TrainConfig) : Configuration file used for initialization of enviroment
@@ -48,6 +48,8 @@ class CrashProofEnvironment(gym.Env):
 
         self.env_initalizations : int = 0
         self.queue_empty_error  : int = 0
+
+        self.return_obs_as_dict = return_obs_as_dict
 
         self.total_timesteps = 0
         self._step_recorded_at_timestep = -1
@@ -77,6 +79,7 @@ class CrashProofEnvironment(gym.Env):
                                                                                             self.cfg.rl_env.obs_manager.img_height,
                                                                                             self.port)
         self.env = get_environment(self.cfg, self.control_queue, self.response_queue)
+        self.env.obs_manager.return_as_dict = self.return_obs_as_dict
 
     def finalize_process(self, reinit : bool = True):
         """

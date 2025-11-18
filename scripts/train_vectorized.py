@@ -11,7 +11,7 @@ from typing import Optional
 
 from configs.config import TrainConfig
 
-from trackmania_env.envs.sec_env import CrashProofEnvironment
+from trackmania_env.envs.vectorized import VectorizedTMEnvironment
 from utils.hydra_wandb_utils import load_and_merge_platform, secure_attribute_retrieval
 from utils.introscreen import introscreen
 
@@ -36,7 +36,7 @@ def main(cfg : TrainConfig, run_id : Optional[str] = None):
     cfg = load_and_merge_platform(cfg)
     introscreen(cfg, askstart=secure_attribute_retrieval(lambda : cfg.ask_start, default=True))
 
-    tm_env = CrashProofEnvironment(cfg)
+    tm_env = VectorizedTMEnvironment(cfg)
     try:
         tm_env.init_environment()
         
