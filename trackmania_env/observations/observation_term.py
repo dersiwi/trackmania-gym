@@ -34,6 +34,9 @@ class ObservationTerm(ABC):
         from trackmania_env.envs.single_agent_env2 import TMNF_Single_Agent_Env
         self.env : TMNF_Single_Agent_Env = env
 
+    def set_observation_space_as_box(self, low : float, high : float, shape : tuple[int]):
+        self.observation_space = spaces.Box(low = low, high = high, shape=shape )
+
     def reset(self):
         """
         Optional reset hook for observation terms that maintain internal state.
@@ -113,7 +116,7 @@ class VectorlikeTerm(ObservationTerm, ABC):
         self.observation_space = spaces.Box(
             low=low,
             high=high,
-            shape=(dimension),
+            shape=(dimension,),
             dtype=np.float32
         )
 
@@ -170,4 +173,13 @@ class GroupedObservationTerm(ObservationTerm):
 
     def _normalize(self, obs: np.ndarray) -> np.ndarray:
         return obs  # Already normalized at term level
+    
+    def flatten(self, processed_obs):
+        return processed_obs
+    
+    def get_flatten_dim(self):
+        return self.observation_space.shape[0]
+    
+    def get_native_shape(self):
+        return (self.get_flatten_dim(), )
 

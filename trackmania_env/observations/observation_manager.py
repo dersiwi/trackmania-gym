@@ -33,7 +33,7 @@ class ObservationManager(ABC):
         if self.return_as_dict:
             spacedict = {}
             for term in self.observation_terms:
-                spacedict[term] = term.observation_space
+                spacedict[term.name] = term.observation_space
             self.obs_space = spaces.Dict(spacedict)
         else:
             self.obs_space = spaces.Box(-np.inf, np.inf, shape=(sum([term.get_flatten_dim() for term in self.observation_terms])), dtype=np.float32)

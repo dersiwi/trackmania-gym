@@ -20,13 +20,13 @@ class ImgConverter:
 
     def cnvt_img(self, img: np.ndarray) -> np.ndarray:
         """ the images tmnf interface returns are per default rgba """
-        if self.colorspace == ImgConverter.GRAYSCALE_ID: 
+        if self.colorspace == ImgConverter.GRAYSCALE: 
             b, g, r = img[:, :, 0], img[:, :, 1], img[:, :, 2]
             gray : np.ndarray = 0.114 * b + 0.587 * g + 0.299 * r
             gray = gray[np.newaxis, :, :]
             return gray
         
-        elif self.colorspace == ImgConverter.RGB_ID:
+        elif self.colorspace == ImgConverter.RGB:
             #Converts brga image to rgb image
             rgb = img[:, :, :3][:, :, ::-1].copy()  # (H, W, 3) in RGB order
             chw = np.transpose(rgb, (2, 1, 0))  # (H, W, C) -> (C, W, H)
