@@ -56,19 +56,10 @@ class MobileStatesTerm(VectorlikeTerm):
     """Returns all relevant dynamic car states"""
 
     def __init__(self, name = "mobile states", normalize=True):
-        super().__init__(name,normalize, 16,
-                         low = np.array(
-                            [0.0] * 8 +         # is_sliding and has_ground_contact (bools)
-                            [0.0] * 4 +         # damper_absorb
-                            [0.0, 0.0, 0.0, 0.0],  # gearbox_state, gear, rpm, is_freewheeling
-                            dtype=np.float32
-                        ),
-                        high = np.array(
-                                [1.0] * 8 +         # is_sliding and has_ground_contact
-                                [0.2] * 4 +         # damper_absorb: typical range ~0.005 to 0.15, max ~0.2
-                                [2.0, 6.0, 10000.0, 1.0],  # gearbox_state, gear, rpm, is_freewheeling
-                                dtype=np.float32
-                            ))
+        super().__init__(name,normalize, 16, high = np.array([1.0] * 8 + [0.2] * 4 + [2.0, 6.0, 10000.0, 1.0]))      
+                            #is_sliding and has_ground_contact (8) are all booleans, damper_absorb: typical range ~0.005 to 0.15, max ~0.2
+                            #finally estimated values for gearbox_state, gear, rpm, is_freewheeling
+                            
 
     def _normalize(self, obs):
         obs[12]             /= ObsNormalizationFactors.gearbox_norm
