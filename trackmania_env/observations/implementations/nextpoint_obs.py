@@ -9,7 +9,7 @@ from trackmania_env.observations.observation_terms.basic_terms import (
     SurfaceFloats,
     MobileStatesTerm,
 )
-from trackmania_env.observations.observation_terms.ref_line_terms import (
+from trackmania_env.observations.observation_terms.reference_line_terms import (
     NextReflinePoint,
     RelativeDistance,
     LateralDistance,

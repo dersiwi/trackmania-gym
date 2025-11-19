@@ -3,7 +3,7 @@ import numpy as np
 from gymnasium.spaces import Box
 from tminterface.structs import SimStateData, HmsDynaStateStruct
 
-from trackmania_env.observations.observation_term import ObservationTerm
+from trackmania_env.observations.observation_term import ObservationTerm, VectorlikeTerm
 from trackmania_env.utils.constants import ObsNormalizationFactors
 from game_interaction.ipc_fields import IPCFields
 from trackmania_env.utils.reference_line_manager import ReferenceLineManager
@@ -61,19 +61,22 @@ class NextReflinePoint(ObservationTerm):
         self.info["comming_refline_points"] = rel_points
         self.info["orientation"] = car_orientation
         return rel_points, {}
-
-class LateralDistance(ObservationTerm):
-
-    def __init__(self,name="laterale distance",normalize = True):
-        super().__init__(name, normalize)
-        # TODO what are the bounds ?
-        self.observation_space = Box(
-            low=0.0,
-            high=1.0,
-            shape=(),
-            dtype=np.float32
-        )
     
+    def flatten(self, processed_obs):
+        return processed_obs.reshape((processed_obs.shape[0] * processed_obs.shape[1]))
+    
+    def get_flatten_dim(self):
+        return self.n_refline_points * 3
+    
+    def get_native_shape(self):
+        return (self.n_refline_points, 3)
+
+class LateralDistance(VectorlikeTerm):
+    """Lateral Distance to the centerline. This is measured against the current last reference line point."""
+
+    def __init__(self, name="laterale distance", normalize = True):
+        super().__init__(name, normalize, 1) # TODO Bounds not great
+
     def _normalize(self, obs):
         return obs / ObsNormalizationFactors.lateral_dist_norm
 
@@ -83,16 +86,10 @@ class LateralDistance(ObservationTerm):
         lateral_distance : np.ndarray = reference_line.calculate_lateral_difference(next_idx, game_states[IPCFields.SIMSTATE].position)
         return np.array(lateral_distance,dtype=np.float32), {}
     
-class RelativeDistance(ObservationTerm):
+class RelativeDistance(VectorlikeTerm):
     def __init__(self,name="relative distance",normalize = True):
-        super().__init__(name, normalize)
-        # TODO what are the bounds ?
-        self.observation_space = Box(
-            low=0.0,
-            high=1.0,
-            shape=(),
-            dtype=np.float32
-        )
+        super().__init__(name, normalize, 1) # TODO what are the bounds ?
+        
     def _normalize(self, obs):
         return obs
     

@@ -11,13 +11,7 @@ from game_interaction.ipc_fields import IPCFields
 
 class SpeedTerm(VectorlikeTerm):
     def __init__(self, name: str = "speed", normalize: bool = True):
-        super().__init__(name, normalize, dimension=1)
-        self.observation_space = Box(
-            low=0.0,
-            high=1.0 if normalize else MAX_SPEED,
-            shape=(),
-            dtype=np.float32
-        )
+        super().__init__(name, normalize, dimension=1, high=1.0 if normalize else MAX_SPEED)
 
     def _normalize(self, obs: float) -> float:
         return obs / ObsNormalizationFactors.speed_norm
@@ -31,13 +25,7 @@ class SurfaceFloats(VectorlikeTerm):
     Returns a float vector representing the surface category each wheel is currently in contact with.
     """
     def __init__(self, name: str = "surface_floats", normalize: bool = True):
-        super().__init__(name, normalize, 4)
-        self.observation_space = Box(
-            low=0.0,
-            high=float(NUM_SURFACE_CATEGORIES + 1),
-            shape=(4,),  # one float per wheel
-            dtype=np.float32
-        )
+        super().__init__(name, normalize, 4, high = float(NUM_SURFACE_CATEGORIES + 1))
 
     def _normalize(self, obs: np.ndarray) -> np.ndarray:
         return obs  # already normalized 
@@ -68,24 +56,19 @@ class MobileStatesTerm(VectorlikeTerm):
     """Returns all relevant dynamic car states"""
 
     def __init__(self, name = "mobile states", normalize=True):
-        super().__init__(name,normalize, 16)
-        
-        # Define lower and upper bounds for each of the 16 features
-        low = np.array(
-            [0.0] * 8 +         # is_sliding and has_ground_contact (bools)
-            [0.0] * 4 +         # damper_absorb
-            [0.0, 0.0, 0.0, 0.0],  # gearbox_state, gear, rpm, is_freewheeling
-            dtype=np.float32
-        )
-
-        high = np.array(
-            [1.0] * 8 +         # is_sliding and has_ground_contact
-            [0.2] * 4 +         # damper_absorb: typical range ~0.005 to 0.15, max ~0.2
-            [2.0, 6.0, 10000.0, 1.0],  # gearbox_state, gear, rpm, is_freewheeling
-            dtype=np.float32
-        )
-
-        self.observation_space = Box(low=low, high=high, shape=(16,), dtype=np.float32)
+        super().__init__(name,normalize, 16,
+                         low = np.array(
+                            [0.0] * 8 +         # is_sliding and has_ground_contact (bools)
+                            [0.0] * 4 +         # damper_absorb
+                            [0.0, 0.0, 0.0, 0.0],  # gearbox_state, gear, rpm, is_freewheeling
+                            dtype=np.float32
+                        ),
+                        high = np.array(
+                                [1.0] * 8 +         # is_sliding and has_ground_contact
+                                [0.2] * 4 +         # damper_absorb: typical range ~0.005 to 0.15, max ~0.2
+                                [2.0, 6.0, 10000.0, 1.0],  # gearbox_state, gear, rpm, is_freewheeling
+                                dtype=np.float32
+                            ))
 
     def _normalize(self, obs):
         obs[12]             /= ObsNormalizationFactors.gearbox_norm

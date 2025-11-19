@@ -107,9 +107,15 @@ class ObservationTerm(ABC):
 class VectorlikeTerm(ObservationTerm, ABC):
     """This is an observation term that is naturally in vector-from. A position e.g. lives naturally in a singular-column space. However an image naturally lives in 
     image space. """
-    def __init__(self, name, normalize, dimension):
+    def __init__(self, name, normalize, dimension, low : float = 0.0, high : float = 1.0):
         super().__init__(name, normalize)
         self.dimension = dimension
+        self.observation_space = spaces.Box(
+            low=low,
+            high=high,
+            shape=(dimension),
+            dtype=np.float32
+        )
 
     def get_flatten_dim(self):
         return self.dimension
@@ -127,7 +133,7 @@ class GroupedObservationTerm(ObservationTerm):
     Useful for stacking features into a single Box space.
     """
 
-    def __init__(self, observation_terms: List[ObservationTerm], name: str, normalize: bool = True):
+    def __init__(self, observation_terms: List[VectorlikeTerm], name: str, normalize: bool = True):
         super().__init__(name=name, normalize=normalize)
         self.observation_terms = observation_terms
 
@@ -164,3 +170,4 @@ class GroupedObservationTerm(ObservationTerm):
 
     def _normalize(self, obs: np.ndarray) -> np.ndarray:
         return obs  # Already normalized at term level
+
