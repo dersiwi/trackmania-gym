@@ -42,7 +42,7 @@ def main(cfg : TrainConfig):
     
     # Plotting Images
     obs_manager = cfg.rl_env.obs_manager 
-    tm_env.add_env_test_calback(plot_callback.Plot_Obs_Images_Callback(img_size= (obs_manager.img_width,obs_manager.img_height), color_space= obs_manager.colorspace, backend ="matplotlib"))
+    tm_env.add_env_test_calback(plot_callback.Plot_Obs_Images_Callback(img_size= (obs_manager.img_width, obs_manager.img_height), color_space= obs_manager.colorspace, backend ="matplotlib"))
     
     # Plotting Rewards 
     # tm_env.add_env_test_calback(plot_callback.Plot_Rewards_Callback(env = tm_env))

@@ -2,15 +2,18 @@ import numpy as np
 import matplotlib
 matplotlib.use("TkAgg")
 from matplotlib import pyplot as plt
-
+from trackmania_env.envs.single_agent_env2 import TMNF_Single_Agent_Env
 from trackmania_env.callbacks.core import TestEnvironmentCallback, Live3dPlotEnvironmentCallback
 from plotting.core import NonBlockingPlot
-from plotting.factory import PlottingFactory
-from trackmania_env.envs.single_agent_env2 import TMNF_Single_Agent_Env
+
+
+
+
 
 class Plot_Obs_Images_Callback(NonBlockingPlot):
     def __init__(self, img_size:tuple[int,int], color_space:str, backend:str = "matplotlib"):
-        super().__init__(plotter=PlottingFactory(factory_name= "image",backend = backend).create(img_size = img_size, color_space = color_space))
+        super().__init__(factory_name="image", backend=backend, create_args = {"img_size" : img_size, "color_space" : color_space})
+    
 
     def _call_after_step(self, processed_obs, reward, terminated, truncated, info):
         assert "image" in processed_obs, (
@@ -30,7 +33,8 @@ class Plot_Rewards_Callback(NonBlockingPlot):
         if keys_to_plot is not None:
             assert set(keys_to_plot).issubset(reward_terms), f"{keys_to_plot} not found in reward terms"
             reward_terms = keys_to_plot
-        super().__init__(plotter=PlottingFactory(factory_name="lines",backend= backend).create(keys_to_plot= reward_terms, title = "Rewards",ylabel= "Rewards"))
+
+        super().__init__(factory_name="lines", backend=backend, create_args=dict(keys_to_plot= reward_terms, title = "Rewards",ylabel= "Rewards"))
 
     def _call_after_step(self, processed_obs, reward, terminated, truncated, info):
         rewards = info["rewards"]
@@ -40,7 +44,8 @@ class Plot_Rewards_Callback(NonBlockingPlot):
 class Plot_Lateral_Distance_Callback(NonBlockingPlot):
     def __init__(self,reference_line_manager,backend:str = "matplotlib"):
         self.data = {}
-        super().__init__(plotter= PlottingFactory(factory_name="lateral_distance3",backend = backend).create(reference_line_manager=reference_line_manager))
+        # TODO : Actually check if passing the reference line manager works. If only for the utility methods fine (but then why pass it in first place?), but not for data from environment
+        super().__init__(factory_name="lateral_distance3", backend = backend, create_args=dict(reference_line_manager=reference_line_manager))
 
     def _call_after_step(self, processed_obs, reward, terminated, truncated, info):
         self.data["position"] = info["position"]
@@ -50,7 +55,7 @@ class Plot_Lateral_Distance_Callback(NonBlockingPlot):
 class Plot_ReferenceLine_Callback(NonBlockingPlot):
     def __init__(self,reference_line):
         self.data = {}
-        super().__init__(plotter=PlottingFactory(factory_name="ref_line").create(reference_line= reference_line))
+        super().__init__(factory_name="lateral_distance3", backend = "matplotlib", create_args=dict(reference_line= reference_line))
 
     def _call_after_step(self, processed_obs, reward, terminated, truncated, info):
         self.data["position"] = info["position"]
@@ -61,7 +66,7 @@ class Plot_ReferenceLine_Callback(NonBlockingPlot):
 
 class Plot_Rotation_Callback(NonBlockingPlot):
     def __init__(self,):
-        super().__init__(plotter=PlottingFactory(factory_name="rotation").create())
+        super().__init__(factory_name="rotation", backend = "matplotlib", create_args=dict())
 
     def _call_after_step(self, processed_obs, reward, terminated, truncated, info):
         rot_matrix = np.array(info["rotation_matrix"])
@@ -72,7 +77,7 @@ class Plot_1D_Values_Callback(NonBlockingPlot):
     def __init__(self, keys_to_plot, y_lim = None):
         self.keys_to_plot = keys_to_plot
         self.data = {}
-        super().__init__(plotter=PlottingFactory(factory_name="lines").create(keys_to_plot=keys_to_plot, ylim = y_lim, title = "Bunch of 1D Values",ylabel = ""))
+        super().__init__(factory_name="lines", backend = "matplotlib", create_args=dict(keys_to_plot=keys_to_plot, ylim = y_lim, title = "Bunch of 1D Values", ylabel = ""))
 
     def _call_after_step(self, processed_obs, reward, terminated, truncated, info):
         for key in self.keys_to_plot:
@@ -88,7 +93,9 @@ class Plot_3D_Value_Callback(NonBlockingPlot):
         self.key_to_plot = key_to_plot
         self.keys_to_plot = [ax+"-"+ self.key_to_plot for ax in ["x","y","z"]]
         self.data = {}
-        super().__init__(plotter= PlottingFactory(factory_name="lines").create(keys_to_plot=self.keys_to_plot,ylim=y_lim,title = f"Plot of the xyz components of {self.key_to_plot}",ylabel = ""))
+
+        super().__init__(factory_name="lines", backend = "matplotlib", 
+                         create_args=dict(keys_to_plot=self.keys_to_plot,ylim=y_lim,title = f"Plot of the xyz components of {self.key_to_plot}",ylabel = ""))
 
     def _call_after_step(self, processed_obs, reward, terminated, truncated, info):
         assert self.key_to_plot in info, f"The key '{self.key_to_plot}' is not in the info dict"

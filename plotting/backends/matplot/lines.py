@@ -1,4 +1,4 @@
-from plotting.core import EnvPlotter
+from plotting.plotter import EnvPlotter
 import matplotlib.pyplot as plt
 
 class LinePlotter(EnvPlotter):

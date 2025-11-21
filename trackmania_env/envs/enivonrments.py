@@ -66,12 +66,5 @@ def get_environment(cfg : TrainConfig, control_queue : Queue, response_queue : Q
 
     tm_env = TM_ENV_CLASS(**constructor_kwargs)
     tm_env.orientationless_respawn_manager = OrientationlessRespawnManager(respawn_coordinates=OrientationlessRespawnManager.get_respawns_for_very_long_checkpoints())
-    
-    if not test:
-        # apply (Observation)-wrappers to the environment : only relevant for training with sb3
-        for _, wrapper_conf in cfg.rl_env.wrappers.items():
-            wrapper : ObservationWrapper = hydra.utils.instantiate(wrapper_conf)
-            print(f"Wrapping environment in {wrapper.__class__.__name__}")
-            tm_env = wrapper(env=tm_env)
 
     return tm_env
