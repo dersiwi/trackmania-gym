@@ -10,8 +10,8 @@ from trackmania_env.envs.enivonrments import get_environment
 
 from trackmania_env.envs.testenv_single_agent import TestEnvironment
 
-import trackmania_env.callbacks.plotting as plot_callback
-import trackmania_env.callbacks.printing as print_callback
+import plotting.test_environment_callbacks.plotting as plot_callback
+import plotting.test_environment_callbacks.printing as print_callback
 
 from utils.hydra_wandb_utils import load_and_merge_platform
 

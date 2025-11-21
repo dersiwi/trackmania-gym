@@ -1,6 +1,5 @@
 from trackmania_env.envs.single_agent_env2 import TMNF_Single_Agent_Env
 from trackmania_env.utils.actionmap import REVERSE_ACTION_MAP
-from trackmania_env.callbacks.core import TestEnvironmentCallback
 
 import keyboard
 from typing import Callable
@@ -13,6 +12,26 @@ from trackmania_env.observations.observation_manager import ObservationManager
 from trackmania_env.rewards.reward_calculation import RewradCalculator
 from trackmania_env.terminations.termination_manager import TerminationManager
 from trackmania_env.utils.reference_line_manager import ReferenceLineManager
+
+class TestEnvironmentCallback():
+    """TestEnviornmentCallbacks are used to track, log, do whatever with data obtained by an environment per setp."""
+
+    def __init__(self):
+        self.n_step = 0
+        """Counts environment-steps aka. how often _call_after_step was called."""
+
+    def _call_after_step(self, processed_obs, reward, terminated, truncated, info):
+        """This method is called by TestEnvironment.step_with_manual_input(), after everytime this method executes
+        an environment step of the underlying environment."""
+        pass
+
+    def _call_after_run(self):
+        """This method is called by TestEnvironment.step_with_manual_input(), after the main-loop has been executed via `esc`."""
+        pass
+
+    def reset(self):
+        """Resets the callback, if the user presses 'r'"""
+        pass
 
 class KEYS:
     """Enum for keys used in TestEnvironment."""
