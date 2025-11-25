@@ -220,6 +220,11 @@ class TMNF_Single_Agent_Env(gym.Env):
     def determine_termination_trucation(self, idx, obs : SimStateData) -> tuple[bool, bool]:
         terminated = truncated = False
         return terminated, truncated
+    
+    def request_map(self, trackname : str) -> None:
+        """Sends a map-request command to the porcess-wrapper"""
+        self.__send_command_to_process_wrapper(IPCCommands.get_cmd_command(self.__ipc_cmd_id, TMInterfaceCommands.map(trackname)))
+
 
     def step(self, action) -> Tuple[gym.spaces.Dict,float,bool,bool,Dict[str,Any]]:
         """

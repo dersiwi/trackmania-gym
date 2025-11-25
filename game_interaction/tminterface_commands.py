@@ -50,3 +50,8 @@ class TMInterfaceCommands:
     def set_camera(camera : int) -> str:
         """Sets the camera to the given camera index"""
         return f"cam {camera}"
+    
+    @staticmethod
+    def map(mapname : str) -> str:
+        """Requests to load a new map"""
+        return f"map {mapname}"
