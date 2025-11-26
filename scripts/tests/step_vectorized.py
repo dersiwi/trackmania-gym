@@ -5,6 +5,8 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 # Hydra related imports
 import hydra
 import traceback
+import random
+import numpy as np
 from hydra.core.hydra_config import HydraConfig
 from typing import Optional
 
@@ -14,6 +16,7 @@ from configs.config import TrainConfig
 from trackmania_env.envs.vectorized import VectorizedTMEnvironment
 from utils.hydra_wandb_utils import load_and_merge_platform, secure_attribute_retrieval
 from utils.introscreen import introscreen
+from trackmania_env.utils.actionmap import ACTION_MAP
 
 from utils.experiment_managers.sb3_exp_manager import Final_Best_CP_Sb3_ExperimentManager
 
@@ -34,23 +37,15 @@ def main(cfg : TrainConfig, run_id : Optional[str] = None):
         run_id (str)        : Run id if weights and biases run is to be resumed
     """
     cfg = load_and_merge_platform(cfg)
-    introscreen(cfg, askstart=secure_attribute_retrieval(lambda : cfg.ask_start, default=True))
-
-    tm_env = VectorizedTMEnvironment(cfg)
+    #introscreen(cfg, askstart=secure_attribute_retrieval(lambda : cfg.ask_start, default=True))
+    N_ENVS = 2
+    tracks = ["very_long_checkpoints.Challenge.Gbx", "ESL-Hockolicious.Challenge.Gbx", "Level1.Challenge.Gbx"]
+    tm_env = VectorizedTMEnvironment(n_envs = N_ENVS, tracks=tracks[0:N_ENVS], cfg=cfg, obs_as_dict=True, alternation_between_tracks=True, n_steps_per_track=1024, assign_random_track_at_alternation=True)
     try:
-        tm_env.init_environment()
-        
-        exp_manager = Final_Best_CP_Sb3_ExperimentManager(
-            cfg = cfg,
-            hydra_run_dir= HydraConfig.get().run.dir,
-            resume="must" if run_id else None,
-            env= tm_env,
-            eval_freq= cfg.wandb.eval_freq,
-            checkpoint_freq= cfg.wandb.checkpoint_freq,
-            )
+        o, info = tm_env.reset()
+        for i in range(100000):
+            o, rew, term, trun, inf = tm_env.step(np.random.randint(0, len(ACTION_MAP), size=(N_ENVS, )))
 
-        model = get_model_from_config(cfg = cfg, tm_env = tm_env, print_params= True, run_id= exp_manager.get_tensorboard_login_identifier())
-        model.learn(**cfg.learn_args, callback= exp_manager.get_callbacks())
     except Exception as e:
         traceback.print_exc()
 
@@ -58,9 +53,9 @@ def main(cfg : TrainConfig, run_id : Optional[str] = None):
         print("KeyboardInterrupt")
 
     finally:
-        exp_manager.after_training(model= model)
         # Finalize training and close game all processes.
-        tm_env.finalize_process(reinit=False)
+        for env in tm_env.envs:
+            env.finalize_process(reinit=False)
 
 if __name__ == "__main__": 
     main()
