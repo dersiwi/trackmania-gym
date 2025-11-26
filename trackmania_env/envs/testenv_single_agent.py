@@ -67,7 +67,7 @@ class TestEnvironment(TMNF_Single_Agent_Env):
                  obs_manager: ObservationManager, 
                  reward_calculator: RewradCalculator, 
                  termination_manger: TerminationManager, 
-                 reference_line: ReferenceLineManager, 
+                 track: str, 
                  reset_mode: str, 
                  n_previous_actions: int, 
                  position_buffer_size: int, 
@@ -81,7 +81,7 @@ class TestEnvironment(TMNF_Single_Agent_Env):
                  platform = "windows",
                  **kwargs):
 
-        super().__init__(command_queue, response_queue, obs_manager, reward_calculator, termination_manger, reference_line, reset_mode, n_previous_actions, position_buffer_size, position_moved_threshold, ignore_stuck_for_n_steps_after_reset, game_speed, countdown_speed, waitforstep_timeout_in_s, startposition_accuracy_threshold, gamma, **kwargs)
+        super().__init__(command_queue, response_queue, obs_manager, reward_calculator, termination_manger, track, reset_mode, n_previous_actions, position_buffer_size, position_moved_threshold, ignore_stuck_for_n_steps_after_reset, game_speed, countdown_speed, waitforstep_timeout_in_s, startposition_accuracy_threshold, gamma, **kwargs)
 
         self.platform = platform
         self.action_modifier : Callable = None

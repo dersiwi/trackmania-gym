@@ -20,6 +20,9 @@ platforms:
 ```
 The default location for this file is in `configs/platforms.yaml`, but you can chance this by changing the `platforms_config_path` attribute of `configs/train.ymal` file to the desired path.
 
+### Reference Line
+As of now, reference line are loaded dynamically. Therefore are expected to exist in `trackmania-gym/tracks/referernce_line` and also to be named exactly like the track. I.e. if the track is named Level1.Challenge.Gbx, reference line must be named Level1.npy.
+
 # Make Car Go Fast
 
 In this student research-project at the  [ALR](https://alr.iar.kit.edu/) the goal was to investigate on how a reinforcement learning agent can learn in a [TMNF : Trackmania Nations Forever Environment](https://www.trackmaniaforever.com/).

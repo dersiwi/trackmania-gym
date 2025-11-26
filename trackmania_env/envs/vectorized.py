@@ -48,6 +48,7 @@ class VectorizedTMEnvironment(gym.Env):
         self._steps_per_track = [[0 for i in range(len(self.tracks))] for i in range(self.n_envs)]
         """Stores the amount of steps each environment did in each track"""
 
+        self.alternation_between_tracks = alternation_between_tracks
         self.n_steps_per_track = n_steps_per_track
         self.assign_random_track_at_alternation = assign_random_track_at_alternation
 
@@ -97,10 +98,12 @@ class VectorizedTMEnvironment(gym.Env):
     
     def check_map_alternation(self) -> None:
         """Checks, whether an environment has made sufficiently many steps on its current map and if yes, it requests a new map."""
-        if self._steps_per_track[0][self.curr_track_id[0]] % self.n_steps_per_track == 0:
+        if self.alternation_between_tracks and self._steps_per_track[0][self.curr_track_id[0]] % self.n_steps_per_track == 0:
             #alternate maps for all tracks, because we assume that all environments are synchronous in their steps
             for i in range(self.n_envs):
-                self.curr_track_id[i] = (self.curr_track_id[i] + 1) % len(self.tracks) if not self.assign_random_track_at_alternation else random.randint(0, len(self.tracks) - 1) 
+                self.curr_track_id[i] = (self.curr_track_id[i] + 1) % len(self.tracks) if not self.assign_random_track_at_alternation else random.randint(0, len(self.tracks) - 1)
+                self.envs[i].env.request_map(self.tracks[self.curr_track_id[i]])
+            time.sleep(10)  #<-- TODO : This is very crude and not scalable (i think) - the problem is that the learner wants to step before the track has been changed, resulting in answreed requests form the environment to the game
  
     def _stack_observations(self, observation_list : list[np.ndarray] | list[dict[str, np.ndarray]]) -> list[np.ndarray] | list[dict[str, np.ndarray]]:
         """

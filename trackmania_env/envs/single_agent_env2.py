@@ -52,7 +52,7 @@ class TMNF_Single_Agent_Env(gym.Env):
             obs_manager : ObservationManager,
             reward_calculator : RewradCalculator,
             termination_manger : TerminationManager,
-            reference_line : ReferenceLineManager,
+            track : str,
             reset_mode:str,
             n_previous_actions:int,
             position_buffer_size:int,
@@ -94,16 +94,18 @@ class TMNF_Single_Agent_Env(gym.Env):
         self.command_queue = command_queue
         self.response_queue = response_queue
         self.__ipc_cmd_id = 0
+        """Command id for interprocess communication"""
         self.__ipc_timeout : int = 10
 
         self.logger = logging.getLogger(self.__class__.__name__)
-        
-        # reference line 
-        self.reference_line : ReferenceLineManager = reference_line
+
+        self.track = track
+        self.reference_line : ReferenceLineManager = ReferenceLineManager.load_dynamically(self.track)
 
         # variables used for resetting car(posiiton)
-        self.start_position :np.ndarray= None
-        self.reset_mode = reset_mode 
+        self.start_position : np.ndarray = None
+        self.reset_mode = reset_mode
+        self.start_position_set : bool = False
         
         self.position_buffer = PositionBuffer(position_buffer_size)
         self.position_buffer_threshold = position_moved_threshold
@@ -193,11 +195,6 @@ class TMNF_Single_Agent_Env(gym.Env):
         raise TMICommunicationFaildException(n_tries=attempt, message="Were not able to send command even after multiple tries.") # <- If this happens; the responding end most likely crashed.
 
 
-    
-    def __send_action(self, action : tuple[bool, bool, bool, bool]):
-        self.__send_command_to_process_wrapper(IPCCommands.get_act_command(self.__ipc_cmd_id, action))
-
-    
     def __get_raw_obs(self) -> Dict:
         """Helper function to translate the the environment's state into an observation"""
 
@@ -211,7 +208,6 @@ class TMNF_Single_Agent_Env(gym.Env):
         return imgs_and_simstate
     
 
-
     def __log_reset_reason(self, terminated_info : dict[str, bool]):
         for key in terminated_info:
             if terminated_info[key]:
@@ -222,9 +218,14 @@ class TMNF_Single_Agent_Env(gym.Env):
         return terminated, truncated
     
     def request_map(self, trackname : str) -> None:
-        """Sends a map-request command to the porcess-wrapper"""
+        """Sends a map-request command to the porcess-wrapper. Furthermore reloads referenceline and random-respawn manager. Also 
+        sets mechanism to find new start-position."""
         self.__send_command_to_process_wrapper(IPCCommands.get_cmd_command(self.__ipc_cmd_id, TMInterfaceCommands.map(trackname)))
-
+        self.track = trackname
+        self.reference_line : ReferenceLineManager = ReferenceLineManager.load_dynamically(trackname)
+        self.random_respawn_manager = RandomRespawnManager(self.reference_line.reference_line)
+        self.start_position = None
+        self.start_position_set = False
 
     def step(self, action) -> Tuple[gym.spaces.Dict,float,bool,bool,Dict[str,Any]]:
         """
@@ -339,8 +340,11 @@ class TMNF_Single_Agent_Env(gym.Env):
 
         if not self.first_reset:
             self.__send_command_to_process_wrapper(IPCCommands.waitforstep(self.__ipc_cmd_id, self.waitforstep_timeout))
-            self.start_position = np.array(raw_obs[IPCFields.SIMSTATE].position)
             self.first_reset = True
+        if not self.start_position_set:
+            self.start_position = np.array(raw_obs[IPCFields.SIMSTATE].position)
+            self.start_position_set = True
+            
 
         return observation, info
     

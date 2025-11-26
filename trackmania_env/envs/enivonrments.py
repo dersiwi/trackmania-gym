@@ -45,7 +45,7 @@ def get_environment(cfg : TrainConfig, control_queue : Queue, response_queue : Q
         obs_manager= obs_manager,
         reward_calculator= reward_calculator,
         termination_manger= termination_manger,
-        reference_line= ReferenceLineManager(cfg.gmi.reference_line),
+        track = cfg.gmi.track,
         reset_mode= env_cfg.reset_mode,
         n_previous_actions= env_cfg.n_previous_actions,
         position_buffer_size= env_cfg.position_buffer_size,

@@ -1,6 +1,7 @@
 import sys, os
 # TODO : <- i don't want this here and it shouldnt have to be here!!!
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))) 
+sys.path.append(os.path.abspath(os.path.join(
+    os.path.join(os.path.dirname(__file__), '..'), '..'))) # TODO : <- i don't want this here and it shouldnt have to be here!!!
 
 # Hydra related imports
 import hydra
@@ -24,7 +25,7 @@ from tmn_sb3.utils.from_cfg import get_model_from_config
 
 _HYDRA_PARAMS = {
     "version_base": "1.3",
-    "config_path": "../configs",
+    "config_path": "../../configs",
     "config_name": "train.yaml",
 }
 
@@ -38,13 +39,15 @@ def main(cfg : TrainConfig, run_id : Optional[str] = None):
     """
     cfg = load_and_merge_platform(cfg)
     #introscreen(cfg, askstart=secure_attribute_retrieval(lambda : cfg.ask_start, default=True))
-    N_ENVS = 2
+    N_ENVS = 1
     tracks = ["very_long_checkpoints.Challenge.Gbx", "ESL-Hockolicious.Challenge.Gbx", "Level1.Challenge.Gbx"]
     tm_env = VectorizedTMEnvironment(n_envs = N_ENVS, tracks=tracks[0:N_ENVS], cfg=cfg, obs_as_dict=True, alternation_between_tracks=True, n_steps_per_track=1024, assign_random_track_at_alternation=True)
     try:
         o, info = tm_env.reset()
         for i in range(100000):
             o, rew, term, trun, inf = tm_env.step(np.random.randint(0, len(ACTION_MAP), size=(N_ENVS, )))
+            if i %  100 == 0:
+                print(f"Completed {i} steps")
 
     except Exception as e:
         traceback.print_exc()

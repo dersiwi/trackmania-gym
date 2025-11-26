@@ -1,15 +1,33 @@
+from __future__ import annotations
 import numpy as np
 import logging
+import os
 
 class ReferenceLineManager:
+
+    REFLINE_DIR = "tracks/reference_line/"
+
+    @staticmethod
+    def load_dynamically(trackname : str, lookahead_size : int = 120, 
+                 search_recursively : bool = True, recursive_lookahead_increase_factor : int = 3, max_recursion_depth : int = 1) -> ReferenceLineManager:
+        """This method dynamically creates the filepath of the reference-line-file according to the track-name. It expects the current working directory
+        to be at base-level (i.e. trackmania-gym)
+        Args:
+            trackname (str)     : Has to be in format [name].Challenge.Gbx - no other paths or extensions 
+            lookahead_size (int)        : @ See ReferenceLineManager-Constructor
+            search_recursively (bool)   : 
+            recursive_lookahead_increase_factor :
+            max_recursion_depth """
+        filepath = os.path.join(ReferenceLineManager.REFLINE_DIR, f"{trackname.split('.')[0]}.npy")
+        return ReferenceLineManager(filepath, lookahead_size = lookahead_size, search_recursively = search_recursively, 
+                                    recursive_lookahead_increase_factor = recursive_lookahead_increase_factor, max_recursion_depth = max_recursion_depth)
     
     def __init__(self, filepath : str, lookahead_size : int = 120, 
                  search_recursively : bool = True, recursive_lookahead_increase_factor : int = 3, max_recursion_depth : int = 1):
         """
-        Parameters
-        ---------
-        - filepath : string for complete filepath of reference-line
-        - lookahead_size : when calculating the distance to next point, looks at only this many next points.
+        Args:
+        - filepath (str)        : string for complete filepath of reference-line
+        - lookahead_size (int)    : when calculating the distance to next point, looks at only this many next points.
         
         Parameters for self.calculate_and_step_next_point
         - search_recursively : Enables the manager to search for the next point recursively (self.calculate_and_step_next_point)

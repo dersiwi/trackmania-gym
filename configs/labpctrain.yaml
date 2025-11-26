@@ -23,7 +23,6 @@ gmi:
   headless: False
   port: 8775
   track : simple1_validated.Challenge.Gbx
-  reference_line: tracks/reference_line/simple1_validated.npy
 
 image:
   width: 128
