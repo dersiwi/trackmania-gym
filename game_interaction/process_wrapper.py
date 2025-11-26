@@ -78,7 +78,8 @@ class TMIProcessWrapper:
 
         self.waitforstep : bool = False
 
-        self.ui_disabled = False
+        self.__ui_disabled = False
+        self.__cam_set = False
 
         self.n_steps = 0
         """Tracks number of steps to track step-frequency"""
@@ -142,15 +143,15 @@ class TMIProcessWrapper:
         """Stops running syncloop(). May result in timeout-error."""
         self.__run_sync_loop = False
 
-    def _reconfigure_logger(self, log_file : str):
+    def _reconfigure_logger(self):
         """This has to be called when executing because this is a sperate process from the main process, therefore needs own log-config."""
         if not os.path.exists(self.logdir):
             os.mkdir(self.logdir)
-
+        logfile = f"tmi_process_{self.iface.port}.log"
         logging.basicConfig(
             level=logging.DEBUG,
             format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-            handlers=[logging.FileHandler(os.path.join(self.logdir, log_file), mode='w')]
+            handlers=[logging.FileHandler(os.path.join(self.logdir, logfile), mode='w')]
         )
 
         self.logger = logging.getLogger(__name__)
@@ -267,8 +268,8 @@ class TMIProcessWrapper:
             self.ingame_time_tracking = 0
 
 
-    def syncloop(self, logfile = "tmi_process.log"):
-        self._reconfigure_logger(logfile)
+    def syncloop(self):
+        self._reconfigure_logger()
         self.logger.info("Started syncloop.")
 
         
@@ -385,11 +386,13 @@ class TMIProcessWrapper:
 
                 # ============================ BEGIN ON RUN STEP ============================
 
-                self.iface.execute_command(TMInterfaceCommands.set_camera(self.camera_id)) # TODO : is this necessary on every step?
+                if not self.__cam_set:
+                    self.iface.execute_command(TMInterfaceCommands.set_camera(self.camera_id))
+                    self.__cam_set = True
 
-                if not self.ui_disabled:
+                if not self.__ui_disabled:
                     self.iface.toggle_interface(False)
-                    self.ui_disabled = True
+                    self.__ui_disabled = True
 
                 if not self.__start_cmd_id == -1:
                     self.answer_command({IPCFields.CMD_ID : self.__start_cmd_id, IPCFields.STATUS : IPCFields.STATUS_OK})
@@ -425,7 +428,7 @@ class TMIProcessWrapper:
                 self.iface.close()
 
             elif msgtype == int(MessageType.SC_ON_CONNECT_SYNC):
-                self.logger.info("On connect event. Reuesting map.")
+                self.logger.info(f"On connect event for port {self.gim.tmi_port}. Reuesting map: '{self.map}'")
                 self.iface.on_connect_event(map_to_load=self.map)
                 self.iface._respond_to_call(msgtype)
             else:

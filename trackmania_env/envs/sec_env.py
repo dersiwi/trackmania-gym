@@ -55,6 +55,7 @@ class CrashProofEnvironment(gym.Env):
         self._step_recorded_at_timestep = -1
         self._last_obs, self._last_rew, self._last_terminated, self._last_truncated, self._last_info = None, None, None, None, None
         self.logger = logging.getLogger(self.__class__.__name__)
+        self.logger.info(f"Initialized with port {self.port}")
         
 
     @property
@@ -74,10 +75,11 @@ class CrashProofEnvironment(gym.Env):
         
         self.env_initalizations += 1
         self.logger.info(f"Initializing environment for the {self.env_initalizations}-th time.")
-        self.tmi_process, self.control_queue, self.response_queue = start_process_and_wait_for_startsignal(self.cfg, 
-                                                                                            self.cfg.rl_env.obs_manager.img_width, 
-                                                                                            self.cfg.rl_env.obs_manager.img_height,
-                                                                                            self.port)
+        self.tmi_process, self.control_queue, self.response_queue = start_process_and_wait_for_startsignal(train_config=self.cfg, 
+                                                                                            image_width=self.cfg.rl_env.obs_manager.img_width, 
+                                                                                            image_height=self.cfg.rl_env.obs_manager.img_height,
+                                                                                            port=self.port,
+                                                                                            lock = None)
         self.env = get_environment(self.cfg, self.control_queue, self.response_queue)
         self.env.obs_manager.return_as_dict = self.return_obs_as_dict
 

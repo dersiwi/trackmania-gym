@@ -4,7 +4,6 @@ import gymnasium as gym
 import random 
 import time
 
-from __future__ import annotations
 
 from trackmania_env.envs.sec_env import CrashProofEnvironment
 from trackmania_env.utils.spacetransform import SpaceTransformer
@@ -41,9 +40,10 @@ class VectorizedTMEnvironment(gym.Env):
         """
         self.n_envs = n_envs
         self.tracks = tracks
+        assert len(tracks) > 0, "You have to provide at least one track."
         self.cfg = cfg
         self.return_obs_as_dict : bool = obs_as_dict
-        self.curr_track_id = [random.randint(0, len(tracks)-1) if assign_rangom_track_at_init else 0 for i in range(n_envs)]
+        self.curr_track_id = [random.randint(0, len(tracks) - 1) if assign_rangom_track_at_init else 0 for i in range(n_envs)]
         """Stores the current track id for each environment. self.tracks[self.curr_track_id[i]] stores the track name for environment i."""
         self._steps_per_track = [[0 for i in range(len(self.tracks))] for i in range(self.n_envs)]
         """Stores the amount of steps each environment did in each track"""
@@ -55,7 +55,7 @@ class VectorizedTMEnvironment(gym.Env):
         self.envs : list[CrashProofEnvironment] = [CrashProofEnvironment(train_cfg=self.cfg, port = port+i, return_obs_as_dict = obs_as_dict) for i in range(self.n_envs)]
         for i in range(self.n_envs):
             self.envs[i].init_environment()
-            self.envs[i].env.request_map(self.tracks[self.curr_track_id])
+            self.envs[i].env.request_map(self.tracks[self.curr_track_id[i]])
         
         self.transformer = SpaceTransformer.get_instance()
         self.transformer.expect_vectorized(self.n_envs)
@@ -82,6 +82,11 @@ class VectorizedTMEnvironment(gym.Env):
             truncated[i] = trun
             rewards[i] = rew
             info.append(envinfo)
+            
+            if term or trun:
+                o_res, info_res = self.envs[i].reset()
+                observationlist[-1] = o_res
+                info[-1]["terminal_observation"] = obs
 
             self._steps_per_track[i][self.curr_track_id[i]] += 1
         
