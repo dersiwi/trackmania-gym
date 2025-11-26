@@ -1,5 +1,5 @@
 from plotting.test_environment_callbacks.core import TestEnvironmentCallback
-
+from trackmania_env.envs.info import EnvironmentInfo
 class PrintRewardsToConsole(TestEnvironmentCallback):
 
     def __init__(self):
@@ -8,13 +8,13 @@ class PrintRewardsToConsole(TestEnvironmentCallback):
 
     def _call_after_step(self, processed_obs, reward, terminated, truncated, info):
         if self.n_step % 128 == 0:
-            for key in info["rewards"]:
+            for key in info[EnvironmentInfo.REWARDS]:
                 print(key, end=" | ")
             print("\n")
-        for key in info["rewards"]:
-            print(key,info["rewards"][key], end=" | ")
-            if "total" in info["rewards"]:
-                self.accumulated += info["rewards"]["total"]
+        for key in info[EnvironmentInfo.REWARDS]:
+            print(key,info[EnvironmentInfo.REWARDS][key], end=" | ")
+            if "total" in info[EnvironmentInfo.REWARDS]:
+                self.accumulated += info[EnvironmentInfo.REWARDS]["total"]
                 print(f"Accumulated : {self.accumulated}")
         print("\n")
         self.n_step += 1

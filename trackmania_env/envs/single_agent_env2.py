@@ -2,6 +2,7 @@
 Custom Gymnasium Environment for TMNF using InterprocessCommunication to talk to TMIProcessWrapper.
 https://gymnasium.farama.org/tutorials/gymnasium_basics/environment_creation/
 """
+from __future__ import annotations
 from typing import Any,Dict,Tuple,Optional,List
 
 import gymnasium as gym
@@ -28,6 +29,7 @@ from trackmania_env.utils.orientationless_random_respawn_manager import Orientat
 from trackmania_env.utils.return_tracker import ReturnTracker
 from trackmania_env.utils.position_buffer import PositionBuffer
 from trackmania_env.utils.actionmap import ACTION_MAP
+from trackmania_env.envs.info import EnvironmentInfo
 
 from configs.config import EnvConfig
 
@@ -158,13 +160,14 @@ class TMNF_Single_Agent_Env(gym.Env):
     def _get_info(self,ssD:SimStateData) -> Dict[str,Any]:
         """Helper function for computing additional information (e.g. for debugging or logging)"""
         info = {}
-        info["display_speed"] = ssD.display_speed
-        info["gas"] = ssD.scene_mobil.input_gas
-        info["last_has_any_lateral_contact_time"] = ssD.scene_mobil.last_has_any_lateral_contact_time
-        info["velocity"] = ssD.velocity
-        info["position"] = ssD.position
-        info["rotation_matrix"] = ssD.rotation_matrix
-        info["dyna_rotation"] = ssD.dyna.current_state.rotation
+        info[EnvironmentInfo.DISPLAY_SPEED] = ssD.display_speed
+        info[EnvironmentInfo.GAS] = ssD.scene_mobil.input_gas
+        info[EnvironmentInfo.LAST_HAS_ANY_LATERAL_CONTACT_TIME] = ssD.scene_mobil.last_has_any_lateral_contact_time
+        info[EnvironmentInfo.VELOCITY] = ssD.velocity
+        info[EnvironmentInfo.POSITION] = ssD.position
+        info[EnvironmentInfo.ROTATION_MATRIX] = ssD.rotation_matrix
+        info[EnvironmentInfo.DYNA_ROTATION] = ssD.dyna.current_state.rotation
+        info[EnvironmentInfo.NEXT_REFLINE_IDX] = self.reference_line.next_point_idx
         return info
     
 

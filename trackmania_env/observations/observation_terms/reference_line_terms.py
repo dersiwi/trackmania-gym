@@ -3,6 +3,7 @@ import numpy as np
 from gymnasium.spaces import Box
 from tminterface.structs import SimStateData, HmsDynaStateStruct
 
+from trackmania_env.envs.info import EnvironmentInfo
 from trackmania_env.observations.observation_term import ObservationTerm, VectorlikeTerm
 from trackmania_env.utils.constants import ObsNormalizationFactors
 from game_interaction.ipc_fields import IPCFields
@@ -20,13 +21,9 @@ class NextReflinePoint(ObservationTerm):
         self.n_refline_points = n_refline_points
         self.reference_line_stride = reference_line_stride
 
-        self.observation_space = Box(
-            low=-np.inf,
-            high=np.inf,
-            shape=(self.n_refline_points, 3),
-            dtype=np.float32
-        )
+        self.set_observation_space_as_box(-1000, 1000, (n_refline_points, 3))
 
+        
     def _normalize(self, obs: np.ndarray) -> np.ndarray:
         return obs / ObsNormalizationFactors.refline_norm
 
@@ -39,7 +36,6 @@ class NextReflinePoint(ObservationTerm):
 
         refline: ReferenceLineManager = self.env.reference_line
         next_idx, _, _ = refline.get_distance_to_next_point()
-        self.info["next_refline_index"] = next_idx
 
         upcoming_refline_points: np.ndarray = refline.get_reference_line_points(
             begin_idx=next_idx,
@@ -58,9 +54,9 @@ class NextReflinePoint(ObservationTerm):
             (upcoming_refline_points - car_position).T
         ).T  # Shape: (n_refline_points, 3)
 
-        self.info["comming_refline_points"] = rel_points
-        self.info["orientation"] = car_orientation
-        return rel_points, {}
+        self.info[EnvironmentInfo.COMING_REFLINE_POINTS] = rel_points
+        self.info[EnvironmentInfo.ORIENTATION] = car_orientation
+        return rel_points, self.info
     
     def flatten(self, processed_obs):
         return processed_obs.reshape((processed_obs.shape[0] * processed_obs.shape[1]))
@@ -78,7 +74,7 @@ class LateralDistance(VectorlikeTerm):
         super().__init__(name, normalize, 1) # TODO Bounds not great
 
     def _normalize(self, obs):
-        return obs / ObsNormalizationFactors.lateral_dist_norm
+        return obs / ObsNormalizationFactors.lateraltrack_dist_norm
 
     def _get_obs(self, game_states :  dict[str, Union[np.ndarray, SimStateData]], **kwargs):
         reference_line = self.env.reference_line

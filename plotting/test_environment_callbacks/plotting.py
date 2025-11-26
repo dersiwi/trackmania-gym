@@ -1,6 +1,7 @@
 import numpy as np
 import matplotlib
 matplotlib.use("TkAgg")
+from trackmania_env.envs.info import EnvironmentInfo
 from matplotlib import pyplot as plt
 from trackmania_env.envs.single_agent_env2 import TMNF_Single_Agent_Env
 from plotting.test_environment_callbacks.core import TestEnvironmentCallback, Live3dPlotEnvironmentCallback
@@ -37,7 +38,7 @@ class Plot_Rewards_Callback(NonBlockingPlot):
         super().__init__(factory_name="lines", backend=backend, create_args=dict(keys_to_plot= reward_terms, title = "Rewards",ylabel= "Rewards"))
 
     def _call_after_step(self, processed_obs, reward, terminated, truncated, info):
-        rewards = info["rewards"]
+        rewards = info[EnvironmentInfo.REWARDS]
         rewards = {k: v for k, v in rewards.items() if k not in BANNED}
         self.queue.put(rewards)
 
@@ -48,8 +49,8 @@ class Plot_Lateral_Distance_Callback(NonBlockingPlot):
         super().__init__(factory_name="lateral_distance3", backend = backend, create_args=dict(reference_line_manager=reference_line_manager))
 
     def _call_after_step(self, processed_obs, reward, terminated, truncated, info):
-        self.data["position"] = info["position"]
-        self.data["next_refline_index"] = info["next_refline_index"] 
+        self.data[EnvironmentInfo.POSITION] = info[EnvironmentInfo.POSITION]
+        self.data[EnvironmentInfo.NEXT_REFLINE_IDX] = info[EnvironmentInfo.NEXT_REFLINE_IDX] 
         self.queue.put(self.data)
 
 class Plot_ReferenceLine_Callback(NonBlockingPlot):
@@ -58,10 +59,10 @@ class Plot_ReferenceLine_Callback(NonBlockingPlot):
         super().__init__(factory_name="lateral_distance3", backend = "matplotlib", create_args=dict(reference_line= reference_line))
 
     def _call_after_step(self, processed_obs, reward, terminated, truncated, info):
-        self.data["position"] = info["position"]
-        self.data["orientation"] = info["orientation"]
-        self.data["comming_refline_points"] = info["comming_refline_points"]
-        self.data["next_refline_index"] = info["next_refline_index"]
+        self.data[EnvironmentInfo.POSITION] = info[EnvironmentInfo.POSITION]
+        self.data[EnvironmentInfo.ORIENTATION] = info[EnvironmentInfo.ORIENTATION]
+        self.data[EnvironmentInfo.COMING_REFLINE_POINTS] = info[EnvironmentInfo.COMING_REFLINE_POINTS]
+        self.data[EnvironmentInfo.NEXT_REFLINE_IDX] = info[EnvironmentInfo.NEXT_REFLINE_IDX]
         self.queue.put(self.data)
 
 class Plot_Rotation_Callback(NonBlockingPlot):

@@ -1,7 +1,7 @@
 from __future__ import annotations
 import multiprocessing as mp
 from queue import Empty
-from trackmania_env.callbacks.core import TestEnvironmentCallback
+from plotting.test_environment_callbacks.core import TestEnvironmentCallback
 from typing import Type, Dict
 from plotting.backends import matplot, pyqtgraph, tmnf_cv2
 from plotting.plotter import EnvPlotter

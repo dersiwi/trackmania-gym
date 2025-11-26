@@ -38,7 +38,7 @@ def main(cfg : TrainConfig):
     # tm_env.add_env_test_calback(plot_callback.Plot_ReferenceLine_Callback(reference_line= tm_env.reference_line.reference_line))
 
     # Plotting lateral distance 
-    # tm_env.add_env_test_calback(plot_callback.Plot_Lateral_Distance_Callback(reference_line_manager=tm_env.reference_line))
+    tm_env.add_env_test_calback(plot_callback.Plot_Lateral_Distance_Callback(reference_line_manager=tm_env.reference_line))
     
     # Plotting Images
     obs_manager = cfg.rl_env.obs_manager 
