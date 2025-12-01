@@ -57,6 +57,9 @@ class VectorizedTMEnvironment(gym.Env):
         for i in range(self.n_envs):
             self.envs[i].init_environment()
             self.envs[i].env.request_map(self.tracks[self.curr_track_id[i]])
+
+        self.observation_space = self._build_observation_space()
+        self.action_space = gym.spaces.Box(-np.inf, np.inf, (n_envs, ))
         
         self.transformer = SpaceTransformer.get_instance()
         self.transformer.expect_vectorized(self.n_envs)
@@ -65,7 +68,19 @@ class VectorizedTMEnvironment(gym.Env):
         self.total_steps = 0
         self.average_step_time = 0
 
-        
+
+    def _build_observation_space(self) -> gym.spaces.Space:
+        """Builds the observation space for the vectorized environment."""
+        if self.return_obs_as_dict:
+            spacedict = {}
+            for term in self.envs[0].obs_manager.observation_terms:
+                termspace = term.observation_space
+                vectorized_shape = tuple([self.n_envs] + list(termspace.shape))
+                low, high = termspace.low.flat[0], termspace.high.flat[0]   # NOTE : This is not correct; but for most terms it should be fine.
+                spacedict[term.name] = gym.spaces.Box(low, high, vectorized_shape)
+            return gym.spaces.Dict(spacedict)
+        else:
+            return gym.spaces.Box(-np.inf, np.inf, (self.n_envs, self.obs_size))
 
     def step(self, action : torch.Tensor | np.ndarray):
         assert action.shape[0] == self.n_envs

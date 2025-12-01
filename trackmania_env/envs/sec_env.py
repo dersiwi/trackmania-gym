@@ -42,6 +42,11 @@ class CrashProofEnvironment(gym.Env):
         self.port : int = port
         self.env : TMNF_Single_Agent_Env = None
 
+        self.obs_manager = None
+        self.rew_calculator = None
+        self.reference_line = None
+        self.termination_manager = None
+
         self.tmi_process : Process  = None
         self.control_queue : Queue  = None
         self.response_queue : Queue = None
@@ -57,6 +62,11 @@ class CrashProofEnvironment(gym.Env):
         self.logger = logging.getLogger(self.__class__.__name__)
         self.logger.info(f"Initialized with port {self.port}")
         
+    def _set_env_variables(self):
+        self.obs_manager = self.env.obs_manager
+        self.rew_calculator = self.env.rew_calculator
+        self.reference_line = self.env.reference_line
+        self.termination_manager = self.env.termination_manager
 
     @property
     def observation_space(self):
@@ -82,6 +92,7 @@ class CrashProofEnvironment(gym.Env):
                                                                                             lock = None)
         self.env = get_environment(self.cfg, self.control_queue, self.response_queue)
         self.env.obs_manager.return_as_dict = self.return_obs_as_dict
+        self._set_env_variables()
 
     def finalize_process(self, reinit : bool = True):
         """
