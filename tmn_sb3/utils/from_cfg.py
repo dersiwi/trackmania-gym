@@ -32,46 +32,9 @@ from neural_networks.extractors import make_tmn_extractor
 
 def print_model_params(model : BaseAlgorithm):
     """"Prints parametrs of the given model"""
-    print("\nExtractor, Policy and Critic architecturs:\n" + "-"*30)
-
+    print("\nModel Parameters\n" + "-"*40)
     for name, param in model.policy.named_parameters():
-        if param.requires_grad:
-            print(f"{name}: {param.shape}")
-
-    print("\nFeature Extractor Parameters:\n" + "-"*30)
-    if isinstance(model.policy,AsyncActorCriticPolicy):
-        for name, param in chain(
-            model.policy.policy_features_extractor.named_parameters(),
-model.policy.value_features_extractor.named_parameters(),
-            model.policy.mlp_extractor.named_parameters()):
-            print(name, param.shape)
-    elif isinstance(model,QRDQN):
-        for name, param in model.quantile_net.features_extractor.named_parameters():
-            print(f"{name}: requires_grad = {param.requires_grad}")
-    else:
-        for name, param in chain(model.policy.features_extractor.named_parameters(),model.policy.mlp_extractor.named_parameters()):
-            print(f"{name}: requires_grad = {param.requires_grad}")
-
-    
-    if isinstance(model.policy, ActorCriticPolicy):
-        print("\nActor- and Value-Networks Parameters:\n" + "-"*30)
-        for name, param in chain(model.policy.action_net.named_parameters(),model.policy.value_net.named_parameters()):
-            print(f"{name}: requires_grad = {param.requires_grad}")
-        print("\n[INFO] Checking whether the actor and critic are using the same feature extractor:\n" + "-"*30)
-        if isinstance(model.policy,AsyncActorCriticPolicy):
-            actor_id = id(model.policy.policy_features_extractor)
-            critic_id = id(model.policy.value_features_extractor)
-        else:   
-            actor_id = id(model.policy.pi_features_extractor)
-            critic_id = id(model.policy.vf_features_extractor)
-
-        print("Actor Feature Extractor ID:", actor_id)
-        print("Critic Feature Extractor ID:", critic_id)
-
-        if actor_id != critic_id:
-            print("Actor and Critic are using DIFFERENT feature extractors.")
-        else:
-            print("Actor and Critic are sharing the SAME feature extractor.")
+        print(f"{name:<75} {str(tuple(param.shape)):<25}  grad={param.requires_grad}")
 
 def get_model_from_config(
         cfg : TrainConfig,
