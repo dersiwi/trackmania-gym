@@ -7,8 +7,7 @@ import hydra
 from omegaconf import DictConfig, OmegaConf,ListConfig
 from itertools import chain
 
-from tmn_sb3.policies.async_policy import AsyncActorCriticPolicy
-from neural_networks.lr_schedulers import LR_Scheduler
+
 
 from sb3_contrib.qrdqn.qrdqn import QRDQN
 
@@ -16,20 +15,19 @@ from stable_baselines3.common.base_class import BaseAlgorithm
 from stable_baselines3.common.policies import ActorCriticPolicy
 from stable_baselines3.common.off_policy_algorithm import OffPolicyAlgorithm
 
-from trackmania_env.envs.single_agent_env2 import TMNF_Single_Agent_Env
 
 from configs.config import TrainConfig
 from typing import Any, Dict
 
-from neural_networks.extractors.extractors import ExtractorConfig
-
-from neural_networks.extractors import make_tmn_extractor
-
 from dataclasses import replace as data_cls_replace
-
 from tmn_sb3.policies.async_policy import build_async_actor_critic_policy
-
 from utils.hydra_wandb_utils import secure_attribute_retrieval
+
+from trackmania_env.envs.single_agent_env2 import TMNF_Single_Agent_Env
+from tmn_sb3.policies.async_policy import AsyncActorCriticPolicy
+from neural_networks.lr_schedulers import LR_Scheduler
+from neural_networks.extractors.extractors import ExtractorConfig
+from neural_networks.extractors import make_tmn_extractor
 
 
 def print_model_params(model : BaseAlgorithm):
@@ -74,36 +72,6 @@ model.policy.value_features_extractor.named_parameters(),
             print("Actor and Critic are using DIFFERENT feature extractors.")
         else:
             print("Actor and Critic are sharing the SAME feature extractor.")
-
-def _create_base_extractor_config(
-    policy_cfg: DictConfig,
-    cfg: DictConfig,
-    tm_env: TMNF_Single_Agent_Env,
-    vision_model: partial[nn.Module],
-    vision_model_kwargs: Dict[str,Any],
-    device: str
-) -> ExtractorConfig:
-    """Creates a base ExtractorConfig with all shared/common parameters."""
-    
-    activation_fn_class = secure_attribute_retrieval(
-        lambda: hydra.utils.get_class(policy_cfg.activation_fn._target_), nn.ReLU
-    )
-    last_activation_fn_class = secure_attribute_retrieval(
-        lambda: hydra.utils.get_class(policy_cfg.last_activation_fn._target_), nn.Identity
-    )
-    
-    return ExtractorConfig(
-        vision_model=vision_model,
-        vision_model_kwargs=vision_model_kwargs, 
-        normalized_image=cfg.rl_env.env.normalize_images,
-        out_dim=secure_attribute_retrieval(lambda: policy_cfg.extractors_out_dim,64),
-        check_channels=cfg.rl_env.env.check_channels,
-        
-        float_model=secure_attribute_retrieval(lambda: policy_cfg.float_net, None), 
-        activation_fn=activation_fn_class,
-        last_activation_fn=last_activation_fn_class,
-        device = device 
-    )
 
 def get_model_from_config(
         cfg : TrainConfig,
@@ -156,7 +124,7 @@ def get_model_from_config(
     policy_type = policy_cfg.type 
     policy_kwargs = None
 
-    base_ext_config = _create_base_extractor_config(policy_cfg, cfg, tm_env, vision_model, vision_model_kwargs, device)
+    base_ext_config = ExtractorConfig.create(policy_cfg, cfg, vision_model, vision_model_kwargs, device)
 
     if policy_cfg.name in {"basic","dqn"}:
 
@@ -176,7 +144,7 @@ def get_model_from_config(
             float_model=secure_attribute_retrieval(lambda: policy_cfg.actor.float_net, None),
             activation_fn=hydra.utils.get_class(policy_cfg.actor.activation_fn._target_),
             last_activation_fn=hydra.utils.get_class(policy_cfg.actor.last_activation_fn._target_),
-            out_dim =  policy_cfg.actor.extractors_out_dim,
+            out_dim = policy_cfg.actor.extractors_out_dim,
         )
         
         value_config = data_cls_replace(

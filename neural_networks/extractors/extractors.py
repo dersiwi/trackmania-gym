@@ -1,3 +1,4 @@
+from __future__ import annotations
 import torch
 import torch.nn as nn
 import gymnasium as gym
@@ -10,6 +11,16 @@ from stable_baselines3.common.preprocessing import is_image_space
 from stable_baselines3.common.torch_layers import create_mlp
 
 from neural_networks.extractors.utils import build_vision_model
+
+from functools import partial
+
+import torch.nn as nn
+import hydra
+
+from omegaconf import DictConfig
+from utils.hydra_wandb_utils import secure_attribute_retrieval
+
+
 
 @dataclass
 class ExtractorConfig:
@@ -42,20 +53,42 @@ class ExtractorConfig:
         if exclude_none:
             return {k: v for k, v in d.items() if v is not None}
         return d
-
+    
+    def create(policy_cfg: DictConfig, cfg: DictConfig, vision_model: partial[nn.Module], vision_model_kwargs: Dict[str,Any], device: str) -> ExtractorConfig:
+        """Creates a base ExtractorConfig with all shared/common parameters."""
+        
+        activation_fn_class = secure_attribute_retrieval(
+            lambda: hydra.utils.get_class(policy_cfg.activation_fn._target_), nn.ReLU
+        )
+        last_activation_fn_class = secure_attribute_retrieval(
+            lambda: hydra.utils.get_class(policy_cfg.last_activation_fn._target_), nn.Identity
+        )
+        
+        return ExtractorConfig(
+            vision_model=vision_model, vision_model_kwargs=vision_model_kwargs, 
+            normalized_image=cfg.rl_env.env.normalize_images,
+            out_dim=secure_attribute_retrieval(lambda: policy_cfg.extractors_out_dim,64),
+            check_channels=cfg.rl_env.env.check_channels,
+            
+            float_model=secure_attribute_retrieval(lambda: policy_cfg.float_net, None), 
+            activation_fn=activation_fn_class,
+            last_activation_fn=last_activation_fn_class,
+            device = device 
+        )
 
 
 class TMN_Extractor(BaseFeaturesExtractor, ABC):
-    """Feature extractor class from which special extractor can extend 
-    :param observation_space: Gym Dict space describing the full observation structure.
-    :param vision_model: A neural network used to extract features from image observations.
-    :param out_dim: The number of dimension each extractor should project on to
-    :param normalized_image: If True, assumes that image inputs are already normalized.        
-    :param float_model (list[int]): Optional list defining MLP layer sizes for vector inputs.
-    :param activation_fn (type[nn.Module]): Activation function class for MLPs.
-    :param last_activation_fn (type[nn.Module]): Activation for final MLP layer.
-    :param check_channnles (bool): Whether to do or not the check for the number of channels.
-        e.g., with frame-stacking, the observation space may have more channels than expected. 
+    """Feature extractor class from which special extractor can extend
+    Args:
+         observation_space: Gym Dict space describing the full observation structure.
+         vision_model: A neural network used to extract features from image observations.
+         out_dim: The number of dimension each extractor should project on to
+         normalized_image: If True, assumes that image inputs are already normalized.        
+         float_model (list[int]): Optional list defining MLP layer sizes for vector inputs.
+         activation_fn (type[nn.Module]): Activation function class for MLPs.
+         last_activation_fn (type[nn.Module]): Activation for final MLP layer.
+         check_channnles (bool): Whether to do or not the check for the number of channels.
+            e.g., with frame-stacking, the observation space may have more channels than expected. 
     """
     def __init__(self, observation_space: gym.spaces.Box,
             vision_model: Optional[Type[nn.Module]] = None,
