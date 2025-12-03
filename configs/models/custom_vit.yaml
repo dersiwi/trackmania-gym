@@ -1,4 +1,3 @@
-_partial_: True
 _target_: neural_networks.vit.ViT
 img_size: 100
 patch_size: 10

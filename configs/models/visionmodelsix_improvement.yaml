@@ -1,2 +1,1 @@
-_partial_: True
 _target_: neural_networks.vision_encoder.conv_NNs.VisionModelSixImprovement

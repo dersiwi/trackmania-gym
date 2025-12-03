@@ -1,7 +1,0 @@
-_partial_: True
-_target_: neural_networks.vision_encoder.conv_NNs.ImprovedCNN
-num_blocks: 3
-out_channels1: 32
-out_channels2: 64
-image_shape: [100, 100]
-use_skip: True

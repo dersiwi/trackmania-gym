@@ -8,7 +8,6 @@ from .extractors import TMN_Box_Extractor, TMN_Dict_Extractor
 def make_tmn_extractor(
     observation_space: gym.Space,
     *,
-    vision_model: Optional[Type[nn.Module]] = None,
     out_dim: int = 64,
     device: str = "cpu",
     **kwargs: Any,
@@ -32,7 +31,6 @@ def make_tmn_extractor(
     if isinstance(observation_space, gym.spaces.Box):
         return TMN_Box_Extractor(
             observation_space=observation_space,
-            vision_model=vision_model,
             out_dim=out_dim,
             device=device,
             **kwargs,  # forward everything else
@@ -41,7 +39,6 @@ def make_tmn_extractor(
     elif isinstance(observation_space, gym.spaces.Dict):
         return TMN_Dict_Extractor(
             observation_space=observation_space,
-            vision_model=vision_model,
             out_dim=out_dim,
             device=device,
             **kwargs,  # forward everything else

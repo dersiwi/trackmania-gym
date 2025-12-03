@@ -69,15 +69,6 @@ def get_model_from_config(
     device = cfg.platforms.device
     normalized_images = cfg.rl_env.env.normalize_images
 
-    # Prepare Vision Model
-    vision_model = (hydra.utils.instantiate(cfg.models) if secure_attribute_retrieval(lambda: cfg.rl_env.env.obs_have_imgs, True) else None) 
-
-    vision_model_kwargs = (
-        OmegaConf.to_container(cfg.models.args, resolve=True)
-        if secure_attribute_retrieval(lambda: cfg.models.args, False)
-        else {}
-    )
-
     # extract algo params
     algorithm_params = OmegaConf.to_container(cfg.sb3.algorithm_params, resolve=True)
 
@@ -86,7 +77,9 @@ def get_model_from_config(
     policy_type = policy_cfg.type 
     policy_kwargs = None
 
-    base_ext_config = ExtractorConfig.create(policy_cfg, cfg, vision_model, vision_model_kwargs, device)
+    # vision model is created in the feature extractor
+    vision_model_kwargs = cfg.models if secure_attribute_retrieval(lambda: cfg.rl_env.env.obs_have_imgs, True) else None
+    base_ext_config = ExtractorConfig.create(policy_cfg, cfg, vision_model_kwargs = vision_model_kwargs, device = device)
 
     if policy_cfg.name in {"basic","dqn"}:
 

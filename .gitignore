@@ -202,7 +202,6 @@ logs/
 outputs/
 wandb/
 runs/
-models/
 checkpoints/
 *.gif
 sb3/

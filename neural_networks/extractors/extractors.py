@@ -36,7 +36,6 @@ class ExtractorConfig:
             e.g., with frame-stacking, the observation space may have more channels than expected. 
     """
     # observation_space: gym.spaces.Space
-    vision_model: Union[nn.Module, Any]
     vision_model_kwargs: Optional[Dict[str, Any]]
     out_dim: int
     normalized_image: bool
@@ -53,7 +52,7 @@ class ExtractorConfig:
             return {k: v for k, v in d.items() if v is not None}
         return d
     
-    def create(policy_cfg: PolicyCfg, cfg: TrainConfig, vision_model: partial[nn.Module], vision_model_kwargs: Dict[str,Any], device: str) -> ExtractorConfig:
+    def create(policy_cfg: PolicyCfg, cfg: TrainConfig, vision_model_kwargs: Dict[str,Any], device: str) -> ExtractorConfig:
         """Creates a base ExtractorConfig with all shared/common parameters."""
         policy_cfg = cfg.policy
         activation_fn_class = secure_attribute_retrieval(
@@ -64,11 +63,10 @@ class ExtractorConfig:
         )
         
         return ExtractorConfig(
-            vision_model=vision_model, vision_model_kwargs=vision_model_kwargs, 
+            vision_model_kwargs=vision_model_kwargs, 
             normalized_image=cfg.rl_env.env.normalize_images,
             out_dim=secure_attribute_retrieval(lambda: policy_cfg.extractors_out_dim, 64),
             check_channels=cfg.rl_env.env.check_channels,
-            
             float_model=secure_attribute_retrieval(lambda: policy_cfg.float_net, None), 
             activation_fn=activation_fn_class,
             last_activation_fn=last_activation_fn_class,
@@ -90,7 +88,6 @@ class TMN_Extractor(BaseFeaturesExtractor, ABC):
             e.g., with frame-stacking, the observation space may have more channels than expected. 
     """
     def __init__(self, observation_space: gym.spaces.Box,
-            vision_model: Optional[Type[nn.Module]] = None,
             vision_model_kwargs: Optional[Dict[str, Any]] = None,
             out_dim: int = 64,
             device: str = "cpu",
@@ -101,7 +98,6 @@ class TMN_Extractor(BaseFeaturesExtractor, ABC):
             check_channels: bool = True):
 
         super().__init__(observation_space, features_dim = out_dim)
-        self.vision_model = vision_model
         self.vision_model_kwargs = vision_model_kwargs
         self.out_dim = out_dim
         self.device = device
@@ -113,10 +109,9 @@ class TMN_Extractor(BaseFeaturesExtractor, ABC):
 
     def build_box_extractor(self, space : gym.spaces.Space):
         if is_image_space(observation_space= space, check_channels=self.check_channels, normalized_image=self.normalized_image):
-            if self.vision_model is None:
+            if self.vision_model_kwargs is None:
                 raise ValueError("vision_model_cls must be provided for image spaces.")
-            return build_vision_model(vision_model_cls=self.vision_model, space=space, 
-                                      out_dim = self.out_dim, device = self.device, vision_model_kwargs=self.vision_model_kwargs)
+            return build_vision_model(space=space, out_dim = self.out_dim, device = self.device, vision_model_kwargs=self.vision_model_kwargs)
 
         # Otherwise, handle vector (float) inputs
         input_dim = space.shape[0]
@@ -144,8 +139,8 @@ class TMN_Extractor(BaseFeaturesExtractor, ABC):
 class TMN_Box_Extractor(TMN_Extractor):
     """Feature extractor for a single gym.Box observation (image or vector)."""
 
-    def __init__(self, observation_space : gym.spaces.Box, vision_model = None, vision_model_kwargs = None, out_dim = 64, device = "cpu", normalized_image = False, float_model = None, activation_fn = nn.ReLU, last_activation_fn = nn.Tanh, check_channels = True):
-        super().__init__(observation_space, vision_model, vision_model_kwargs, out_dim, device, normalized_image, float_model, activation_fn, last_activation_fn, check_channels)
+    def __init__(self, observation_space : gym.spaces.Box, vision_model_kwargs = None, out_dim = 64, device = "cpu", normalized_image = False, float_model = None, activation_fn = nn.ReLU, last_activation_fn = nn.Tanh, check_channels = True):
+        super().__init__(observation_space, vision_model_kwargs, out_dim, device, normalized_image, float_model, activation_fn, last_activation_fn, check_channels)
         assert isinstance(observation_space,gym.spaces.Box), f"This extractor only works with Box observation spaces but got {observation_space}"
         self.extractor = self.build_box_extractor(self._observation_space)
 
@@ -156,9 +151,9 @@ class TMN_Box_Extractor(TMN_Extractor):
 class TMN_Dict_Extractor(TMN_Extractor):
     """Combined feature extractor for dictionary observations (images + vectors)."""
 
-    def __init__(self, observation_space : gym.spaces.Dict, vision_model = None, vision_model_kwargs = None, out_dim = 64, device = "cpu", normalized_image = False, float_model = None, activation_fn = nn.ReLU, last_activation_fn = nn.Tanh, check_channels = True):
+    def __init__(self, observation_space : gym.spaces.Dict, vision_model_kwargs = None, out_dim = 64, device = "cpu", normalized_image = False, float_model = None, activation_fn = nn.ReLU, last_activation_fn = nn.Tanh, check_channels = True):
         assert isinstance(observation_space,gym.spaces.Dict), f"This extractor only works with Dict observation spaces but got {observation_space}"
-        super().__init__(observation_space, vision_model, vision_model_kwargs, out_dim, device, normalized_image, float_model, activation_fn, last_activation_fn, check_channels)
+        super().__init__(observation_space, vision_model_kwargs, out_dim, device, normalized_image, float_model, activation_fn, last_activation_fn, check_channels)
 
         extractors = {}
         total_dim = 0
