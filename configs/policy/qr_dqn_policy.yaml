@@ -1,4 +1,3 @@
 name: "dqn"
 type: "MultiInputPolicy"
 extractors_out_dim: 64 # every extractor will produce an output with this dimension 
-normalize_images: True

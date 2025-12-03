@@ -28,13 +28,13 @@ class PlatformConfig:
     device: str
 
 @dataclass
-class PretrainedResNetConfig:
+class ModelCfg:
     _partial_: bool
     _target_: str
     model_name: str
     out_dims: int
-    pretrained: bool
-    trainable_backbone: bool
+    args : dict[str, any]
+    """Argruments given to model at instanciation"""
 
 @dataclass
 class ObservationsFilterConfig:
@@ -96,13 +96,7 @@ class LinesightObsCfg:
     road_width: int  ## a little bit of margin, could be closer to 24 probably ? Don't take risks there are curvy roads
     sync_virtual_and_real_checkpoints : bool
 
-@dataclass
-class SB3LearnArgsConfig:
-  total_timesteps: int
-  log_interval: int
-  tb_log_name: str
-  reset_num_timesteps: bool
-  progress_bar: bool
+
   
 @dataclass
 class SB3PPOConfig:
@@ -146,6 +140,10 @@ class EnvConfig:
     normalize_rewards : bool
     normalize_obs : bool
     store_imgs_as_uint8 : bool
+    normalize_images : bool
+    check_channels : bool
+    """Executes a check of number of channels in order to determine if a observation-term is an imageterm.
+    May be wrong, if doing framestacking,..."""
 
     ignore_stuck_for_n_steps_after_reset : int
     increase_timeout_intervals : list[int]
@@ -193,6 +191,28 @@ class Learnargs:
     progress_bar : bool
     tb_log_name : str
 
+
+@dataclass
+class PolicyCfg:
+    name : str
+    type : str
+    extractors_out_dim : Optional[int] 
+    """Custom policies may vary."""
+@dataclass
+class FloatNetArchitecture:
+    extractors_out_dim : int
+    observations : list[str]
+    float_net : list[int]
+    activation_fn : any
+    """this is a target-path to a function that is being instanciated"""
+    last_activation_fn : any
+    """this is a target-path to a function that is being instanciated"""
+
+@dataclass
+class ActorCriticPolicyCfg(PolicyCfg):
+    actor : FloatNetArchitecture
+    critic : FloatNetArchitecture
+
 @dataclass
 class TrainConfig:
     gmi: GMIConfig
@@ -200,11 +220,13 @@ class TrainConfig:
     learn_args : Learnargs
     extractors_out_dim : int
     platforms_config_path : str
-    learn_args: SB3LearnArgsConfig
-    platforms: Optional[PlatformConfig] = None
-    models: Optional[PretrainedResNetConfig] = None
-    rl_env: Optional[RLEnvConfig] = None
-    lr_scheduler : Optional[LearningRateSchedulerConfig] = None
-    sb3: Optional[SB3PPOConfig] = None
-    wandb_callbacks: Optional[SB3CallbackConfig]= None
-    wandb: Optional[WandbConfig] = None
+    policy : PolicyCfg | ActorCriticPolicyCfg
+    platforms: PlatformConfig 
+    models: ModelCfg 
+    rl_env: RLEnvConfig 
+    lr_scheduler : LearningRateSchedulerConfig 
+    sb3: SB3PPOConfig 
+    wandb_callbacks: SB3CallbackConfig 
+    wandb: WandbConfig 
+
+    

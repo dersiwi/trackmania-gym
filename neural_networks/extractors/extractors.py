@@ -16,8 +16,7 @@ from functools import partial
 
 import torch.nn as nn
 import hydra
-
-from omegaconf import DictConfig
+from configs.config import TrainConfig, PolicyCfg
 from utils.hydra_wandb_utils import secure_attribute_retrieval
 
 
@@ -54,9 +53,9 @@ class ExtractorConfig:
             return {k: v for k, v in d.items() if v is not None}
         return d
     
-    def create(policy_cfg: DictConfig, cfg: DictConfig, vision_model: partial[nn.Module], vision_model_kwargs: Dict[str,Any], device: str) -> ExtractorConfig:
+    def create(policy_cfg: PolicyCfg, cfg: TrainConfig, vision_model: partial[nn.Module], vision_model_kwargs: Dict[str,Any], device: str) -> ExtractorConfig:
         """Creates a base ExtractorConfig with all shared/common parameters."""
-        
+        policy_cfg = cfg.policy
         activation_fn_class = secure_attribute_retrieval(
             lambda: hydra.utils.get_class(policy_cfg.activation_fn._target_), nn.ReLU
         )
@@ -67,7 +66,7 @@ class ExtractorConfig:
         return ExtractorConfig(
             vision_model=vision_model, vision_model_kwargs=vision_model_kwargs, 
             normalized_image=cfg.rl_env.env.normalize_images,
-            out_dim=secure_attribute_retrieval(lambda: policy_cfg.extractors_out_dim,64),
+            out_dim=secure_attribute_retrieval(lambda: policy_cfg.extractors_out_dim, 64),
             check_channels=cfg.rl_env.env.check_channels,
             
             float_model=secure_attribute_retrieval(lambda: policy_cfg.float_net, None), 
