@@ -36,7 +36,7 @@ class SpaceTransformer:
         observations = []
         for term in self.obsterms:
             observations.append(term.flatten(dictobs[term.name]))
-        return np.hstack([observations])
+        return np.hstack(observations)
     
     def dict_to_numpy_vectorized(self, dictobs : dict[str, np.ndarray]) -> np.ndarray:
         """These the obs in dictobs are unflattened obs, so this has to be called manually depending on if its vectorized or not."""
@@ -67,3 +67,10 @@ class SpaceTransformer:
             obsdict[term.name] = array[:, startidx : startidx + term.get_flatten_dim()].reshape(tuple([self.n_envs] + [sdim for sdim in term.get_native_shape()]))
             startidx += term.get_flatten_dim()
         return obsdict
+    
+
+    def store_numpy_observations(self, path : str, observations : np.ndarray):
+        np.save(path, observations)
+
+    def load_numpy_observations(self, path) -> np.ndarray:
+        return np.load(path)

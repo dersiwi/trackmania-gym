@@ -1,24 +1,29 @@
-from .utils import build_box_extractor
-from typing import Optional, List, Type, Dict, Any, Union
 import torch
 import torch.nn as nn
 import gymnasium as gym
-from stable_baselines3.common.torch_layers import BaseFeaturesExtractor
-from dataclasses import dataclass, asdict
 
+from abc import ABC, abstractmethod
+from stable_baselines3.common.torch_layers import BaseFeaturesExtractor
+from typing import Optional, List, Type, Dict, Any, Union
+from dataclasses import dataclass, asdict
+from stable_baselines3.common.preprocessing import is_image_space
+from stable_baselines3.common.torch_layers import create_mlp
+
+from neural_networks.extractors.utils import build_vision_model
 
 @dataclass
 class ExtractorConfig:
-    """   
-    observation_space: Gym Dict space describing the full observation structure.
-    vision_model: A neural network used to extract features from image observations.
-    out_dim: The number of dimension each extractor should project on to
-    normalized_image: If True, assumes that image inputs are already normalized.        
-    float_model (list[int]): Optional list defining MLP layer sizes for vector inputs.
-    activation_fn (type[nn.Module]): Activation function class for MLPs.
-    last_activation_fn (type[nn.Module]): Activation for final MLP layer.
-    check_channnles (bool): Whether to do or not the check for the number of channels.
-        e.g., with frame-stacking, the observation space may have more channels than expected. 
+    """
+    Args:
+        observation_space: Gym Dict space describing the full observation structure.
+        vision_model: A neural network used to extract features from image observations.
+        out_dim: The number of dimension each extractor should project on to
+        normalized_image: If True, assumes that image inputs are already normalized.        
+        float_model (list[int]): Optional list defining MLP layer sizes for vector inputs.
+        activation_fn (type[nn.Module]): Activation function class for MLPs.
+        last_activation_fn (type[nn.Module]): Activation for final MLP layer.
+        check_channnles (bool): Whether to do or not the check for the number of channels.
+            e.g., with frame-stacking, the observation space may have more channels than expected. 
     """
     # observation_space: gym.spaces.Space
     vision_model: Union[nn.Module, Any]
@@ -38,9 +43,10 @@ class ExtractorConfig:
             return {k: v for k, v in d.items() if v is not None}
         return d
 
-class TMN_Box_Extractor(BaseFeaturesExtractor):
-    """Feature extractor for a single gym.Box observation (image or vector).
 
+
+class TMN_Extractor(BaseFeaturesExtractor, ABC):
+    """Feature extractor class from which special extractor can extend 
     :param observation_space: Gym Dict space describing the full observation structure.
     :param vision_model: A neural network used to extract features from image observations.
     :param out_dim: The number of dimension each extractor should project on to
@@ -51,84 +57,81 @@ class TMN_Box_Extractor(BaseFeaturesExtractor):
     :param check_channnles (bool): Whether to do or not the check for the number of channels.
         e.g., with frame-stacking, the observation space may have more channels than expected. 
     """
+    def __init__(self, observation_space: gym.spaces.Box,
+            vision_model: Optional[Type[nn.Module]] = None,
+            vision_model_kwargs: Optional[Dict[str, Any]] = None,
+            out_dim: int = 64,
+            device: str = "cpu",
+            normalized_image: bool = False,
+            float_model: Optional[List[int]] = None,
+            activation_fn: Type[nn.Module] = nn.ReLU,
+            last_activation_fn: Type[nn.Module] = nn.Tanh,
+            check_channels: bool = True):
 
-    def __init__(
-        self,
-        observation_space: gym.spaces.Box,
-        vision_model: Optional[Type[nn.Module]] = None,
-        vision_model_kwargs: Optional[Dict[str, Any]] = None,
-        out_dim: int = 64,
-        device: str = "cpu",
-        normalized_image: bool = False,
-        float_model: Optional[List[int]] = None,
-        activation_fn: Type[nn.Module] = nn.ReLU,
-        last_activation_fn: Type[nn.Module] = nn.Tanh,
-        check_channels: bool = True, 
-    ) -> None:
+        super().__init__(observation_space, features_dim = out_dim)
+        self.vision_model = vision_model
+        self.vision_model_kwargs = vision_model_kwargs
+        self.out_dim = out_dim
+        self.device = device
+        self.normalized_image = normalized_image
+        self.float_model = float_model
+        self.activation_fn = activation_fn
+        self.last_activation_fn = last_activation_fn
+        self.check_channels = check_channels
+
+    def build_box_extractor(self, space : gym.spaces.Space):
+        if is_image_space(observation_space= space, check_channels=self.check_channels, normalized_image=self.normalized_image):
+            if self.vision_model is None:
+                raise ValueError("vision_model_cls must be provided for image spaces.")
+            return build_vision_model(vision_model_cls=self.vision_model, space=space, 
+                                      out_dim = self.out_dim, device = self.device, vision_model_kwargs=self.vision_model_kwargs)
+
+        # Otherwise, handle vector (float) inputs
+        input_dim = space.shape[0]
+        if self.float_model:
+            layers = create_mlp(
+                input_dim=input_dim,
+                output_dim=self.out_dim,
+                net_arch=self.float_model,
+                activation_fn=self.activation_fn,
+            )
+        else:
+            hidden_dim = input_dim // 2 if input_dim > self.out_dim else input_dim * 2
+            layers = [
+                nn.Linear(input_dim, hidden_dim, device=self.device),
+                self.activation_fn(),
+                nn.Linear(hidden_dim, self.out_dim, device=self.device),
+                self.last_activation_fn(),
+            ]
+        return nn.Sequential(*layers)
+    
+    @abstractmethod
+    def forward(self, observations: torch.Tensor) -> torch.Tensor:
+        raise NotImplementedError()
+
+class TMN_Box_Extractor(TMN_Extractor):
+    """Feature extractor for a single gym.Box observation (image or vector)."""
+
+    def __init__(self, observation_space : gym.spaces.Box, vision_model = None, vision_model_kwargs = None, out_dim = 64, device = "cpu", normalized_image = False, float_model = None, activation_fn = nn.ReLU, last_activation_fn = nn.Tanh, check_channels = True):
+        super().__init__(observation_space, vision_model, vision_model_kwargs, out_dim, device, normalized_image, float_model, activation_fn, last_activation_fn, check_channels)
         assert isinstance(observation_space,gym.spaces.Box), f"This extractor only works with Box observation spaces but got {observation_space}"
-        super().__init__(observation_space, features_dim=out_dim)
+        self.extractor = self.build_box_extractor(self._observation_space)
 
-        self.extractor = build_box_extractor(
-            space =observation_space,
-            out_dim=out_dim,
-            device=device,
-            vision_model_cls=vision_model,
-            vision_model_kwargs= vision_model_kwargs,
-            float_model=float_model,
-            activation_fn=activation_fn,
-            last_activation_fn=last_activation_fn,
-            normalized_image=normalized_image,
-            check_channels=check_channels,
-        )
 
     def forward(self, observations: torch.Tensor) -> torch.Tensor:
         return self.extractor(observations)
 
-class TMN_Dict_Extractor(BaseFeaturesExtractor):
-    """Combined feature extractor for dictionary observations (images + vectors).
-    
-    :param observation_space: Gym Dict space describing the full observation structure.
-    :param vision_model: A neural network used to extract features from image observations.
-    :param out_dim: The number of dimension each extractor should project on to
-    :param normalized_image: If True, assumes that image inputs are already normalized.        
-    :param float_model (list[int]): Optional list defining MLP layer sizes for vector inputs.
-    :param activation_fn (type[nn.Module]): Activation function class for MLPs.
-    :param last_activation_fn (type[nn.Module]): Activation for final MLP layer.
-    :param check_channnles (bool): Whether to do or not the check for the number of channels.
-        e.g., with frame-stacking, the observation space may have more channels than expected. 
-    """
+class TMN_Dict_Extractor(TMN_Extractor):
+    """Combined feature extractor for dictionary observations (images + vectors)."""
 
-    def __init__(
-        self,
-        observation_space: gym.spaces.Dict,
-        vision_model: Optional[Type[nn.Module]] = None,
-        vision_model_kwargs: Optional[Dict[str, Any]] = None,
-        out_dim: int = 64,
-        device: str = "cpu",
-        normalized_image: bool = False,
-        float_model: Optional[List[int]] = None,
-        activation_fn: Type[nn.Module] = nn.ReLU,
-        last_activation_fn: Type[nn.Module] = nn.Tanh,
-        check_channels: bool = True, 
-    ) -> None:
+    def __init__(self, observation_space : gym.spaces.Dict, vision_model = None, vision_model_kwargs = None, out_dim = 64, device = "cpu", normalized_image = False, float_model = None, activation_fn = nn.ReLU, last_activation_fn = nn.Tanh, check_channels = True):
         assert isinstance(observation_space,gym.spaces.Dict), f"This extractor only works with Dict observation spaces but got {observation_space}"
-        super().__init__(observation_space, features_dim=1)
+        super().__init__(observation_space, vision_model, vision_model_kwargs, out_dim, device, normalized_image, float_model, activation_fn, last_activation_fn, check_channels)
 
         extractors = {}
         total_dim = 0
         for key, subspace in observation_space.spaces.items():
-            extractor = build_box_extractor(
-                space=subspace,
-                out_dim=out_dim,
-                device=device,
-                vision_model_cls=vision_model,
-                vision_model_kwargs= vision_model_kwargs,
-                float_model=float_model,
-                activation_fn=activation_fn,
-                last_activation_fn=last_activation_fn,
-                normalized_image=normalized_image,
-                check_channels=check_channels,
-            )
+            extractor = self.build_box_extractor(subspace)
             extractors[key] = extractor
             total_dim += out_dim
 

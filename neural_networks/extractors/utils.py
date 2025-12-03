@@ -1,9 +1,7 @@
-from typing import Optional, List, Type, Dict, Any
+from typing import Optional, Dict, Any
 import torch
 import torch.nn as nn
 import gymnasium as gym
-from stable_baselines3.common.preprocessing import is_image_space
-from stable_baselines3.common.torch_layers import create_mlp
 
 import functools
 
@@ -33,43 +31,3 @@ def build_vision_model(
     if dummy_output.shape[1] != out_dim:
         raise ValueError(f"Vision model output dimension {dummy_output.shape[1]} != expected {out_dim}")
     return model
-
-def build_box_extractor(
-    space: gym.Space,
-    out_dim: int,
-    device: str,
-    vision_model_cls: Optional[Type[nn.Module]] = None, 
-    vision_model_kwargs: Optional[Dict[str, Any]] = None,
-    float_model: Optional[List[int]] = None,
-    activation_fn: Type[nn.Module] = nn.ReLU,
-    last_activation_fn: Type[nn.Module] = nn.Tanh,
-    normalized_image: bool = False,
-    check_channels: bool = True, 
-) -> nn.Module:
-    """
-    Builds a feature extractor for a single gym.Box space.
-    Uses vision_model_cls if the space is an image; otherwise builds an MLP.
-    """
-    if is_image_space(observation_space= space, check_channels=check_channels, normalized_image=normalized_image):
-        if vision_model_cls is None:
-            raise ValueError("vision_model_cls must be provided for image spaces.")
-        return build_vision_model(vision_model_cls=vision_model_cls,space=space, out_dim =out_dim, device = device, vision_model_kwargs=vision_model_kwargs)
-
-    # Otherwise, handle vector (float) inputs
-    input_dim = space.shape[0]
-    if float_model:
-        layers = create_mlp(
-            input_dim=input_dim,
-            output_dim=out_dim,
-            net_arch=float_model,
-            activation_fn=activation_fn,
-        )
-    else:
-        hidden_dim = input_dim // 2 if input_dim > out_dim else input_dim * 2
-        layers = [
-            nn.Linear(input_dim, hidden_dim, device=device),
-            activation_fn(),
-            nn.Linear(hidden_dim, out_dim, device=device),
-            last_activation_fn(),
-        ]
-    return nn.Sequential(*layers)
