@@ -43,7 +43,7 @@ class ObservationTerm(ABC):
         Override in subclasses if needed.
         We made it do nothing on purpose since most of the subclasses dont actually do anything during reset
         """
-        ...
+        pass
 
     def get_observation_space(self) -> Optional[Space]:
         """

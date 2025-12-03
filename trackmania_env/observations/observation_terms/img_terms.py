@@ -76,7 +76,7 @@ class ImageObservationTerm(ObservationTerm):
     
 
     def flatten(self, processed_obs):
-        return processed_obs.reshape(processed_obs[0] * processed_obs[1] * processed_obs[2])
+        return processed_obs.reshape(processed_obs.shape[0] * processed_obs.shape[1] * processed_obs.shape[2])
     
     def get_flatten_dim(self):
         return self.num_channels * self.img_height * self.img_width

@@ -13,5 +13,5 @@ class ObsNormalizationFactors:
     refline_norm = 500.0
     gearbox_norm = 5.0
     rpm_norm = 12000.0
-    lateral_dist_norm = 18
+    lateraltrack_dist_norm = 18
     gear_norm = 2

@@ -10,7 +10,7 @@ from game_interaction.ipc_fields import IPCFields
 
 
 class SpeedTerm(VectorlikeTerm):
-    def __init__(self, name: str = "speed", normalize: bool = True):
+    def __init__(self, name : str = "speed", normalize: bool = True):
         super().__init__(name, normalize, dimension=1, high=1.0 if normalize else MAX_SPEED)
 
     def _normalize(self, obs: float) -> float:
