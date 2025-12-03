@@ -1,0 +1,3 @@
+# About this project
+
+This project originated as a student research project at the [ALR](https://alr.iar.kit.edu/) at [KIT](https://www.kit.edu/english/). The main focus was on Reinforcement Learning as is, yet the available codebase for performing reinforcement learning was insufficient. Basically, the only project was [linesight](https://github.com/Linesight-RL/linesight?tab=readme-ov-file), which is popular, but hard to work with if you want to try different algorithms etc. Basically, we needed for a gym-compatible environment, which led to the creation of this project. 

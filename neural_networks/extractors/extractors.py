@@ -18,6 +18,7 @@ import torch.nn as nn
 import hydra
 from configs.config import TrainConfig, PolicyCfg
 from utils.hydra_wandb_utils import secure_attribute_retrieval
+from configs.config import ModelCfg
 
 
 
@@ -26,7 +27,6 @@ class ExtractorConfig:
     """
     Args:
         observation_space: Gym Dict space describing the full observation structure.
-        vision_model: A neural network used to extract features from image observations.
         out_dim: The number of dimension each extractor should project on to
         normalized_image: If True, assumes that image inputs are already normalized.        
         float_model (list[int]): Optional list defining MLP layer sizes for vector inputs.
@@ -36,7 +36,7 @@ class ExtractorConfig:
             e.g., with frame-stacking, the observation space may have more channels than expected. 
     """
     # observation_space: gym.spaces.Space
-    vision_model_kwargs: Optional[Dict[str, Any]]
+    vision_model_kwargs: ModelCfg
     out_dim: int
     normalized_image: bool
     float_model: Optional[List[int]]
@@ -78,7 +78,7 @@ class TMN_Extractor(BaseFeaturesExtractor, ABC):
     """Feature extractor class from which special extractor can extend
     Args:
          observation_space: Gym Dict space describing the full observation structure.
-         vision_model: A neural network used to extract features from image observations.
+         vision_model_kwargs (vision_model_kwargs) : Hydra loaded config file needed to instanciate the vision model
          out_dim: The number of dimension each extractor should project on to
          normalized_image: If True, assumes that image inputs are already normalized.        
          float_model (list[int]): Optional list defining MLP layer sizes for vector inputs.
@@ -88,7 +88,7 @@ class TMN_Extractor(BaseFeaturesExtractor, ABC):
             e.g., with frame-stacking, the observation space may have more channels than expected. 
     """
     def __init__(self, observation_space: gym.spaces.Box,
-            vision_model_kwargs: Optional[Dict[str, Any]] = None,
+            vision_model_kwargs: ModelCfg = None,
             out_dim: int = 64,
             device: str = "cpu",
             normalized_image: bool = False,
@@ -110,18 +110,13 @@ class TMN_Extractor(BaseFeaturesExtractor, ABC):
     def build_box_extractor(self, space : gym.spaces.Space):
         if is_image_space(observation_space= space, check_channels=self.check_channels, normalized_image=self.normalized_image):
             if self.vision_model_kwargs is None:
-                raise ValueError("vision_model_cls must be provided for image spaces.")
+                raise ValueError("vision_model_args must be provided for image spaces.")
             return build_vision_model(space=space, out_dim = self.out_dim, device = self.device, vision_model_kwargs=self.vision_model_kwargs)
 
         # Otherwise, handle vector (float) inputs
         input_dim = space.shape[0]
         if self.float_model:
-            layers = create_mlp(
-                input_dim=input_dim,
-                output_dim=self.out_dim,
-                net_arch=self.float_model,
-                activation_fn=self.activation_fn,
-            )
+            layers = create_mlp(input_dim=input_dim, output_dim=self.out_dim, net_arch=self.float_model, activation_fn=self.activation_fn)
         else:
             hidden_dim = input_dim // 2 if input_dim > self.out_dim else input_dim * 2
             layers = [

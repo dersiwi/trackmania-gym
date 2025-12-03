@@ -7,7 +7,6 @@ import hydra
 from configs.config import ModelCfg
 
 def build_vision_model(space: gym.Space, out_dim: int, device: str, vision_model_kwargs: ModelCfg = None,) -> nn.Module:
-    # 
     """Instantiate and validate a vision model. This method basically uses everytrhing specified in the [visionmodelname].yaml and uses it
     to instanciate the vision model.
     Args:
