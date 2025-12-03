@@ -39,9 +39,11 @@ def main(cfg : TrainConfig, run_id : Optional[str] = None):
     """
     cfg = load_and_merge_platform(cfg)
     #introscreen(cfg, askstart=secure_attribute_retrieval(lambda : cfg.ask_start, default=True))
-    N_ENVS = 1
+    N_ENVS = 2
     tracks = ["very_long_checkpoints.Challenge.Gbx", "ESL-Hockolicious.Challenge.Gbx", "Level1.Challenge.Gbx"]
     tm_env = VectorizedTMEnvironment(n_envs = N_ENVS, tracks=tracks[0:N_ENVS], cfg=cfg, obs_as_dict=True, alternation_between_tracks=True, n_steps_per_track=1024, assign_random_track_at_alternation=True)
+    print(tm_env.observation_space)
+    print(tm_env.action_space)
     try:
         o, info = tm_env.reset()
         for i in range(100000):

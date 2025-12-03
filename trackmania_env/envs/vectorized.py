@@ -4,11 +4,11 @@ import gymnasium as gym
 import random 
 import time
 
-
 from trackmania_env.envs.sec_env import CrashProofEnvironment
 from trackmania_env.utils.spacetransform import SpaceTransformer
-from configs.config import TrainConfig
+from trackmania_env.utils.actionmap import ACTION_MAP
 
+from configs.config import TrainConfig
 
 class TrackAssignmentManager:
     # TODO - for the future 
@@ -58,8 +58,9 @@ class VectorizedTMEnvironment(gym.Env):
             self.envs[i].init_environment()
             self.envs[i].env.request_map(self.tracks[self.curr_track_id[i]])
 
-        self.observation_space = self._build_observation_space()
-        self.action_space = gym.spaces.Box(-np.inf, np.inf, (n_envs, ))
+        #self.observation_space = self._build_observation_space()
+        self.observation_space = self.envs[0].observation_space
+        self.action_space = gym.spaces.Discrete(len(ACTION_MAP))
         
         self.transformer = SpaceTransformer.get_instance()
         self.transformer.expect_vectorized(self.n_envs)
@@ -88,8 +89,8 @@ class VectorizedTMEnvironment(gym.Env):
         info = []
         observationlist = []
         rewards = np.zeros((self.n_envs, ))
-        terminated = np.zeros((self.n_envs, ))
-        truncated = np.zeros((self.n_envs, ))
+        terminated = np.zeros((self.n_envs, ), dtype=bool)
+        truncated = np.zeros((self.n_envs, ), dtype=bool)
 
         for i in range(self.n_envs):
             obs, rew, term, trun, envinfo = self.envs[i].step(action[i])
@@ -110,6 +111,11 @@ class VectorizedTMEnvironment(gym.Env):
         self.total_steps += 1
         self.average_step_time += (step_begin - self.average_step_time) / self.total_steps
         return self._stack_observations(observationlist), rewards, terminated, truncated, info
+    
+    def finalize_process(self, **kwargs) -> None:
+        """Stops execution for all environments."""
+        for env in self.envs:
+            env.finalize_process(reinit=False)
     
     def check_map_alternation(self) -> None:
         """Checks, whether an environment has made sufficiently many steps on its current map and if yes, it requests a new map."""
@@ -145,3 +151,107 @@ class VectorizedTMEnvironment(gym.Env):
             observations.append(observation)
             infos.append(info)
         return self._stack_observations(observations), infos
+
+
+
+from stable_baselines3.common.vec_env import VecEnv
+
+class SB3Vectorized(VecEnv):
+
+    def __init__(self, n_envs : int, tracks : list[str], cfg : TrainConfig, obs_as_dict : bool = False,
+                 alternation_between_tracks : bool = False, 
+                    n_steps_per_track : int = 2048,
+                    assign_rangom_track_at_init : bool = True,
+                    assign_random_track_at_alternation : bool = False):
+        self.vecenv = VectorizedTMEnvironment(n_envs, tracks, cfg, obs_as_dict, alternation_between_tracks, n_steps_per_track, 
+                                              assign_rangom_track_at_init, assign_random_track_at_alternation)
+        super().__init__(n_envs, self.vecenv.envs[0].observation_space, self.vecenv.envs[0].action_space)
+        self.actions = None
+    def reset(self):
+        obs, infos = self.vecenv.reset()
+        return obs
+    
+    def step_async(self, actions):
+        self.actions = actions
+    
+    def step_wait(self):
+        obs, rewards, terminated, truncated, info = self.vecenv.step(self.actions)
+        dones = np.logical_or(terminated, truncated)
+        return obs, rewards, dones, info
+    
+    def close(self):
+        self.vecenv.finalize_process()
+    
+    def seed(self, seed = None):
+        pass
+
+    def env_method(self, method_name, *method_args, indices=None, **method_kwargs):
+        """
+        Call `method_name` for each underlying env.
+        Returns list of results.
+        """
+        if indices is None:
+            indices = range(self.num_envs)
+        if isinstance(indices, int):
+            indices = [indices]
+
+        results = []
+        for i in indices:
+            env = self.vecenv.envs[i]
+            method = getattr(env, method_name)
+            results.append(method(*method_args, **method_kwargs))
+        return results
+
+    def get_attr(self, attr_name, indices=None):
+        """
+        Get attribute from underlying envs.
+        """
+        if indices is None:
+            indices = range(self.num_envs)
+        if isinstance(indices, int):
+            indices = [indices]
+
+        results = []
+        for i in indices:
+            env = self.vecenv.envs[i]
+            results.append(getattr(env, attr_name))
+        return results
+
+    def set_attr(self, attr_name, value, indices=None):
+        """
+        Set attribute on underlying envs.
+        """
+        if indices is None:
+            indices = range(self.num_envs)
+        if isinstance(indices, int):
+            indices = [indices]
+
+        for i in indices:
+            env = self.vecenv.envs[i]
+            setattr(env, attr_name, value)
+
+    def env_is_wrapped(self, wrapper_class, indices=None):
+        """
+        Return True/False for each env: is it wrapped by wrapper_class?
+        """
+        if indices is None:
+            indices = range(self.num_envs)
+        if isinstance(indices, int):
+            indices = [indices]
+
+        results = []
+        for i in indices:
+            env = self.vecenv.envs[i]
+            wrapped = False
+            current = env
+            # unroll wrappers
+            while hasattr(current, "env"):
+                if isinstance(current, wrapper_class):
+                    wrapped = True
+                    break
+                current = current.env
+            # last check (if not using classic wrappers)
+            if isinstance(current, wrapper_class):
+                wrapped = True
+            results.append(wrapped)
+        return results
