@@ -2,6 +2,7 @@ site_name: trackmania-gym Documentation
 nav:
   - Home : index.md 
   - Installation : installation.md
+  - Measure Of Progress : refline.md
   - Structure : project-structure.md
   - Testing : testing.md
   - About : about.md

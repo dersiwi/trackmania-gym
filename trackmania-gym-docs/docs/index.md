@@ -16,6 +16,10 @@ For full documentation visit [mkdocs.org](https://www.mkdocs.org).
 ```
 
 
+## How to read
+
+If installation is complete, read about the reference line, afterwards the structure and then testing.
+
 ## Commands
 
 * `mkdocs new [dir-trackmania-gym]` - Create a new project.
