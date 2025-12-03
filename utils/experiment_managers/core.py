@@ -51,6 +51,8 @@ class ExperimentManager:
         print(f"Added artifact '{artifact_name}' for upload from {path}")
 
     def _additional_post_processing(self,model: Any):
+        """This is additional post processing for the final model, which is dependenet on the library used, i.e. this method
+        has to be implemented by the specific Experiment-Manager."""
         pass
 
     def after_training(self, model: Any = None):

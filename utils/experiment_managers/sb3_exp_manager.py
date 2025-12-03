@@ -11,16 +11,34 @@ from stable_baselines3.common.base_class import BaseAlgorithm
 from gymnasium import Env
 from utils.experiment_managers.core import ExperimentManager 
 from configs.config import TrainConfig
+  
 
-# --- This class is correct from your previous message ---
 class Sb3ExperimentManager(ExperimentManager):
     """
-    An ExperimentManager specialized for Stable-Baselines3.
+    A SB3 Manager that automatically configures and registers:
+    Callbacks: 
+        1. EvalCallback (for best model)
+        2. CheckpointCallback (for periodic checkpoints)
+    Artifacts:
+        1. best-model
+        2. checkpoint-model
     """
     
-    def __init__(self, hydra_run_dir: str, cfg: TrainConfig, run_id=None, resume=None):
-        super().__init__(hydra_run_dir,cfg, run_id, resume)
-        self.callbacks: List[EventCallback] = []
+    def __init__(self, hydra_run_dir : str, cfg : TrainConfig, env : Env, eval_freq : int, checkpoint_freq : int, run_id = None, resume = None):
+        
+        super().__init__(hydra_run_dir, cfg, run_id, resume)
+        self.callbacks : List[EventCallback] = []
+        model_dir = os.path.join(self.hydra_run_dir, "models")
+        self.best_model_path = self._setup_path(model_dir, "best_model")
+        self.checkpoint_path = self._setup_path(model_dir, "checkpoints")
+        self.eval_log_path = self._setup_path(self.hydra_run_dir, "eval_logs")
+        
+        self.eval_freq = eval_freq
+        self.checkpoint_freq = checkpoint_freq
+       
+        self.append_callbacks(env)
+        self.add_artifacts()
+        
 
     def get_callbacks(self) -> CallbackList:
         """
@@ -28,37 +46,14 @@ class Sb3ExperimentManager(ExperimentManager):
         """
         return CallbackList(self.callbacks)
 
-class Final_Best_CP_Sb3_ExperimentManager(Sb3ExperimentManager):
-    """
-    An SB3 Manager that automatically configures and registers:
-    1. EvalCallback (for best model)
-    2. CheckpointCallback (for periodic checkpoints)
-    """
-    
-    def __init__(
-        self, 
-        hydra_run_dir: str,
-        cfg: TrainConfig, 
-        env: Env,
-        eval_freq:int,
-        checkpoint_freq:int,
-        run_id=None, 
-        resume=None
-    ):
-        
-        super().__init__(hydra_run_dir, cfg, run_id, resume)
-
-        model_dir = os.path.join(self.hydra_run_dir, "models")
-        self.best_model_path = self._setup_path(model_dir, "best_model")
-        self.checkpoint_path = self._setup_path(model_dir, "checkpoints")
-        self.eval_log_path = self._setup_path(self.hydra_run_dir, "eval_logs")
-        
+    def append_callbacks(self, env):
+        """Append Evaluation-callback and Checkpoint-Callback"""
         # Eval Callback saves best model
         eval_callback = EvalCallback(
             env, 
             best_model_save_path=self.best_model_path,
             log_path=os.path.join(self.hydra_run_dir, "eval_logs"),
-            eval_freq= eval_freq, 
+            eval_freq= self.eval_freq, 
             deterministic=True,
             render=False,
         )
@@ -66,16 +61,17 @@ class Final_Best_CP_Sb3_ExperimentManager(Sb3ExperimentManager):
 
         # Checkpoint Callback save model every N steps
         checkpoint_callback = CheckpointCallback(
-            save_freq= checkpoint_freq,
+            save_freq= self.checkpoint_freq,
             save_path=self.checkpoint_path,
             name_prefix="checkpoint",
             save_replay_buffer=False,
             save_vecnormalize=False,
         )
-        self.callbacks.append(checkpoint_callback)  
-       
-       # Register the best_model.zip file that EvalCallback will create
-        best_model_zip_path = os.path.join(self.best_model_path, "best_model.zip")
+        self.callbacks.append(checkpoint_callback)
+
+    def add_artifacts(self):
+        """Add best model and checkpoint-model artifact"""
+        best_model_zip_path = os.path.join(self.best_model_path, "best_model.zip") # Register the best_model.zip file that EvalCallback will create
         self.add_artifact(
             artifact_name="best_model",
             artifact_type="model",
