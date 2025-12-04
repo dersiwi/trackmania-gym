@@ -322,7 +322,7 @@ class TMNF_Single_Agent_Env(gym.Env):
         self.reset_car(None)
         raw_obs = self.__get_raw_obs()
 
-        if self.start_position is not None:
+        if self.start_position_set:
             tries = 0
             """Sometimes the raw obs queried after reset are not actually the ones after reset - therefore this primitive check is implemeneted which checks that the first starting position;
             which is recorded before any step was made somewhat matches the position after a reset; if so, collects more obs."""

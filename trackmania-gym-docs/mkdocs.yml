@@ -4,6 +4,7 @@ nav:
   - Installation : installation.md
   - Measure Of Progress : refline.md
   - Structure : project-structure.md
+  - Managers : managers.md
   - Testing : testing.md
   - About : about.md
 theme: readthedocs
