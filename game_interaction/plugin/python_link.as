@@ -29,7 +29,7 @@ enum MessageType {
 
 const bool debug = false;
 const string HOST = "127.0.0.1";
-uint16 PORT = 8775;
+uint16 PORT;
 uint RESPONSE_TIMEOUT = 2000;
 int next_frame_requested_H = -1;
 int next_frame_requested_W = -1;
@@ -321,8 +321,8 @@ void OnConnect(){
 
 void OnQueueProcessed(int fromTime, int toTime, const string&in commandLine, const array<string>&in args)
 {
-    PORT = 8775;
-    log("Port donadigo" + PORT);
+    PORT = uint16(GetVariableDouble("custom_port"));
+    log("Port donadigo" + GetVariableDouble("custom_port"));
     Init_Socket();
 }
 
@@ -336,13 +336,22 @@ void Main()
     cmdList.Process();
 }
 
+//void Main(){
+//    RegisterVariable("custom_port", 0);
+//    PORT = uint16(GetVariableDouble("custom_port"));
+//    Init_Socket();
+//}
 
 void OnGameStateChanged(TM::GameState state){
     if(state == TM::GameState::Menus && on_connect_queued){
         OnConnect();
         on_connect_queued = false;
     }
+    if (state == TM::GameState::LocalRace) {
+        Graphics::FocusGameWindow();
+    }
 }
+
 
 void Render(){
     //Bluescreens if you print every Render()
