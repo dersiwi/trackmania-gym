@@ -124,6 +124,9 @@ class TMNF_Single_Agent_Env(gym.Env):
         self.n_steps : int = 0
         self.total_steps : int = 0
 
+        self.__wrong_starting_position = 0
+        """Counts how often the starting position was missed. Then teleports it slightly infornt of the currents tarting position after too many misses."""
+
         self.rt = ReturnTracker(length = self.termination_manager.timeout, gamma = gamma)
 
 
@@ -331,6 +334,10 @@ class TMNF_Single_Agent_Env(gym.Env):
                 self.logger.warning(f"Start position did not match obs posiiton. Waiting until resetted. Tries : {tries}")
                 time.sleep(0.005)
                 raw_obs = self.__get_raw_obs()
+                self.__wrong_starting_position += 1
+        
+        if self.__wrong_starting_position >= 20:
+            self._teleport_car_slightly()
 
 
         self.reference_line.calculate_and_step_next_point(raw_obs[IPCFields.SIMSTATE].position)
@@ -350,6 +357,15 @@ class TMNF_Single_Agent_Env(gym.Env):
             
 
         return observation, info
+    
+    def _teleport_car_slightly(self):
+        """The idea is that by slightly teleporting the car, the game can reset itself. But thats just a hunch."""
+        telepos = np.array([0.1, 0.0, 0.0])
+        if self.start_position is not None:
+            telepos += self.start_position
+        self.logger.info(f"Sending command to teleport car to : {telepos}")
+        self.__send_command_to_process_wrapper(IPCCommands.get_cmd_command(self.__ipc_cmd_id, TMInterfaceCommands.teleport(telepos )))
+        self.__wrong_starting_position = 0
     
     def reset_car(self, position : np.ndarray | list[float]):
         """Resets car depending on specified mode.

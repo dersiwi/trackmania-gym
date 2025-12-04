@@ -36,8 +36,8 @@ def main(cfg : TrainConfig, run_id : Optional[str] = None):
     cfg = load_and_merge_platform(cfg)
     introscreen(cfg, askstart=secure_attribute_retrieval(lambda : cfg.ask_start, default=True))
     tracks = ["very_long_checkpoints.Challenge.Gbx", "Level1.Challenge.Gbx"]
-    N_ENVS = 2
-    tm_env = SB3Vectorized(n_envs = N_ENVS, tracks=tracks[0:N_ENVS], cfg=cfg, obs_as_dict=True, alternation_between_tracks=True, n_steps_per_track=2048, assign_random_track_at_alternation=True)
+    N_ENVS = 1
+    tm_env = SB3Vectorized(n_envs = N_ENVS, tracks=tracks, cfg=cfg, obs_as_dict=True)
     try:
         model = get_model_from_config(cfg = cfg, tm_env = tm_env)
         model.learn(**cfg.learn_args)

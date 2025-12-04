@@ -41,16 +41,18 @@ class SpaceTransformer:
     def dict_to_numpy_vectorized(self, dictobs : dict[str, np.ndarray]) -> np.ndarray:
         """These the obs in dictobs are unflattened obs, so this has to be called manually depending on if its vectorized or not."""
         observations = np.zeros((self.n_envs, self.expected_dim))
+        begin_idx = 0
         for i, term in enumerate(self.obsterms):
-            observations[:, term.get_flatten_dim()] = dictobs[term.name]
+            observations[:, begin_idx : begin_idx + term.get_flatten_dim()] = np.stack([term.flatten(termobs) for termobs in dictobs[term.name]], axis=0)
+            begin_idx += term.get_flatten_dim()
         return observations
     
     def numpy_to_dict(self, array : np.ndarray) -> dict[str, np.ndarray]:
         """Trurns the given array into a dictionary."""
         if len(array) == 2:
             return self.numpy_to_dict_vectorized(array)
-        
-        assert array.shape[0] == self.expected_dim, f"Got unexepcted array-shape. Expected {self.expected_dim}, got {array.shape[0]}"
+
+        assert array.shape[0] == self.expected_dim, f"Got unexepcted array-shape. Expected {self.expected_dim}, got {array.shape}"
         obsdict = {}
         startidx = 0
         for i, term in enumerate(self.obsterms):
@@ -60,11 +62,11 @@ class SpaceTransformer:
     
     def numpy_to_dict_vectorized(self, array : np.ndarray) -> dict[str, np.ndarray]:
         """Trurns the given array into a dictionary."""
-        assert array.shape[0] == self.n_envs and array.shape[0] == self.expected_dim, f"Got unexepcted array-shape. Expected {self.expected_dim}, got {array.shape[0]}"
+        assert array.shape[0] == self.n_envs and array.shape[1] == self.expected_dim, f"Got unexepcted array-shape. Expected {(self.n_envs, self.expected_dim)}, got {array}"
         obsdict = {}
         startidx = 0
         for i, term in enumerate(self.obsterms):
-            obsdict[term.name] = array[:, startidx : startidx + term.get_flatten_dim()].reshape(tuple([self.n_envs] + [sdim for sdim in term.get_native_shape()]))
+            obsdict[term.name] = array[:, startidx : startidx + term.get_flatten_dim()].reshape(tuple([self.n_envs] + [sdim for sdim in term.get_native_shape()])).copy()
             startidx += term.get_flatten_dim()
         return obsdict
     
