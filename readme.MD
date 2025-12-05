@@ -1,3 +1,18 @@
+
+<h1 align="center">Trackmania Gym</h1>
+<p align="center">Trackmania Nations Forever finally gets a Gymanasium Compatible Environment</p>
+
+<p align="center">
+  <a href="https://your-docs-url.com">
+    <img src="https://img.shields.io/badge/documentation-blue?style=for-the-badge&logo=readthedocs&logoColor=white" />
+  </a>
+  <a href="https://discord.gg/yourserver">
+    <img src="https://img.shields.io/badge/train_your agent-brightgreen?style=for-the-badge" />
+  </a>
+</p>
+
+
+
 # Table of Contents
 - Communication in game_interaction/readme.MD
 - [TMNF as Gymnasium-Environment](#TMNF-as-Gym-Environment)

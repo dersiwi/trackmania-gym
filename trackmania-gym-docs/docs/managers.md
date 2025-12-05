@@ -47,3 +47,7 @@ return rew
 `rf` == race finished (boolean), `ot` == other terimations (dictionary)
 
 ### Reward-Term `rewards.reward_calculation.RewardTerm`
+
+## Termination-Manager `trackmania_env.terminations.termination_maanger.TerminationManager`
+
+

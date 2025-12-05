@@ -82,12 +82,12 @@ class IPCCommands:
         
         @staticmethod
         def rewind_state(command_id : int, state : SimStateData) -> dict[str, any]:
-            """Sends command to call ifcae.prevent_simulation_finish """
+            """Sends command to rewind the state to the given simstate """
             return {IPCFields.CMD_ID : command_id, IPCFields.CMD : IPCCommands.REWIND_STATE, IPCFields.ARGS : state}
         
         @staticmethod
         def step(command_id : int, action : tuple[bool, bool, bool, bool]) -> dict[str, any]:
-            """Sends command to call ifcae.prevent_simulation_finish """
+            """Sends a complete MDP step-command. Given action will be sent to agent, returns images and gamestates """
             return {IPCFields.CMD_ID : command_id, IPCFields.CMD : IPCCommands.STEP, IPCFields.ARGS : action}
 
         @staticmethod
