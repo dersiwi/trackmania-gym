@@ -4,6 +4,8 @@ import gymnasium as gym
 import random 
 import time
 
+from concurrent.futures import ThreadPoolExecutor
+
 from trackmania_env.envs.sec_env import CrashProofEnvironment
 from trackmania_env.utils.spacetransform import SpaceTransformer
 from trackmania_env.utils.actionmap import ACTION_MAP
@@ -18,8 +20,8 @@ class TrackAssignmentManager:
 
 class VectorizedTMEnvironment(gym.Env):
 
-
     def __init__(self, n_envs : int, tracks : list[str], cfg : TrainConfig, obs_as_dict : bool = False,
+                 step_parallel : bool = False,
                  alternation_between_tracks : bool = False, 
                     n_steps_per_track : int = 2048,
                     assign_rangom_track_at_init : bool = False,
@@ -31,10 +33,10 @@ class VectorizedTMEnvironment(gym.Env):
             - n_envs (int)          : The number of environments
             - tracks (list[str])    : The tracks used by the single environments (this does not have to be the same amount as n_envs)
             - cfg (TraingConfig)    : Configuration file for the environments
+            - step_parallel (bool)  : Steps each environment in parallel using a threadpool. If false, steps all environments in sequence.
             - obs_as_dict (bool)    : Boolean; Wheather obs are returned as dictionaries - or as singular blocks of arrays (can be transformed using SpaceTransformer later on)
             - n_steps_per_track (int)                   : Number of steps each environment performs on a track before alternating to the next
             - alternation_between_tracks (bool)         : If True, Each environment trains `n_steps_per_track` on each track, before switching to a new track
-                NOTE : Currently, this does not! work except if you refocus the windows manually (at least on some windows machines)
             - assign_rangom_track_at_init (bool)        : If Tracks are assigned randomly to each environment (at initialization), or in the order given by the list. 
             - assign_random_track_at_alternation (bool) : If Tracks are assigned randomly to each environment (after `n_steps_per_track`)
         
@@ -49,14 +51,23 @@ class VectorizedTMEnvironment(gym.Env):
         self._steps_per_track = [[0 for i in range(len(self.tracks))] for i in range(self.n_envs)]
         """Stores the amount of steps each environment did in each track"""
 
+        self.step_parallel = step_parallel
+        self.threadpool : ThreadPoolExecutor = None
+        if self.step_parallel:
+            self.threadpool = ThreadPoolExecutor(max_workers = self.n_envs)
+
         self.alternation_between_tracks = alternation_between_tracks
         self.n_steps_per_track = n_steps_per_track
         self.assign_random_track_at_alternation = assign_random_track_at_alternation
 
         port = self.cfg.gmi.port
         self.envs : list[CrashProofEnvironment] = [CrashProofEnvironment(train_cfg=self.cfg, port = port+i, return_obs_as_dict = obs_as_dict) for i in range(self.n_envs)]
+        
+        # using a threadpool here is much much faster than initializing sequentially, as innit_environment also starts the game
+        with ThreadPoolExecutor(max_workers=self.n_envs) as executor:
+            _ = executor.map(lambda env : env.init_environment(), self.envs)
+
         for i in range(self.n_envs):
-            self.envs[i].init_environment()
             self.envs[i].env.request_map(self.tracks[self.curr_track_id[i]])
 
         #self.observation_space = self._build_observation_space()
@@ -75,7 +86,7 @@ class VectorizedTMEnvironment(gym.Env):
         """Builds the observation space for the vectorized environment."""
         if self.return_obs_as_dict:
             spacedict = {}
-            for term in self.envs[0].obs_manager.observation_terms:
+            for term in self.envs[0].obs_manager.terms:
                 termspace = term.observation_space
                 vectorized_shape = tuple([self.n_envs] + list(termspace.shape))
                 low, high = termspace.low.flat[0], termspace.high.flat[0]   # NOTE : This is not correct; but for most terms it should be fine.
@@ -84,35 +95,60 @@ class VectorizedTMEnvironment(gym.Env):
         else:
             return gym.spaces.Box(-np.inf, np.inf, (self.n_envs, self.obs_size))
 
+    def _step_env(self, i, action):
+        """This is a helper method used by the Threadpools, if steppig is executed in parallel.
+        """
+        return i, self.envs[i].step(action)
+    
+
     def step(self, action : torch.Tensor | np.ndarray):
         assert action.shape[0] == self.n_envs
         step_begin = time.time()
+
         info = []
         observationlist = []
-        rewards = np.zeros((self.n_envs, ))
-        terminated = np.zeros((self.n_envs, ), dtype=bool)
-        truncated = np.zeros((self.n_envs, ), dtype=bool)
+        rewards = np.zeros((self.n_envs,))
+        terminated = np.zeros((self.n_envs,), dtype=bool)
+        truncated = np.zeros((self.n_envs,), dtype=bool)
 
-        for i in range(self.n_envs):
-            obs, rew, term, trun, envinfo = self.envs[i].step(action[i])
+        # start the 'parallel processing' of environments in the threadpool
+        if self.step_parallel:
+            futures = [self.threadpool.submit(self._step_env, i, action[i]) for i in range(self.n_envs)]
+
+        results = [None] * self.n_envs
+
+        # collect futures and store in results
+        if self.step_parallel:
+            for f in futures:
+                idx, result = f.result()
+                results[idx] = result
+
+        for i, result_tuple in enumerate(results):
+            # collect results or step environment, process sequentially.
+            if self.step_parallel:
+                (obs, rew, term, trun, envinfo) = result_tuple
+            else:
+                obs, rew, term, trun, envinfo = self.envs[i].step(action[i])
             observationlist.append(obs)
             terminated[i] = term
             truncated[i] = trun
             rewards[i] = rew
             info.append(envinfo)
-            
+
             if term or trun:
                 o_res, info_res = self.envs[i].reset()
                 observationlist[-1] = o_res
                 info[-1]["terminal_observation"] = obs
 
             self._steps_per_track[i][self.curr_track_id[i]] += 1
-        
+
         self.check_map_alternation()
         self.total_steps += 1
-        self.average_step_time += (step_begin - self.average_step_time) / self.total_steps
+        self.average_step_time += (time.time() - step_begin - self.average_step_time) / self.total_steps
+        print(self.average_step_time)
         return self._stack_observations(observationlist), rewards, terminated, truncated, info
     
+
     def finalize_process(self, **kwargs) -> None:
         """Stops execution for all environments."""
         for env in self.envs:
@@ -159,12 +195,12 @@ from stable_baselines3.common.vec_env import VecEnv
 
 class SB3Vectorized(VecEnv):
 
-    def __init__(self, n_envs : int, tracks : list[str], cfg : TrainConfig, obs_as_dict : bool = False,
+    def __init__(self, n_envs : int, tracks : list[str], cfg : TrainConfig, obs_as_dict : bool = False, step_parallel : bool = False,
                  alternation_between_tracks : bool = False, 
                     n_steps_per_track : int = 2048,
                     assign_rangom_track_at_init : bool = False,
                     assign_random_track_at_alternation : bool = False):
-        self.vecenv = VectorizedTMEnvironment(n_envs, tracks, cfg, obs_as_dict, alternation_between_tracks, n_steps_per_track, 
+        self.vecenv = VectorizedTMEnvironment(n_envs, tracks, cfg, obs_as_dict, step_parallel, alternation_between_tracks, n_steps_per_track, 
                                               assign_rangom_track_at_init, assign_random_track_at_alternation)
         super().__init__(n_envs, self.vecenv.envs[0].observation_space, self.vecenv.envs[0].action_space)
         self.actions = None
