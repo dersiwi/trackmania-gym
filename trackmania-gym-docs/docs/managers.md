@@ -5,6 +5,7 @@ In order to keep the calculation of Terminations, Rewards and Observations as mo
 All managers extend `trackmania_env.manager.Manager` and all Terms extend `trackmania_env.manager.ManagerTerm`. These baseclasses mostly implement the passing of the environment-variable, as each Manager and Term is given an instance of the environment after instanciation, which it can access using `self.env`. This is very useful for accessing position-buffers (or other) and the ReferenceLineManager of the envrionment.
 
 The calculation-interface is implemented by the specific Term, i.e. `ObservationTerm`. 
+ 
 
 
 ## Observation-Manager `trackmania_env.observations.observation_manager.ObservationManager`

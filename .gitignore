@@ -203,6 +203,5 @@ outputs/
 wandb/
 runs/
 checkpoints/
-*.gif
 sb3/
 configs/platforms.yaml

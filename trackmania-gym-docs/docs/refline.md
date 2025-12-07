@@ -28,10 +28,9 @@ Start the game using the modloader TMLoader. Then execute
 python tracks\reference_line\create_refline\add_vcp_as_triggers.py tracks/reference_line/Level1.npy
 ``` 
 which should then look something like this
-<center>
-    <img src="../images/refline-vis.png"><br>
-    This picture is from the map simple1_validated.
-</center>
+
+![Reference Line Visualized](images/refline-vis.png){ width="400", .center }
+
 
 ### Matplotlib
 Use `tracks.reference_line.plot.py`, which is a quick-and-dirty script to quickly visualize the reference line as a 3D Plot in matplotlib. The script assumes the reference line is stored in `tracks/reference_line` as a numpy-file. When in base-directory of the repository execute:
