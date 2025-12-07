@@ -68,7 +68,7 @@ class NextPointRewards(RewradCalculator):
         if len(kwargs) > 0:
             print(f"Got additional kwargsuments that are not used; ignoring them : {kwargs.keys()}. Maybe they're used by a class that inherits.")
 
-        self.reward_terms = [AccumulatedDistanceReward(accum_distance_weight),
+        self.terms = [AccumulatedDistanceReward(accum_distance_weight),
                              RaceFinished(race_finished_reward_weight),
                              ConstantRewardTerm((-1) * race_not_finished_weight),
                              SpeedReward(speed_reward_weight / SpeedReward.THEORETICAL_MAX_VALUE),
@@ -88,7 +88,7 @@ class OptimizeRaceTiem(RewradCalculator):
                  speed_reward_weight = 1,
                  wall_contact = -0.2, normalize = False, **kwargs):
         super().__init__(normalize, **kwargs)
-        self.reward_terms = [AccumulatedDistanceReward(accum_distance_weight),
+        self.terms = [AccumulatedDistanceReward(accum_distance_weight),
                              RaceFinished(race_finished_reward_weight, scaled_by_steps_taken=True),
                              ConstantRewardTerm((-1) * race_not_finished_weight),
                              SpeedReward(speed_reward_weight / SpeedReward.THEORETICAL_MAX_VALUE),
@@ -107,14 +107,14 @@ class RaceFinishedRewards(NextPointRewards):
             """
         super().__init__(normalize=normalize, **kwargs)
 
-        self.reward_terms = [
+        self.terms = [
             RaceFinished(self.race_finished_reward_weight, scaled_by_steps_taken=True),
             AccumulatedDistanceReward(self.accum_distance_weight, enhanced_by_amount_travelled=True, exponential_factor=1.2),
             TerminationPunishment((-1) * self.other_termination_punishment),
             HasWallConatact(-0.15)]
         
         if use_punishment:
-            self.reward_terms.append(NoProgressPunishment(self.race_finished_reward_weight, steps_without_progress_until_punishment))
+            self.terms.append(NoProgressPunishment(self.race_finished_reward_weight, steps_without_progress_until_punishment))
 
 class NextPointRewards3(NextPointRewards):
 
@@ -127,8 +127,8 @@ class NextPointRewards3(NextPointRewards):
         **kwargs
     ):
         super().__init__(normalize=normalize, **kwargs)
-        self.reward_terms.append(OffTrackPunishment(weight=off_course_penalty_weight))
-        self.reward_terms.append(AccumulatedWallPenalty(weight=wall_penalty_weight,min_wall_contact_time = min_wall_contact_time))
+        self.terms.append(OffTrackPunishment(weight=off_course_penalty_weight))
+        self.terms.append(AccumulatedWallPenalty(weight=wall_penalty_weight,min_wall_contact_time = min_wall_contact_time))
 
 class NextPointDriftReward(NextPointRewards):
     def __init__(self, 
@@ -136,7 +136,7 @@ class NextPointDriftReward(NextPointRewards):
                 normalize = False,
                 **kwargs):
         super().__init__(normalize=normalize, **kwargs)
-        self.reward_terms.append(DriftReward(drift_reward_weight))
+        self.terms.append(DriftReward(drift_reward_weight))
 
 class AirBrakeNextPointReward(NextPointRewards):
 
@@ -145,7 +145,7 @@ class AirBrakeNextPointReward(NextPointRewards):
                 normalize = False,
                 **kwargs):
         super().__init__(normalize=normalize, **kwargs)
-        self.reward_terms.append(AirBrakeReward(air_brake_reward_weight))        
+        self.terms.append(AirBrakeReward(air_brake_reward_weight))        
 
 
 class SpeedSplideNextPointReward(NextPointRewards):
@@ -155,4 +155,4 @@ class SpeedSplideNextPointReward(NextPointRewards):
                 normalize = False,
                 **kwargs):
         super().__init__(normalize=normalize, **kwargs)
-        self.reward_terms.append(SpeedSlideReward(speed_slide_reward_weight))        
+        self.terms.append(SpeedSlideReward(speed_slide_reward_weight))        

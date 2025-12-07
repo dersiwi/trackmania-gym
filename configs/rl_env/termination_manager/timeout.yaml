@@ -1,9 +1,3 @@
-name: "timeout_increase"
+name: "timeout"
 max_steps_until_reset : 2049  ##aka timeout
 ignore_stuck_for_n_steps_after_reset : 80 
-increase_timeout_intervals : ## total environment steps after which an increase of timeout happens
-    - 124000
-    - 1000000
-new_timeouts : ## specifies new values for increase of timeout (initial value is max_steps_until_reset)
-    - 512
-    - 1024

@@ -1,29 +1,32 @@
 from tminterface.structs import CheckpointData, SimStateData, CheckpointTime
+from trackmania_env.terminations.termination_terms import TerminationTerm
+from trackmania_env.manager import Manager
 
-
-class TerminationManager:
+class TerminationManager(Manager):
 
     def __init__(self, timeout : int, ignore_stuck_for_n_steps_after_reset : int):
+
         self.timeout : int = timeout
-
         self.ignore_stuck_for_n_steps_after_reset = ignore_stuck_for_n_steps_after_reset
-        self.env = None
 
-    def set_env(self, environment) -> None:
-        """Sets environment for this Termination Manager"""
-        from trackmania_env.envs.single_agent_env2 import TMNF_Single_Agent_Env
-        self.env : TMNF_Single_Agent_Env = environment
+        self.terms : list[TerminationTerm] = [] #just for typeinference.
 
     def calculate_terminations(self, observations : SimStateData) -> tuple[bool, bool, dict[str, bool]]:
         """Returns terminated, truncated for environment step."""
-        raise NotImplementedError("Impement Own Class")
+        
+        stuck = self.car_is_stuck()
+        timeout = self.calculate_timeout()
+        terminated, truncated = stuck, timeout
+        termination_dict = {"stuck" : stuck, "timeout" : timeout}
+        for term in self.terms:
+            term_terminated, term_truncated = term.calculate_termination(observations)
+            termination_dict.update({term.name : term_terminated or term_truncated})
+            terminated = terminated or term_terminated
+            truncated = truncated or term_truncated
 
-    def reset(self):
-        pass
+        return terminated, truncated, termination_dict
 
-
-    # implemented termination terms, to use for subclasses 
-
+    # Implementation of default-termination terms (i.e. stuck and timeout.)
 
     def calculate_timeout(self) -> bool:
         """Calculates if timeout has been reached"""

@@ -6,8 +6,9 @@ import numpy as np
 from trackmania_env.utils.reference_line_manager import ReferenceLineManager
 from trackmania_env.utils.position_buffer import PositionBuffer
 from trackmania_env.rewards.normalizer import RewardNormalizer
+from trackmania_env.manager import Manager, ManagerTerm
 
-class RewardTerm():
+class RewardTerm(ManagerTerm):
 
     THEORETICAL_MAX_VALUE = np.inf
     """Theroretical maximial Value of the reward-term, before weighting."""
@@ -23,12 +24,13 @@ class RewardTerm():
             clip_min (flaot): Minimal value of the reward term (applied before weighing)
             clip_max (float): Maximal value of the reward term (applied before weighing)
         """
+        super().__init__(name)
         self.weight = weight
-        self.name = name
         self.clip_min = clip_min
         self.clip_max = clip_max
         self.env = None
 
+        
     def _get_term(self, observations : dict[str, any], processed_obs : dict[str, any], race_finished : bool, other_terminations : dict[str, bool]) -> float:
         raise NotImplementedError("")
 
@@ -40,13 +42,7 @@ class RewardTerm():
     def calculate_reward_term(self, observations : dict[str, any], processed_obs : dict[str, any], race_finished : bool, other_terminations : dict[str, bool]) -> tuple[float, dict[str, int | float]]:
         val = self._get_weighted_term(observations, processed_obs, race_finished, other_terminations)
         return val, {self.name : val}
-    
-    def set_env(self, env):
-        from trackmania_env.envs.single_agent_env2 import TMNF_Single_Agent_Env
-        self.env : TMNF_Single_Agent_Env= env
-        
-    def reset(self) -> None:
-        pass
+
 
 class BoundedRewardterm(RewardTerm):
     """The term itself can only return values 0,1."""
@@ -59,9 +55,9 @@ class BoundedRewardterm(RewardTerm):
     def __init__(self, weight, name):
         super().__init__(weight, name, clip_min=0.0, clip_max=1.0)
 
-class RewradCalculator:
+class RewradCalculator(Manager):
     """Responsible for reward calculations for environment.
-    Subclasses have to initialize self.reward_terms with the desired reward-terms. This has to happen in the constructor!"""
+    Subclasses have to initialize self.terms with the desired reward-terms. This has to happen in the constructor!"""
 
     def __init__(self, normalize : bool = False):
         self.env = None
@@ -70,20 +66,12 @@ class RewradCalculator:
         self.normalizer = RewardNormalizer()
         self.normalize = normalize
 
-        self.reward_terms : list[RewardTerm] = []
-
-
-    def set_env(self, env):
-        from trackmania_env.envs.single_agent_env2 import TMNF_Single_Agent_Env
-        self.env : TMNF_Single_Agent_Env= env
-
-        for term in self.reward_terms:
-            term.set_env(env)
+        self.terms : list[RewardTerm] #this is just for type-inference.
 
     def get_sum_of_weighted_rewards(self, observations : dict[str, any], processed_obs : dict[str, any], race_finished : bool, other_terminations : dict[str, bool]) -> tuple[float, dict[str, int | float]]:
         rew = 0
         info = {}
-        for term in self.reward_terms:
+        for term in self.terms:
             termvalue, terminfo = term.calculate_reward_term(observations, processed_obs, race_finished, other_terminations)
             rew += termvalue
             info = info | terminfo
@@ -117,11 +105,6 @@ class RewradCalculator:
         if self.normalize:
             return self.normalizer.normalize_float(rewards)
         return rewards
-
-    def reset(self) -> None:
-        """resets rewrad calculator"""
-        for term in self.reward_terms:
-            term.reset()
 
 
 class RewardLogCallback(BaseCallback):

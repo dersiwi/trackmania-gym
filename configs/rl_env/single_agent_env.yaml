@@ -1,7 +1,7 @@
 defaults:
   - obs_manager: sophy_obs.yaml
   - reward_manager: next_point_rewards.yaml
-  - termination_manager: no_progress.yaml
+  - termination_manager: timeout.yaml
 
 env:
   _partial_: True
