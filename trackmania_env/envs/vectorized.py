@@ -145,7 +145,6 @@ class VectorizedTMEnvironment(gym.Env):
         self.check_map_alternation()
         self.total_steps += 1
         self.average_step_time += (time.time() - step_begin - self.average_step_time) / self.total_steps
-        print(self.average_step_time)
         return self._stack_observations(observationlist), rewards, terminated, truncated, info
     
 
