@@ -5,6 +5,18 @@ nav:
   - Measure Of Progress : refline.md
   - Structure : project-structure.md
   - Managers : managers.md
-  - Testing : testing.md
+  - Live-Testing : testing.md
+  - Future Work : future_work.md
   - About : about.md
+markdown_extensions:
+  - admonition
+  - attr_list
+  - pymdownx.arithmatex:
+      generic: true
+
+extra_javascript:  
+  - javascripts/mathjax.js
+  - https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js
+extra_css:
+  - stylesheets/extra.css
 theme: readthedocs
