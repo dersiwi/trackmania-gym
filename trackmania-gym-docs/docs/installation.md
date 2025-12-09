@@ -46,7 +46,15 @@ you use the plugin provided in `game_intertaction/plugin/python_link.as`.
 
 ### If on Linux
 
-TODO
+You need to make sure you have wine installed, as this is necessary to translate windows-based systemcalls into linux-based systemcalls (in order to be able to execute the game TMNF):
+```sh
+sudo apt install winetricks
+winetricks dxvk
+```
+You also have to have build-tools installed, i.e.
+```
+sudo apt install xdotool libxdo-dev
+```
 
 ## Game-Setup
 
