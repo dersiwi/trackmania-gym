@@ -28,10 +28,9 @@ from trackmania_env.utils.random_respawn_manager import RandomRespawnManager
 from trackmania_env.utils.orientationless_random_respawn_manager import OrientationlessRespawnManager
 from trackmania_env.utils.return_tracker import ReturnTracker
 from trackmania_env.utils.position_buffer import PositionBuffer
-from trackmania_env.utils.actionmap import ACTION_MAP
+from trackmania_env.utils.actionmap import ACTION_MAP, ActionMode
 from trackmania_env.envs.info import EnvironmentInfo
 
-from configs.config import EnvConfig
 
 class TMICommunicationFaildException(Exception):
     """Custom exception for the error repeatedely encountered during training."""
@@ -138,8 +137,8 @@ class TMNF_Single_Agent_Env(gym.Env):
                                                                                              TMInterfaceCommands.set_variable(TMInterfaceCommands.Variables.SPEED, 
                                                                                                                               value=game_speed)))
         self.__send_command_to_process_wrapper(IPCCommands.get_cmd_command(self.__ipc_cmd_id, 
-                                                                                                    TMInterfaceCommands.set_variable(TMInterfaceCommands.Variables.COUNTDOWN_SPEED, 
-                                                                                                                                    value=countdown_speed)))
+                                                                                                TMInterfaceCommands.set_variable(TMInterfaceCommands.Variables.COUNTDOWN_SPEED, 
+                                                                                                                                value=countdown_speed)))
         # this is the defautl simstateData when the car first gets spawned. We will use this for the random reset
         self.default_ssD = None
         self.default_set = False
@@ -233,6 +232,12 @@ class TMNF_Single_Agent_Env(gym.Env):
         self.start_position = None
         self.start_position_set = False
 
+    def _get_action(self, action) -> tuple[bool]:
+        """This method takes the action as given by the learner (i.e. the agent) and translates it into something
+        the ProcessWrapper can work with. In the discrete case this is a tuple of booleans:
+            (left, right, accelerate, brake)"""
+        return ACTION_MAP[action]
+
     def step(self, action) -> Tuple[gym.spaces.Dict,float,bool,bool,Dict[str,Any]]:
         """
         The `step` function is a core component of the Gymnasium environment API and contains 
@@ -253,7 +258,7 @@ class TMNF_Single_Agent_Env(gym.Env):
         """
         
         #store action internally and send via TMInterface
-        action = ACTION_MAP[action]
+        action = self._get_action(action)
         self.actions.append(action)
         raw_obs = self.__send_command_to_process_wrapper(IPCCommands.step(self.__ipc_cmd_id, action))
         raw_obs[IPCFields.ACTION] = action 
@@ -421,3 +426,22 @@ class TMNF_Single_Agent_Env(gym.Env):
         ssD = raw_obs[IPCFields.SIMSTATE] 
         reset_state = (self.random_respawn_manager.make_ssD_from_ref_point(ssD=self.default_ssD))
         self.__send_command_to_process_wrapper(IPCCommands.rewind_state(self.__ipc_cmd_id, reset_state))
+
+
+class ContinuousTMNF_Single_Agent_Env(TMNF_Single_Agent_Env):
+    def __init__(self, command_queue, response_queue, obs_manager, reward_calculator, termination_manger, 
+                 track, reset_mode, n_previous_actions, position_buffer_size, position_moved_threshold, 
+                 ignore_stuck_for_n_steps_after_reset, game_speed, countdown_speed, waitforstep_timeout_in_s, 
+                 startposition_accuracy_threshold, gamma, actionspace : int, **kwargs):
+        super().__init__(command_queue, response_queue, obs_manager, reward_calculator, termination_manger, 
+                         track, reset_mode, n_previous_actions, position_buffer_size, position_moved_threshold,
+                          ignore_stuck_for_n_steps_after_reset, game_speed, countdown_speed, waitforstep_timeout_in_s, 
+                          startposition_accuracy_threshold, gamma, actionspace, **kwargs)
+        
+        size = 2 if actionspace == ActionMode.CONTINUOUS_2D else 4
+        assert actionspace == ActionMode.CONTINUOUS_2D or actionspace == ActionMode.CONTINUOUS_4D
+
+        self.action_space = gym.spaces.Box(low=-1, high = 1, shape = (size,), dtype=np.float32)
+        self.__send_command_to_process_wrapper(IPCCommands.set_actionmode(self.__ipc_cmd_id, actionspace))
+
+    

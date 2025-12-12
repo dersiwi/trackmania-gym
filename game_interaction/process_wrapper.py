@@ -1,15 +1,15 @@
-from game_interaction.tminterface2 import MessageType, TMInterface
-from game_interaction.game_instance_manager2 import GameInstanceManager
-from game_interaction.ipc_fields import IPCFields, IPCCommands
-from game_interaction.tminterface_commands import TMInterfaceCommands
-import numpy as np
 import time
 import logging, os
 
 from multiprocessing import Queue as MultiprocessingQueue
 from queue import Empty, Queue 
-from tminterface.structs import CheckpointData, SimStateData
-from configs.config import EnvConfig
+
+from game_interaction.tminterface2 import MessageType, TMInterface
+from game_interaction.game_instance_manager2 import GameInstanceManager
+from game_interaction.ipc_fields import IPCFields, IPCCommands
+from game_interaction.tminterface_commands import TMInterfaceCommands
+
+from trackmania_env.utils.actionmap import ActionMode
 
 class TMIProcessWrapper:
 
@@ -115,6 +115,9 @@ class TMIProcessWrapper:
 
         self.cmd_count, self.avg_cmd_exectime = 0, 0.0
         """These two log average execution times of all commands."""
+
+        self.actionmode = ActionMode.DISCRETE
+        """The type of actions to expect (either discrete or continuous.)"""
         
     def __receive_frame(self) -> dict:
         """Receives a frame from self.ifaca If self._req_img_cmd_id != -1, it sends the aquired frame and simstate via the response-queue.
@@ -135,8 +138,15 @@ class TMIProcessWrapper:
 
 
     def send_action(self, action : tuple[bool, bool, bool, bool]) -> dict:
-        left, right, acc, brake = action
-        self.iface.set_input_state(left, right, acc, brake)
+        if self.actionmode == ActionMode.DISCRETE:
+            left, right, acc, brake = action
+            self.iface.set_input_state(left, right, acc, brake)
+        elif self.actionmode == ActionMode.CONTINUOUS_2D:
+            steering, breaking, acceleration = ActionMode.transform_continuous_2d(action)
+            self.iface.execute_command(f"steer {int(steering)}")
+            self.iface.set_input_state(False, False, acceleration, breaking)
+        elif self.actionmode == ActionMode.CONTINUOUS_4D:
+            raise NotImplementedError("")
 
 
     def stop_sync_loop(self) -> None:
@@ -188,6 +198,10 @@ class TMIProcessWrapper:
 
         self.time_since_last_unanswered_handling = time.time()
 
+    def _answer_command_ok(self, cmd_id : int):
+        """Utility method to send a response that just contains ok-status"""
+        return self.answer_command({IPCFields.CMD_ID : cmd_id, IPCFields.STATUS : IPCFields.STATUS_OK})
+
     def check_command_queue(self) -> dict:
         """Checks command queue for ICP and handles command appropriately. Returns command."""
         # first get command
@@ -212,25 +226,25 @@ class TMIProcessWrapper:
 
         if command == IPCCommands.ACT:
             self.send_action(cmd[IPCFields.ARGS])
-            self.answer_command({IPCFields.CMD_ID : cmd_id, IPCFields.STATUS : IPCFields.STATUS_OK})
+            self._answer_command_ok(cmd_id)
 
         elif command == IPCCommands.REQ_IMG:
             self._req_img_cmd_id = cmd_id
             self.request_image()
         elif command == IPCCommands.END_SYNCLOOP: 
             self.stop_sync_loop()
-            self.answer_command({IPCFields.CMD_ID : cmd_id, IPCFields.STATUS : IPCFields.STATUS_OK})
+            self._answer_command_ok(cmd_id)
         elif command == IPCCommands.EXECUTE_COMMAND:
             self.iface.execute_command(cmd[IPCFields.ARGS])
-            self.answer_command({IPCFields.CMD_ID : cmd_id, IPCFields.STATUS : IPCFields.STATUS_OK})
+            self._answer_command_ok(cmd_id)
         elif command == IPCCommands.SIMULATION_STARTED:
             self.__start_cmd_id = cmd[IPCFields.CMD_ID]
         elif command == IPCCommands.REVENT_SIM_FINISH:
             self.iface.prevent_simulation_finish()
-            self.answer_command({IPCFields.CMD_ID : cmd_id, IPCFields.STATUS : IPCFields.STATUS_OK})
+            self._answer_command_ok(cmd_id)
         elif command == IPCCommands.REWIND_STATE:
             self.iface.rewind_to_state(cmd[IPCFields.ARGS])
-            self.answer_command({IPCFields.CMD_ID : cmd_id, IPCFields.STATUS : IPCFields.STATUS_OK})
+            self._answer_command_ok(cmd_id)
 
         elif command == IPCCommands.STEP:
             assert self.waitforstepmode_on, "Cannot call step before waitfotsep has not been enabled."
@@ -245,7 +259,11 @@ class TMIProcessWrapper:
             self.waitforstepmode_on = True
             self.expect_next_step_command = True
             self.max_waiting_period_for_step_command = cmd[IPCFields.ARGS]
-            self.answer_command({IPCFields.CMD_ID : cmd_id, IPCFields.STATUS : IPCFields.STATUS_OK})
+            self._answer_command_ok(cmd_id)
+        elif command == IPCCommands.SET_ACTIONMODE:
+            self.actionmode = cmd[IPCFields.ARGS]
+            assert ActionMode.is_valid(self.actionmode), f"The action-mode '{self.actionmode}' you have tried to set the processwrapper in was invalid."
+            self._answer_command_ok(cmd_id)
         else:
             self.answer_command({IPCFields.CMD_ID : cmd_id, IPCFields.STATUS : IPCFields.STATUS_ERROR, IPCFields.ERROR : "NoSuchCommand"})
             

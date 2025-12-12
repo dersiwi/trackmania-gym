@@ -49,6 +49,7 @@ class IPCCommands:
         REWIND_STATE = 6
         STEP = 7
         WAITFORSTEP = 8
+        SET_ACTIONMODE = 9
 
         @staticmethod
         def get_act_command(command_id : int, action : tuple[bool, bool, bool, bool]) -> dict[str, any]:
@@ -94,3 +95,9 @@ class IPCCommands:
         def waitforstep(command_id : int, max_wait_duraion : float) -> dict[str, any]:
             """Sends command to setp process wrapper into stepping mode """
             return {IPCFields.CMD_ID : command_id, IPCFields.CMD : IPCCommands.WAITFORSTEP, IPCFields.ARGS : max_wait_duraion}
+        
+        @staticmethod
+        def set_actionmode(command_id : int, mode : int) -> dict[str, any]:
+            """Sest the process-wrapper to expect eithert continuous or discrete actions. Default is discrete!
+            @see from trackmania_env.utils.actionmap import ActionMode the modes you can choose from."""
+            return {IPCFields.CMD_ID : command_id, IPCFields.CMD : IPCCommands.SET_ACTIONMODE, IPCFields.ARGS : mode}

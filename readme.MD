@@ -1,6 +1,6 @@
 
 <h1 align="center">Trackmania-Gym</h1>
-<p align="center">Trackmania Nations Forever finally gets a Gymanasium Compatible Environment</p>
+<p align="center">Trackmania Nations Forever gets a Gymanasium Compatible Environment</p>
 
 <p align="center">
   <a href="https://your-docs-url.com">
@@ -30,4 +30,4 @@ These agents are also able to generalize to unseen tracks, although with some  r
     <img src="trackmania-gym-docs/docs/images/simple-validated-run.gif">
 </center>
 
-This is one of the agents we traied using Trackmania-Gym, in only around 5 hours on the map simple_validated1.
+This is one of the agents we traied using Trackmania-Gym, in only around 5 hours on the map simple_validated1. Beware this was not our final agent, much rather an example.
