@@ -145,6 +145,9 @@ class EnvConfig:
     """Executes a check of number of channels in order to determine if a observation-term is an imageterm.
     May be wrong, if doing framestacking,..."""
 
+    continuous_actions : bool
+    actionmode : str | int
+
     ignore_stuck_for_n_steps_after_reset : int
     increase_timeout_intervals : list[int]
     new_timeouts : list[int]

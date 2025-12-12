@@ -2,7 +2,7 @@ from multiprocessing import Queue
 import gymnasium as gym
 
 
-from trackmania_env.envs.single_agent_env2 import TMNF_Single_Agent_Env
+from trackmania_env.envs.single_agent_env2 import TMNF_Single_Agent_Env, ContinuousTMNF_Single_Agent_Env
 from trackmania_env.envs.testenv_single_agent import TestEnvironment
 
 from trackmania_env.observations.observations import get_observation_manager_from_cfg
@@ -65,14 +65,18 @@ def get_environment(cfg : TrainConfig, control_queue : Queue, response_queue : Q
     termination_manager = get_termination_manager(termination_cfg= cfg.rl_env.termination_manager)
 
     constructor_kwargs = _get_env_constructor_args(cfg, control_queue, response_queue, obs_manager, reward_calculator, termination_manager)
-
-    if cfg.rl_env.env.test or test:
-        constructor_kwargs.update(dict(platform = cfg.platforms.os))
-        TM_ENV_CLASS = TestEnvironment
+    
+    if not cfg.rl_env.env.continuous_actions:
+        if cfg.rl_env.env.test or test:
+            constructor_kwargs.update(dict(platform = cfg.platforms.os))
+            TM_ENV_CLASS = TestEnvironment
+        else :
+            TM_ENV_CLASS = TMNF_Single_Agent_Env
+        tm_env = TM_ENV_CLASS(**constructor_kwargs)
     else:
-        TM_ENV_CLASS = TMNF_Single_Agent_Env
+        tm_env = ContinuousTMNF_Single_Agent_Env(**constructor_kwargs, actionspace= cfg.rl_env.env.actionmode)
 
-    tm_env = TM_ENV_CLASS(**constructor_kwargs)
+    
     tm_env.orientationless_respawn_manager = OrientationlessRespawnManager(respawn_coordinates=OrientationlessRespawnManager.get_respawns_for_very_long_checkpoints())
 
     return tm_env

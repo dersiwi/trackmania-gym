@@ -36,6 +36,9 @@ env:
   waitforstep_timeout_in_s : 1.2 # this HAS to be smaller than the timeout of TMInterface
   use_rewind : True
 
+  continuous_actions : True
+  actionmode : 1    #thios is ugly (maybe do this with string, @see actionmap.py : 0 == discrete, 1 == 2d continuous, 2 == 4d continuous); only relevant when continuous_actions== TRue
+
 
 wrappers:
   monitor: 
