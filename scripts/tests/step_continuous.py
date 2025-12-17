@@ -6,20 +6,14 @@ sys.path.append(os.path.abspath(os.path.join(
 # Hydra related imports
 import hydra
 import traceback
-import random
-import numpy as np
-from hydra.core.hydra_config import HydraConfig
 from typing import Optional
 
 
 from configs.config import TrainConfig
 
 from trackmania_env.envs.sec_env import CrashProofEnvironment
-from utils.hydra_wandb_utils import load_and_merge_platform, secure_attribute_retrieval
-from utils.introscreen import introscreen
-from trackmania_env.utils.actionmap import ACTION_MAP
-from trackmania_env.utils.spacetransform import SpaceTransformer
-from tmn_sb3.utils.from_cfg import get_model_from_config
+from utils.hydra_wandb_utils import load_and_merge_platform
+from trackmania_env.utils.actionmap import ActionMode
 
 _HYDRA_PARAMS = {
     "version_base": "1.3",
@@ -48,7 +42,9 @@ def main(cfg : TrainConfig, run_id : Optional[str] = None):
     try:
         o, info = tm_env.reset()
         for i in range(100000):
-            o, rew, term, trun, inf = tm_env.step(np.array([0.0, speed]))#tm_env.step(np.random.random((2,)) * 2 - 1)
+            action = ActionMode.generate_random_action(ActionMode.CONTINUOUS_2D)
+            #print(f"[Aciton info]     :      steering : {action[0]},      acceleration {action[1]}")
+            o, rew, term, trun, inf = tm_env.step(action)#tm_env.step(np.random.random((2,)) * 2 - 1) - np.array([0.0, speed])
             
             if i % 50 == 0:
                 speed += 0.2

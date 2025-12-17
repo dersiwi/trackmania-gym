@@ -87,6 +87,8 @@ class TMIProcessWrapper:
         """Tracks time to track step-frequency"""
 
         self.aps = actions_per_second
+        self.simsteps_between_envsteps = 100 / self.aps
+        """The game does 100 simulation steps per (in-game) second."""
         self.gametime_between_actions = 1 / self.aps * 1000 # in-game-seconds between each action
         self.disable_waitforstep_after_n_consecutive_timeouts = disable_waitforstep_after_n_consecutive_timeouts
         self.use_rewind  = use_rewind
@@ -118,8 +120,9 @@ class TMIProcessWrapper:
 
         self.actionmode = ActionMode.DISCRETE
         """The type of actions to expect (either discrete or continuous.)"""
-        self.simsteps_since_last_env_step : int = 0
-        self.actions_to_send = [(False, False, False, False)] * 5
+
+        self.simsteps_since_last_env_step : int = 0 #this should always equal self.simsteps_between_envsteps
+        self.actions_to_send = [(False, False, False, False)] * self.simsteps_between_envsteps
         self.curr_action_idx = len(self.actions_to_send)
         
     def __receive_frame(self) -> dict:
@@ -141,28 +144,16 @@ class TMIProcessWrapper:
     def create_continuous_actions(self, action):
         """ This method takes a 1 D continuous action within [-1, 1] and translates it into a list of booleans to send to the game.
         """
-        self.actions_to_send = [(False, False, False, False)] * 5
-        if action >= 0:
-            if action > 0.8:
-                self.actions_to_send[-1] = (False, False, True, False)
-            if action > 0.6:
-                self.actions_to_send[-2] = (False, False, True, False)
-            if action > 0.4:
-                self.actions_to_send[-3] = (False, False, True, False)
-            if action > 0.2:
-                self.actions_to_send[-4] = (False, False, True, False)
-            self.actions_to_send[-5] = (False, False, True, False)
-        else:
-            if action < -0.8:
-                self.actions_to_send[-1] = (False, False, False, True)
-            if action < -0.6:
-                self.actions_to_send[-2] = (False, False, False, True)
-            if action < -0.4:
-                self.actions_to_send[-3] = (False, False, False, True)
-            if action < -0.2:
-                self.actions_to_send[-4] = (False, False, False, True)
-            self.actions_to_send[-5] = (False, False, False, True)
-            #self.actions_to_send = [(False, False, False, True)] * 5
+        self.actions_to_send = [(False, False, False, False)] * self.simsteps_between_envsteps
+        multiplier = 1 if action >= 0 else - 1
+        steps = 1 / self.simsteps_between_envsteps # this is the amount of simulation steps between each environment step.
+        accelerate, decelerate = (False, False, True, False), (False, False, False, True)
+        
+        for i in range(1, len(self.actions_to_send) + 1):
+            if action * multiplier > 1 - steps * i:
+                self.actions_to_send[-i] = accelerate if multiplier == 1 else decelerate
+
+        #set the current action index to zero to allow actions to be sent (automatically disables action-sending after index > len(actions_to_send))
         self.curr_action_idx = 0
 
     def send_action(self, action : tuple[bool, bool, bool, bool]) -> dict:
@@ -173,7 +164,6 @@ class TMIProcessWrapper:
             self.create_continuous_actions(action[1])
             steering, breaking, acceleration = ActionMode.transform_continuous_2d(action)
             self.iface.execute_command(f"steer {int(steering)}")
-            #self.iface.set_input_state(False, False, acceleration, breaking)
         elif self.actionmode == ActionMode.CONTINUOUS_4D:
             raise NotImplementedError("")
 
@@ -431,6 +421,7 @@ class TMIProcessWrapper:
                     self.ingame_time_tracking = 0
 
                 if self.curr_action_idx < len(self.actions_to_send):
+                    # When using continuous actions, this sends actions to the environment
                     left, right, acc, brake = self.actions_to_send[self.curr_action_idx]
                     self.iface.set_input_state(left, right, acc, brake)
                     self.curr_action_idx += 1

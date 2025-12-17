@@ -16,10 +16,8 @@ from configs.config import TrainConfig
 
 from trackmania_env.envs.vectorized import VectorizedTMEnvironment
 from utils.hydra_wandb_utils import load_and_merge_platform, secure_attribute_retrieval
-from utils.introscreen import introscreen
-from trackmania_env.utils.actionmap import ACTION_MAP
+from trackmania_env.utils.actionmap import ActionMode, ACTION_MAP
 from trackmania_env.utils.spacetransform import SpaceTransformer
-from tmn_sb3.utils.from_cfg import get_model_from_config
 
 _HYDRA_PARAMS = {
     "version_base": "1.3",
@@ -44,10 +42,12 @@ def main(cfg : TrainConfig, run_id : Optional[str] = None):
     obstransform = SpaceTransformer.get_instance() # == tm_env.transformer
     print(tm_env.observation_space)
     print(tm_env.action_space)
+    action_mode = ActionMode.get_mode(cfg.rl_env.env.continuous_actions, cfg.rl_env.env.actionmode)
     try:
         o, info = tm_env.reset()
         for i in range(100000):
-            o, rew, term, trun, inf = tm_env.step(np.random.randint(0, len(ACTION_MAP), size=(N_ENVS, )))
+            action = ActionMode.generate_random_action(action_mode, n_envs = N_ENVS, vectorized=True)
+            o, rew, term, trun, inf = tm_env.step(action)
             if i %  100 == 0:
                 print(f"Completed {i} steps")
             print(o.shape)
@@ -72,8 +72,7 @@ def main(cfg : TrainConfig, run_id : Optional[str] = None):
 
     finally:
         # Finalize training and close game all processes.
-        for env in tm_env.envs:
-            env.finalize_process(reinit=False)
+        tm_env.finalize_process()
 
 if __name__ == "__main__": 
     main()

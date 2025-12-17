@@ -52,6 +52,28 @@ class ActionMode:
         return mode == ActionMode.DISCRETE or mode == ActionMode.CONTINUOUS_2D or mode == ActionMode.CONTINUOUS_4D 
     
     @staticmethod
+    def get_mode(continuous : bool, mode : int) -> int:
+        """Returns the correct mode (may be used for action-generation); must pass config argumetns"""
+        if not continuous:
+            return ActionMode.DISCRETE
+        assert ActionMode.is_valid(mode)
+        return mode
+    
+    @staticmethod
+    def generate_random_action(mode : int, n_envs = 1, vectorized = False) -> np.ndarray | tuple[bool, bool, bool, bool]:
+        action = None
+        if mode == ActionMode.DISCRETE:
+            action = np.random.randint(0, len(ACTION_MAP), size=(n_envs, ))
+        elif mode == ActionMode.CONTINUOUS_2D:
+            action = np.random.random((n_envs, 2)) * 2 - 1
+        elif mode == ActionMode.CONTINUOUS_4D:
+            raise NotImplementedError("Not yet implemented")
+        if not vectorized:
+            return action[0]
+        return action
+  
+
+    @staticmethod
     def transform_discrete(action : int) -> tuple[bool, bool, bool, bool]:
         """
         Transform action (index in ACTIONMAP) into action for ProcessWrapper
