@@ -1,0 +1,70 @@
+Bootstrap: docker
+From: condaforge/mambaforge:latest
+Stage: conda-builder
+
+%files
+	environment.yml environment.yml
+
+%post
+	export DEBIAN_FRONTEND=noninteractive
+
+	apt-get update && apt-get install -y --no-install-recommends \
+        	python3-dev build-essential libevdev-dev && \
+        	rm -rf /var/lib/apt/lists/*
+
+    	mamba env create -p /env -f environment.yml
+    	conda clean -afy
+
+Bootstrap: docker
+From: ghcr.io/sgsiegens/tmnf-docker:latest
+Stage: final
+
+%environment
+    	export PATH="/env/bin:$PATH"
+
+%setup
+    	mkdir -p ${SINGULARITY_ROOTFS}/home/wineuser/trackmania_gym
+
+%files from conda-builder
+    	/env /env
+
+%files
+	configs            /home/wineuser/trackmania_gym/configs
+	game_interaction   /home/wineuser/trackmania_gym/game_interaction
+	models             /home/wineuser/trackmania_gym/models
+	neural_networks    /home/wineuser/trackmania_gym/neural_networks
+	plotting           /home/wineuser/trackmania_gym/plotting
+	scripts            /home/wineuser/trackmania_gym/scripts
+	tmn_sb3            /home/wineuser/trackmania_gym/tmn_sb3
+	trackmania_env     /home/wineuser/trackmania_gym/trackmania_env
+	tracks             /home/wineuser/trackmania_gym/tracks
+	utils              /home/wineuser/trackmania_gym/utils
+	setupvgl.sh         /usr/local/bin/setupvgl.sh
+
+%post
+	chmod 755 /usr/local/bin/setupvgl.sh
+	chown -R wineuser:wineuser /home/wineuser/.vnc
+    	chmod 755 /home/wineuser/.vnc/passwd
+
+    	mkdir -p /home/wineuser/trackmania_gym
+	cd /home/wineuser/trackmania_gym
+	mkdir -p checkpoints logs outputs runs wandb 
+    	chown -R wineuser:wineuser /home/wineuser/trackmania_gym
+    	chown -R wineuser:wineuser /env
+
+    	cat <<EOF > /home/wineuser/trackmania_gym/configs/platforms.yaml
+		platforms:
+	 	 os: linux
+		 home: /home/wineuser
+	  	 tmloader: /home/wineuser/.wine/drive_c/Program_Files_x86/TmNationsForever/TMLoader.exe
+	  	 plugin: /home/wineuser/.wine/drive_c/users/wineuser/Documents/TMInterface/
+	  	 map_dir: /home/wineuser/.wine/drive_c/users/wineuser/Documents/TmForever/Tracks/Challenges
+	  	 device: cuda
+		EOF
+
+%runscript
+	exec /usr/local/bin/setupvgl.sh "$@"
+	
+	
+	
+

@@ -205,3 +205,4 @@ runs/
 checkpoints/
 sb3/
 configs/platforms.yaml
+*.sif
