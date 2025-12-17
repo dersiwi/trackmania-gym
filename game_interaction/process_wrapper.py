@@ -494,4 +494,5 @@ class TMIProcessWrapper:
                 self.handle_unanswered_commands()
 
         if self.launch_game:
+            print("closing game with pid",self.gim.tm_process_id,id(self.gim))
             self.gim.close_game()

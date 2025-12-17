@@ -22,7 +22,7 @@ else:
 from pathlib import Path
 
 
-#from multiprocessing.synchronize import Lock
+from multiprocessing import Lock
 from game_interaction.tminterface2 import TMInterface
 
 class GameInstanceManager:
@@ -234,14 +234,9 @@ class GameInstanceMangerLinux(GameInstanceManager):
         print("Launched xvfb-process.")
 
 
-    def __init__(self, TMLoader_path, TMLoader_profile_name, path_to_plugin, game_spawning_lock : str | None, headless : bool,tmi_port:int):
+    def __init__(self, TMLoader_path, TMLoader_profile_name, path_to_plugin, game_spawning_lock : None, headless : bool,tmi_port:int):
         super().__init__(TMLoader_path, TMLoader_profile_name, path_to_plugin, headless,tmi_port)
-
         self.game_spawning_lock : str = game_spawning_lock
-        if self.game_spawning_lock:
-            self._global_game_lock_path = os.path.join("/tmp", f"{self.game_spawning_lock}.global.lock")
-            self._global_game_lock = FileLock(self._global_game_lock_path, timeout=60)
-            self._lock_acquired_by_this_instance : bool = False # Tracks if this specific instance holds the lock
 
 
     def _get_tm_window_id(self):
@@ -277,26 +272,24 @@ class GameInstanceMangerLinux(GameInstanceManager):
         except psutil.NoSuchProcess:
             return False
 
-    def __get_tmnf_process_id(self, launcher_proc: psutil.Process, timeout: int = 10):
-        """Waits for the Trackmania process (TmForever.exe) to appear as a child of the Wine/TMLoader process."""
-        start = time.time()
-        while time.time() - start < timeout:
-            try:
-                children = launcher_proc.children(recursive=True)
-            except psutil.NoSuchProcess:
-                raise TimeoutError("Launcher process exited before Trackmania started.")
-
-            for child in children:
-                name = child.name().lower()
-                if "tmforever" in name or "trackmania" in name:
-                    self.tm_process_id = child.pid
-                    print(f"Found Trackmania PID: {self.tm_process_id}")
-                    return
-
+    def __get_tmnf_process_id(self, pid_before , timeout: int = 10):
+        launch_time = time.time()
+        while True:
             time.sleep(0.25)
+            pid_after = set(self._get_tm_pids())
+            new_pids = pid_after - pid_before
+            if new_pids:
+                if len(new_pids) == 1:
+                    self.tm_process_id = new_pids.pop()
+                    break
+                else:
+                    print(f"[WARN] Multiple new PIDs detected: {new_pids}")
+                    self.tm_process_id = list(new_pids)[0]  # just pick the first one?
+                    break
 
-        raise TimeoutError(f"TMNF process did not launch within {timeout} seconds.")
-            
+            if time.time() - launch_time > timeout:
+                raise TimeoutError(f"TMNF process did not launch within {timeout} seconds.")
+
     def __get_launch_cmds(self):
         return [
             "wine",
@@ -309,9 +302,8 @@ class GameInstanceMangerLinux(GameInstanceManager):
         
     def launch_game(self, timeout=10):
         """Launches the game with timeout 10s to find process ids."""
-        #with self.game_spawning_lock:
-        #with FileLock(self.game_spawning_lock + ".game_launch.lock", timeout=60):
-        self._acquire_lock()
+
+        self.game_spawning_lock.acquire()
 
         pid_before = set(self._get_tm_pids())
         launch_cmds = self.__get_launch_cmds()
@@ -321,9 +313,9 @@ class GameInstanceMangerLinux(GameInstanceManager):
         else:
             process = subprocess.Popen(launch_cmds)
         launcher_process = psutil.Process(process.pid)
-        self.__get_tmnf_process_id(launcher_process, timeout)
+        self.__get_tmnf_process_id(pid_before, timeout)
         self._get_tm_window_id()
-        self._release_lock()
+        self.game_spawning_lock.release()
         return self.tm_process_id
 
     def _get_gameprocess_killcommand(self) -> str:
@@ -331,31 +323,15 @@ class GameInstanceMangerLinux(GameInstanceManager):
     
     def _set_window_focus(self):
         if not self.game_activated:
-            #with FileLock(self.game_spawning_lock + ".focus_activate.lock", timeout=60):
-            #time.sleep(2)
             xdo_instance = Xdo() 
             print(f"[{os.getpid()}] Waiting for window {self.tm_window_id} to be viewable...")
             xdo_instance.wait_for_window_map_state(self.tm_window_id, X.IsViewable)
             print(f"[{os.getpid()}] Window {self.tm_window_id} is now viewable.")
-            self._acquire_lock()
             print(f"DEBUG: tm_window_id type: {type(self.tm_window_id)}")
             print(f"DEBUG: tm_window_id value: {self.tm_window_id}")
             xdo_instance.activate_window(self.tm_window_id)
             xdo_instance.raise_window(self.tm_window_id)
             self.game_activated= True
-            self._release_lock()
-
-    def _acquire_lock(self):
-        if self.game_spawning_lock:
-            self._global_game_lock.acquire() 
-            self._lock_acquired_by_this_instance = True
-            print(f"[{os.getpid()}] Global game lock acquired: {self._global_game_lock_path}")
-    
-    def _release_lock(self):
-        if self.game_spawning_lock:
-            self._global_game_lock.release()
-            self._lock_acquired_by_this_instance = False
-            print(f"[{os.getpid()}] Released global game lock: {self._global_game_lock_path}")
 
 if __name__ == "__main__":
 

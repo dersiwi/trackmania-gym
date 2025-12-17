@@ -18,7 +18,8 @@ from trackmania_env.envs.vectorized import VectorizedTMEnvironment, SB3Vectorize
 
 from tmn_sb3.utils.from_cfg import get_model_from_config
 from stable_baselines3.common.vec_env import VecNormalize
-
+from multiprocessing import Lock
+# from threading import Lock
 _HYDRA_PARAMS = {
     "version_base": "1.3",
     "config_path": "../configs",
@@ -35,9 +36,10 @@ def main(cfg : TrainConfig, run_id : Optional[str] = None):
     """
     cfg = load_and_merge_platform(cfg)
     introscreen(cfg, askstart=secure_attribute_retrieval(lambda : cfg.ask_start, default=True))
-    tracks = ["very_long_checkpoints.Challenge.Gbx", "Level1.Challenge.Gbx"]
+    tracks = ["very_long_checkpoints.Challenge.Gbx", "Level1.Challenge.Gbx","curvy.Challenge.Gbx","Speed_Slide_Practice.Challenge.Gbx"]
     N_ENVS = 4
-    tm_env = SB3Vectorized(n_envs = N_ENVS, tracks=tracks, cfg=cfg, obs_as_dict=True, step_parallel=True)
+    lock = Lock()
+    tm_env = SB3Vectorized(n_envs = N_ENVS, tracks=tracks, cfg=cfg, obs_as_dict=True, step_parallel=True, lock = lock)
     try:
         model = get_model_from_config(cfg = cfg, tm_env = tm_env)
         model.learn(**cfg.learn_args)

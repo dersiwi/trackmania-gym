@@ -21,11 +21,12 @@ class TrackAssignmentManager:
 class VectorizedTMEnvironment(gym.Env):
 
     def __init__(self, n_envs : int, tracks : list[str], cfg : TrainConfig, obs_as_dict : bool = False,
-                 step_parallel : bool = False,
-                 alternation_between_tracks : bool = False, 
-                    n_steps_per_track : int = 2048,
-                    assign_rangom_track_at_init : bool = False,
-                    assign_random_track_at_alternation : bool = False):
+                step_parallel : bool = False,
+                alternation_between_tracks : bool = False, 
+                n_steps_per_track : int = 2048,
+                assign_rangom_track_at_init : bool = False,
+                assign_random_track_at_alternation : bool = False,
+                lock = None):
         """
         This instanciates a Vectorized TMNF-Environment. 
 
@@ -61,7 +62,7 @@ class VectorizedTMEnvironment(gym.Env):
         self.assign_random_track_at_alternation = assign_random_track_at_alternation
 
         port = self.cfg.gmi.port
-        self.envs : list[CrashProofEnvironment] = [CrashProofEnvironment(train_cfg=self.cfg, port = port+i, return_obs_as_dict = obs_as_dict) for i in range(self.n_envs)]
+        self.envs : list[CrashProofEnvironment] = [CrashProofEnvironment(train_cfg=self.cfg, port = port+i, return_obs_as_dict = obs_as_dict,lock = lock) for i in range(self.n_envs)]
         
         # using a threadpool here is much much faster than initializing sequentially, as innit_environment also starts the game
         with ThreadPoolExecutor(max_workers=self.n_envs) as executor:
@@ -195,12 +196,14 @@ from stable_baselines3.common.vec_env import VecEnv
 class SB3Vectorized(VecEnv):
 
     def __init__(self, n_envs : int, tracks : list[str], cfg : TrainConfig, obs_as_dict : bool = False, step_parallel : bool = False,
-                 alternation_between_tracks : bool = False, 
-                    n_steps_per_track : int = 2048,
-                    assign_rangom_track_at_init : bool = False,
-                    assign_random_track_at_alternation : bool = False):
+                alternation_between_tracks : bool = False, 
+                n_steps_per_track : int = 2048,
+                assign_rangom_track_at_init : bool = False,
+                assign_random_track_at_alternation : bool = False,
+                 lock = None):
+
         self.vecenv = VectorizedTMEnvironment(n_envs, tracks, cfg, obs_as_dict, step_parallel, alternation_between_tracks, n_steps_per_track, 
-                                              assign_rangom_track_at_init, assign_random_track_at_alternation)
+                                              assign_rangom_track_at_init, assign_random_track_at_alternation,lock= lock)
         super().__init__(n_envs, self.vecenv.envs[0].observation_space, self.vecenv.envs[0].action_space)
         self.actions = None
     def reset(self):
