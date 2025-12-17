@@ -87,7 +87,7 @@ class TMIProcessWrapper:
         """Tracks time to track step-frequency"""
 
         self.aps = actions_per_second
-        self.simsteps_between_envsteps = 100 / self.aps
+        self.simsteps_between_envsteps = int(100 / self.aps)
         """The game does 100 simulation steps per (in-game) second."""
         self.gametime_between_actions = 1 / self.aps * 1000 # in-game-seconds between each action
         self.disable_waitforstep_after_n_consecutive_timeouts = disable_waitforstep_after_n_consecutive_timeouts
