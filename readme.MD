@@ -3,10 +3,10 @@
 <p align="center">Trackmania Nations Forever gets a Gymnasium Compatible Environment</p>
 
 <p align="center">
-  <a href="https://your-docs-url.com">
+  <a href="https://dersiwi.github.io/trackmania-gym/">
     <img src="https://img.shields.io/badge/documentation-blue?style=for-the-badge&logo=readthedocs&logoColor=white" />
   </a>
-  <a href="https://discord.gg/yourserver">
+  <a href="https://dersiwi.github.io/trackmania-gym/build-your-agent/">
     <img src="https://img.shields.io/badge/train_your agent-brightgreen?style=for-the-badge" />
   </a>
 </p>
