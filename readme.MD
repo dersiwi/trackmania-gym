@@ -32,9 +32,9 @@ Our experiments show that Trackmania-Gym can train agents that reach at least hu
 These agents are also able to generalize to unseen tracks, although with some  reduction in performance.
 
 
-<center>
-    <img src="trackmania-gym-docs/docs/images/simple-validated-run.gif", width="400", class="center">
-</center>
+<p align="center">
+    <img src="trackmania-gym-docs/docs/images/simple-validated-run.gif", width="400" class="center">
+</p>
 
 
 This is one of the agents we traied using Trackmania-Gym, in only around 5 hours on the map simple_validated1. Beware this was not our final agent, much rather an example.
