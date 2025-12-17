@@ -1,4 +1,5 @@
 site_name: trackmania-gym Documentation
+site_url : https://dersiwi.github.io/trackmania-gym/
 nav:
   - Home : index.md 
   - Installation : installation.md
