@@ -23,3 +23,15 @@ Go into the file `manuel_stepping.py` and add/remove whatever plot you want. A b
 
 !!! note
     We are still working on better defining the information that is given by the enviornment, currently this is quite a messy conglomerate of dictionaries. Once this is done we will add a tutorial on how to create custom plots; for now you have to rely on your coding skills to figure it out. The code is not too messy though.
+
+
+## Specific Plots
+
+### Testing the Reward Function
+Most useful plots for testing the reward function
+```py
+# Plots the reward function on the y-axis and environment steps on the x-axis; also plots the individual terms.
+tm_env.add_env_test_calback(plot_callback.Plot_Rewards_Callback(env = tm_env))
+# Prints the reward and terms directly to the console (Guaranteed without delay)
+tm_env.add_env_test_calback(print_callback.PrintRewardsToConsole())
+```

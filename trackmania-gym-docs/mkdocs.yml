@@ -6,6 +6,7 @@ nav:
   - Process-Structure : project-structure.md
   - Environment : environment.md
   - Managers : managers.md
+  - Build your Agent : build-your-agent.md
   - Live-Testing : testing.md
   - Headless : headless.md
   - Future Work : future_work.md

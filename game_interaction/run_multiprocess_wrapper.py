@@ -5,7 +5,7 @@ from game_interaction.game_instance_manager2 import GameInstanceManager
 from game_interaction.ipc_fields import IPCCommands
 
 from multiprocessing import Process, Queue
-from configs.config import TrainConfig, GMIConfig, PlatformConfig, EnvConfig
+from configs.config import TrainConfig, EnvConfig
 
 def run_wrapper(gmi, launch_game : bool, cmd_q : Queue, res_q : Queue, track : str, img_w : int, img_h : int, camera_id:int ,env_cfg : EnvConfig): # apparently its better to run process like this to avoid pickel issues or smth?
     """
