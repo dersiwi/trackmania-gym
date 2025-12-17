@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><link rel="canonical" href="https://dersiwi.github.io/trackmania-gym/project-structure/" />
+      <link rel="shortcut icon" href="../img/favicon.ico" />
+    <title>Process-Structure - trackmania-gym Documentation</title>
+    <link rel="stylesheet" href="../css/theme.css" />
+    <link rel="stylesheet" href="../css/theme_extra.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
+        <link href="../stylesheets/extra.css" rel="stylesheet" />
+    
+      <script>
+        // Current page data
+        var mkdocs_page_name = "Process-Structure";
+        var mkdocs_page_input_path = "project-structure.md";
+        var mkdocs_page_url = "/trackmania-gym/project-structure/";
+      </script>
+    
+    <!--[if lt IE 9]>
+      <script src="../js/html5shiv.min.js"></script>
+    <![endif]-->
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+      <script>hljs.highlightAll();</script> 
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+    <div class="wy-side-scroll">
+      <div class="wy-side-nav-search">
+          <a href=".." class="icon icon-home"> trackmania-gym Documentation
+        </a><div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="../search.html" method="get">
+      <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" title="Type search term here" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="..">Home</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../installation/">Installation</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../refline/">Measure Of Progress</a>
+                </li>
+              </ul>
+              <ul class="current">
+                <li class="toctree-l1 current"><a class="reference internal current" href="#">Process-Structure</a>
+    <ul class="current">
+    <li class="toctree-l2"><a class="reference internal" href="#process-wrapper-game_interactionprocess_wrappertmiprocesswrapper">Process-Wrapper game_interaction.process_wrapper.TMIProcessWrapper</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#start-of-the-process">Start of the Process</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#icp-commands">ICP-Commands</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#waitforstep">Waitforstep</a>
+        <ul>
+    <li class="toctree-l4"><a class="reference internal" href="#policy-updates">Policy Updates</a>
+    </li>
+        </ul>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#modules">Modules</a>
+    </li>
+    </ul>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../environment/">Environment</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../managers/">Managers</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../build-your-agent/">Build your Agent</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../testing/">Live-Testing</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../headless/">Headless</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../future_work/">Future Work</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../about/">About</a>
+                </li>
+              </ul>
+      </div>
+    </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+      <nav class="wy-nav-top" role="navigation" aria-label="Mobile navigation menu">
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="..">trackmania-gym Documentation</a>
+        
+      </nav>
+      <div class="wy-nav-content">
+        <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href=".." class="icon icon-home" aria-label="Docs"></a></li>
+      <li class="breadcrumb-item active">Process-Structure</li>
+    <li class="wy-breadcrumbs-aside">
+    </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+            <div class="section" itemprop="articleBody">
+              
+                <h1 id="project-structure">Project Structure</h1>
+<p>The two main things to understand when using this project is how the game-interaction works, and how the environment is structured. A high-level overview of how all components work together is given in this image:</p>
+<p><img _="," alt="High level structure" class="center" src="../images/structure.png" width="400" /></p>
+<p>The learner process consists of a learner (most likely a RL-Library like sb3) and the environment. The learner is what steps the environment, i.e. calls the <code>step</code>-method. The environment then sends IPC (Inter-Process-Communication) commands to the TMInteraction Process. This process continuously communicates with the plugin provided by TMInteraction via a TCP-Connection.</p>
+<p>This architecture was chosen in order to completely de-couple the environment from the necessary continuous communication with the game. This enables the environment to only send and receive on-demand.</p>
+<h2 id="process-wrapper-game_interactionprocess_wrappertmiprocesswrapper">Process-Wrapper <code>game_interaction.process_wrapper.TMIProcessWrapper</code></h2>
+<p>The main task of this class is to continuously respond to TCP-Messages sent by the TMInterface Plugin, such that the connection never fails. The envionrment communicates with the ProcessWrapper by sending commands via a Multiprocessing-Queue and the Process-Wrapper answers the environments-requests also via a Multiprocessing-Queue.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>The description of the prcess wrapper has to be technical, and if you do not plan on modifying the environment or how Trackmania-Gym Interacts with the game you will most likely not need to know this.</p>
+</div>
+<h3 id="start-of-the-process">Start of the Process</h3>
+<p>This is the encapsulated way of starting the ProcessWrapper. This method starts the Game and ProcessWrapper and waits for a Connected-Signal from the ProcessWrapper. I.e. once this method returns, control- and response-queues can immediately be used.</p>
+<pre><code class="language-py"># instanciation of process-wrapper
+from game_interaction.run_multiprocess_wrapper import start_process_and_wait_for_startsignal
+p, control_queue, response_queue = start_process_and_wait_for_startsignal(...)
+</code></pre>
+<p><code>p</code> is the process-object, the <code>control_queue</code> is what is used to send commands to the ProcessWrapper and <code>response_queue</code> is where the answer can be expected. </p>
+<h3 id="icp-commands">ICP-Commands</h3>
+<p>These are the available commands that the process wrapper can respond to. In this example, a step-command is sent with command id 10 (this is not relevant really).</p>
+<pre><code class="language-py">from game_interaction.ipc_fields import IPCFields, IPCCommands
+# send command
+cmd = IPCCommands.step(10, action)
+command_queue.put_nowait(cmd)
+
+# get response and handle accordinlgy.
+response = response_queue.get(timeout=timeout)
+assert response[IPCFields.CMD_ID] == cmd_id
+if response[IPCFields.STATUS] == IPCFields.STATUS_OK:
+    pass # everything worked
+elif response[IPCFields.STATUS] == IPCFields.STATUS_ERROR:
+    errormsg = response[IPCFields.ERROR] # get error
+</code></pre>
+<p>Depending on what command was sent, the respons-object, which is a dictionary may contain different keys. All keys the response-object may contain, if any additionally to STATUS are specified in <code>IPCFields</code>.</p>
+<h3 id="waitforstep">Waitforstep</h3>
+<p>Waitforstep-Mode is one of the most important features of the ProcessWrapper, as it directly supports the desired MDP behaviour of the RL environment. This mode can be activated using the <code>waitforstep</code>-command. After this mode has been activated, the ProcessWrapper expects <code>step</code> commands.</p>
+<p>The main purpose of this mode is to ensure equal timing between <code>step</code>-calls, i.e. equal timing between actions in the environment. You do not have to worry about sending the <code>step</code> commands quickly enough, rather this delay is taken care of by resetting the game-state. Without this mode, the amount of in-game-steps between each environment-step are unknwon and your agent may not learn anything as the distance between two environment steps is too far apart.</p>
+<p>Basically this mode allows the implementation of <code>actions_per_second</code> and actually match these seconds to in-game-seconds.</p>
+<h4 id="policy-updates">Policy Updates</h4>
+<p>When the policy updates the waiting time between environment-steps may significantly increase; as the learner process is busy doing backpropagation. This is handled by the process wrapper by disengaging the waiting for a step-command and stopping the current action of the agent. Once the learner is done and starts sending step-commands again, the ProcessWrapper automatically resumes Waitforstep-Mode.</p>
+<h2 id="modules">Modules</h2>
+<p>A high-level description of all top-level modules</p>
+<ul>
+<li><code>configs</code> - Contains all configuration files</li>
+<li><code>game_interaction</code> - Everything necessary for the communication with TMNF</li>
+<li><code>neural_networks</code> - Contains Neural Networks, Feature Extractors, Learning-Rate Schedulers</li>
+<li><code>plotting</code> - Our plotting framework necessary for testing and live-visualizations</li>
+<li><code>scirpts</code> - Training and testing executables</li>
+<li><code>trackmania_env</code> - Everything around the trackmania-environment</li>
+</ul>
+<pre><code>trackmania_env
+├── envs
+│   ├── single_agent_env.py
+│   └── testenv_single_agent.py
+├── observations
+│    └── observation_manager.py
+|    └── implementations (contains all implemented observation-managers)
+│        ...
+├── rewards
+│   └── reward_calculation.py
+|   └── implementations (contains all implemented reward-managers)
+│       ...
+└── utils
+    ├── position_buffer.py
+    └── reference_line_manager.py
+        ....
+</code></pre>
+<p><code>trackmania_env.utils</code> contains standalone classes or methods that are either used by the enviornmenr, reward or observation-managers.
+- <code>tmn_sb3</code> - Utilities necessary for the interaction with stable-baselines 3
+- <code>tracks</code> - Track-files (<code>.Gbx</code>) we use for trainings and their corresponding reference lines</p>
+              
+            </div>
+          </div><footer>
+    <div class="rst-footer-buttons" role="navigation" aria-label="Footer Navigation">
+        <a href="../refline/" class="btn btn-neutral float-left" title="Measure Of Progress"><span class="icon icon-circle-arrow-left"></span> Previous</a>
+        <a href="../environment/" class="btn btn-neutral float-right" title="Environment">Next <span class="icon icon-circle-arrow-right"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+  </div>
+
+  Built with <a href="https://www.mkdocs.org/">MkDocs</a> using a <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+</footer>
+          
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" aria-label="Versions">
+  <span class="rst-current-version" data-toggle="rst-current-version">
+    
+    
+      <span><a href="../refline/" style="color: #fcfcfc">&laquo; Previous</a></span>
+    
+    
+      <span><a href="../environment/" style="color: #fcfcfc">Next &raquo;</a></span>
+    
+  </span>
+</div>
+    <script src="../js/jquery-3.6.0.min.js"></script>
+    <script>var base_url = "..";</script>
+    <script src="../js/theme_extra.js"></script>
+    <script src="../js/theme.js"></script>
+      <script src="../javascripts/mathjax.js"></script>
+      <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+      <script src="../search/main.js"></script>
+    <script>
+        jQuery(function () {
+            SphinxRtdTheme.Navigation.enable(true);
+        });
+    </script>
+
+</body>
+</html>

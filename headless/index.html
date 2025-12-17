@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><link rel="canonical" href="https://dersiwi.github.io/trackmania-gym/headless/" />
+      <link rel="shortcut icon" href="../img/favicon.ico" />
+    <title>Headless - trackmania-gym Documentation</title>
+    <link rel="stylesheet" href="../css/theme.css" />
+    <link rel="stylesheet" href="../css/theme_extra.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
+        <link href="../stylesheets/extra.css" rel="stylesheet" />
+    
+      <script>
+        // Current page data
+        var mkdocs_page_name = "Headless";
+        var mkdocs_page_input_path = "headless.md";
+        var mkdocs_page_url = "/trackmania-gym/headless/";
+      </script>
+    
+    <!--[if lt IE 9]>
+      <script src="../js/html5shiv.min.js"></script>
+    <![endif]-->
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+      <script>hljs.highlightAll();</script> 
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+    <div class="wy-side-scroll">
+      <div class="wy-side-nav-search">
+          <a href=".." class="icon icon-home"> trackmania-gym Documentation
+        </a><div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="../search.html" method="get">
+      <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" title="Type search term here" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="..">Home</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../installation/">Installation</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../refline/">Measure Of Progress</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../project-structure/">Process-Structure</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../environment/">Environment</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../managers/">Managers</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../build-your-agent/">Build your Agent</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../testing/">Live-Testing</a>
+                </li>
+              </ul>
+              <ul class="current">
+                <li class="toctree-l1 current"><a class="reference internal current" href="#">Headless</a>
+    <ul class="current">
+    </ul>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../future_work/">Future Work</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../about/">About</a>
+                </li>
+              </ul>
+      </div>
+    </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+      <nav class="wy-nav-top" role="navigation" aria-label="Mobile navigation menu">
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="..">trackmania-gym Documentation</a>
+        
+      </nav>
+      <div class="wy-nav-content">
+        <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href=".." class="icon icon-home" aria-label="Docs"></a></li>
+      <li class="breadcrumb-item active">Headless</li>
+    <li class="wy-breadcrumbs-aside">
+    </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+            <div class="section" itemprop="articleBody">
+              
+                <h2 id="docker">Docker</h2>
+<p>A Dockerfile is included to allow you to run the entire project in a containerized environment. This environment already has the game installed and headless rendering enabled.
+To build the container, run the following command in the project directory:</p>
+<pre><code class="language-bash">docker build -t &lt;name&gt; .
+</code></pre>
+<p>All necessary dependencies (like Python) are pre-installed within the container. For detailed information on GPU rendering options and the container's configuration, refer to the base image documentation <a href="https://github.com/SgSiegens/TMNF-Docker">here</a>.</p>
+<h2 id="using-containers-on-the-bwunicluster-at-kit">Using Containers on the bwUniCluster at KIT</h2>
+<h3 id="connecting-to-the-cluster">Connecting to the cluster</h3>
+<p>We assume you already have an account to access the bwUniCluster. If not, please follow the instructions provided <a href="https://bwidm.scc.kit.edu/">here</a>. To log in to the cluster, you must first be connected 
+to the KIT network—either by using a KIT campus network or by connecting through the KIT VPN. Once connected, you can access the cluster via SSH:</p>
+<pre><code class="language-bash">ssh ka_&lt;username&gt;@uc3.scc.kit.edu
+</code></pre>
+<p>You will then be prompted to enter your <strong>one-time password (OTP)</strong>, which you set up during the account registration process. After entering the OTP, you will be asked to provide your regular account password.
+For a more detailed login tutorial, please refer to the documentation <strong><a href="https://wiki.bwhpc.de/e/BwUniCluster3.0/Login">here</a></strong>.</p>
+<h3 id="transfering-data-to-the-cluster">Transfering Data to the cluster</h3>
+<p>To work on the cluster, you will eventually need to transfer local files such as container images or datasets. Before doing so, decide where the data should be stored on the cluster:
+- Workspace
+  Suitable for temporary data or data that is backed up elsewhere (e.g., trained models uploaded via Weights &amp; Biases). Workspaces expire after a fixed period and are automatically deleted.</p>
+<ul>
+<li>Home directory 
+  Recommended for important data that must be preserved permanently. You can create dedicated subdirectories here to store container images, datasets, or long-term training results.</li>
+</ul>
+<p>More information about the cluster filesystems and workspace system is available in this <a href="https://www.nhr.kit.edu/userdocs/horeka/filesystems/">documentation</a>.
+To copy your files to your desired location on the cluster, you can use the <strong><code>scp</code></strong> command (see documentation <strong><a href="https://wiki.bwhpc.de/e/Data_Transfer/SCP">here</a></strong>).
+For example, you can run:</p>
+<pre><code class="language-bash">scp myfile &lt;username&gt;@&lt;remotehost&gt;:/some/remote/directory
+</code></pre>
+<p>For KIT the remote host is usually <code>uc3.scc.kit.edu</code>. <strong>Make sure to run this command from your local machine</strong>, not from within the cluster**.</p>
+<h3 id="running-jobs-on-the-cluster">Running Jobs on the Cluster</h3>
+<p>The cluster uses <a href="https://slurm.schedmd.com/overview.html">Slurm</a> for job scheduling and resource management. The BWUniCluster provides an extensive documentation on how to run jobs on the cluster which you can find 
+<a href="https://wiki.bwhpc.de/e/BwUniCluster3.0/Running_Jobs#Queues_on_bwUniCluster_3.0">here</a>. Additionally, it is helpful to check which partitions are available for job execution see their <a href="https://wiki.bwhpc.de/e/BwUniCluster3.0/Hardware_and_Architecture">hardware page</a>.
+<strong>Some Advice</strong>
+Use only the partitions listed on the hardware page when launching or debugging jobs. In particular, when using the <code>dev_</code> prefix for development/testing partitions, make sure the corresponding base partition actually exists on that page. 
+We found that using partitions not listed there sometimes redirected us to what appear to be older parts of the cluster, where resources (such as GPUs) did not work correctly. But it could also just been a mistake from our side.</p>
+<h3 id="enroot-and-pyxis">Enroot and Pyxis</h3>
+<p>In this section, we describe how to use NVIDIA Enroot and <a href="https://github.com/NVIDIA/pyxis">Pyxis</a> to run containers on the bwUniCluster. This is only a minimal guide to help you get started. For a more detailed tutorial, refer 
+to the <a href="https://wiki.bwhpc.de/e/BwUniCluster3.0/Containers#ENROOT">Enroot section</a> of the bwUniCluster documentation or <a href="https://www.nhr.kit.edu/userdocs/horeka/containers/">here</a>.</p>
+<h4 id="converting-a-local-image-with-enroot">Converting a Local Image with Enroot</h4>
+<p>On your local machine, after building the Docker image, you need to convert it into an Enroot-compatible image. This is done using the Enroot <strong>import</strong> command (assuming Enroot is already installed). In this example, we import 
+a local Docker image, but Enroot also supports pulling images directly from Docker Hub. To convert your local Docker image into an Enroot image run:</p>
+<pre><code class="language-bash">enroot import -o &lt;enroot_img_store_path&gt;.sqsh dockerd://&lt;your_image&gt;:&lt;tag&gt;
+</code></pre>
+<p>For more details on how to use enroot, see the official documentation <a href="https://github.com/NVIDIA/enroot/blob/main/doc/usage.md">here</a>.</p>
+<h4 id="running-the-container-with-pyxis">Running the Container with Pyxis</h4>
+<p>Pyxis is a Slurm plugin that enables running privileged containerized tasks directly through Slurm. In practice, this means you can submit normal Slurm jobs, but with additional parameters 
+that ensure your command is executed inside a specified container. For more detailed information, see the <a href="https://github.com/NVIDIA/pyxis?tab=readme-ov-file#usage">usage section</a>.</p>
+<p>When running on the bwUniCluster, one important flag must always be set: <code>--container-mounts</code>. The required value for the BwUniCluster3 is:</p>
+<pre><code class="language-bash">--container-mounts=/etc/slurm/task_prolog:/etc/slurm/task_prolog,/scratch:/scratch,/usr/lib64/slurm:/usr/lib64/slurm,/usr/lib64/libhwloc.so:/usr/lib64/libhwloc.so,/usr/lib64/libhwloc.so.15:/usr/lib64/libhwloc.so.15
+</code></pre>
+<p>If you store your container in a workspace, Pyxis will not find it by default. To make it work, you <strong>must</strong> set:</p>
+<pre><code class="language-bash">export XDG_DATA_HOME=$(ws_find &lt;workspace&gt;)
+export ENROOT_DATA_PATH=$(ws_find &lt;workspace&gt;)/enroot
+</code></pre>
+<h4 id="example-slurm-script">Example Slurm Script</h4>
+<p>Below is an example Slurm job script that:</p>
+<ul>
+<li>uses a development node for testing <code>dev_gpu_h100</code></li>
+<li>runs inside a workspace named <code>first_tmnf_test</code></li>
+<li>uses a local Enroot container image (<code>tmnf_wandb.sqsh</code>)</li>
+<li>mounts required paths</li>
+<li>exposes Weights &amp; Biases API key inside the container
+  (you can obtain your key at <a href="https://wandb.ai/authorize">https://wandb.ai/authorize</a>)</li>
+</ul>
+<pre><code class="language-bash">#!/bin/bash
+#SBATCH --container-image=./tmnf_wandb.sqsh
+#SBATCH --container-mounts= /etc/slurm/task_prolog:/etc/slurm/task_prolog,/scratch:/scratch,/usr/lib64/slurm:/usr/lib64/slurm,/usr/lib64/libhwloc.so:/usr/lib64/libhwloc.so,/usr/lib64/libhwloc.so.15:/usr/lib64/libhwloc.so.15
+#SBATCH -- no-container-entrypoint
+#SBATCH --container-workdir=/home/wineuser/trackmania_gym
+#SBATCH --time=00:07:00
+#SBATCH --cpus-per-task=1
+#SBATCH --partition=dev_gpu_h100
+#SBATCH --nodes=1
+#SBATCH --ntasks-per-node=1
+#SBATCH --gres=gpu:1
+
+# Expose W&amp;B key inside the container
+export WANDB_API_KEY=&lt;your_api_key&gt;
+
+python scripts/sb3_train.py
+</code></pre>
+<h3 id="singularity">Singularity</h3>
+              
+            </div>
+          </div><footer>
+    <div class="rst-footer-buttons" role="navigation" aria-label="Footer Navigation">
+        <a href="../testing/" class="btn btn-neutral float-left" title="Live-Testing"><span class="icon icon-circle-arrow-left"></span> Previous</a>
+        <a href="../future_work/" class="btn btn-neutral float-right" title="Future Work">Next <span class="icon icon-circle-arrow-right"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+  </div>
+
+  Built with <a href="https://www.mkdocs.org/">MkDocs</a> using a <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+</footer>
+          
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" aria-label="Versions">
+  <span class="rst-current-version" data-toggle="rst-current-version">
+    
+    
+      <span><a href="../testing/" style="color: #fcfcfc">&laquo; Previous</a></span>
+    
+    
+      <span><a href="../future_work/" style="color: #fcfcfc">Next &raquo;</a></span>
+    
+  </span>
+</div>
+    <script src="../js/jquery-3.6.0.min.js"></script>
+    <script>var base_url = "..";</script>
+    <script src="../js/theme_extra.js"></script>
+    <script src="../js/theme.js"></script>
+      <script src="../javascripts/mathjax.js"></script>
+      <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+      <script src="../search/main.js"></script>
+    <script>
+        jQuery(function () {
+            SphinxRtdTheme.Navigation.enable(true);
+        });
+    </script>
+
+</body>
+</html>

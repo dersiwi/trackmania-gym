@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><link rel="canonical" href="https://dersiwi.github.io/trackmania-gym/testing/" />
+      <link rel="shortcut icon" href="../img/favicon.ico" />
+    <title>Live-Testing - trackmania-gym Documentation</title>
+    <link rel="stylesheet" href="../css/theme.css" />
+    <link rel="stylesheet" href="../css/theme_extra.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
+        <link href="../stylesheets/extra.css" rel="stylesheet" />
+    
+      <script>
+        // Current page data
+        var mkdocs_page_name = "Live-Testing";
+        var mkdocs_page_input_path = "testing.md";
+        var mkdocs_page_url = "/trackmania-gym/testing/";
+      </script>
+    
+    <!--[if lt IE 9]>
+      <script src="../js/html5shiv.min.js"></script>
+    <![endif]-->
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+      <script>hljs.highlightAll();</script> 
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+    <div class="wy-side-scroll">
+      <div class="wy-side-nav-search">
+          <a href=".." class="icon icon-home"> trackmania-gym Documentation
+        </a><div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="../search.html" method="get">
+      <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" title="Type search term here" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="..">Home</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../installation/">Installation</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../refline/">Measure Of Progress</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../project-structure/">Process-Structure</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../environment/">Environment</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../managers/">Managers</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../build-your-agent/">Build your Agent</a>
+                </li>
+              </ul>
+              <ul class="current">
+                <li class="toctree-l1 current"><a class="reference internal current" href="#">Live-Testing</a>
+    <ul class="current">
+    <li class="toctree-l2"><a class="reference internal" href="#execution">Execution</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#example-plot">Example plot</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#customize-plots">Customize plots</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#specific-plots">Specific Plots</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#testing-the-reward-function">Testing the Reward Function</a>
+    </li>
+        </ul>
+    </li>
+    </ul>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../headless/">Headless</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../future_work/">Future Work</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../about/">About</a>
+                </li>
+              </ul>
+      </div>
+    </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+      <nav class="wy-nav-top" role="navigation" aria-label="Mobile navigation menu">
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="..">trackmania-gym Documentation</a>
+        
+      </nav>
+      <div class="wy-nav-content">
+        <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href=".." class="icon icon-home" aria-label="Docs"></a></li>
+      <li class="breadcrumb-item active">Live-Testing</li>
+    <li class="wy-breadcrumbs-aside">
+    </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+            <div class="section" itemprop="articleBody">
+              
+                <h1 id="live-testing">Live-Testing</h1>
+<p>You can live-test your rewards, observations and terminations using our testing-interface. We built an environment which you can step using key-inputs as action commands. You can just use the arrow-keys <code>UP</code>, <code>DOWN</code>, <code>LEFT</code>, <code>RIGHT</code> to drive the car as you would in-game. <code>ESC</code> terminates the execution and <code>SHIFT</code> resets the plotting terms (although this is still being worked on currently). Live testing allows you to see directly how your terms react. </p>
+<h2 id="execution">Execution</h2>
+<pre><code class="language-sh">python .\scripts\tests\manuel_stepping.py 
+</code></pre>
+<h3 id="example-plot">Example plot</h3>
+<p>This for example is the live plot of the reference line, the current position of the agent (green X), the current  reference line point (blue X) and the lateral distance at each environment step.</p>
+<p><img _="," alt="Lateral Distance Live Plot" class="center" src="../images/lateral_dist_plot.png" width="400" /></p>
+<h2 id="customize-plots">Customize plots</h2>
+<p>Go into the file <code>manuel_stepping.py</code> and add/remove whatever plot you want. A bunch of plots we regularly use are commented in there, so you can just un-comment them or comment the ones you do not want to see. </p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>We are still working on better defining the information that is given by the enviornment, currently this is quite a messy conglomerate of dictionaries. Once this is done we will add a tutorial on how to create custom plots; for now you have to rely on your coding skills to figure it out. The code is not too messy though.</p>
+</div>
+<h2 id="specific-plots">Specific Plots</h2>
+<h3 id="testing-the-reward-function">Testing the Reward Function</h3>
+<p>Most useful plots for testing the reward function</p>
+<pre><code class="language-py"># Plots the reward function on the y-axis and environment steps on the x-axis; also plots the individual terms.
+tm_env.add_env_test_calback(plot_callback.Plot_Rewards_Callback(env = tm_env))
+# Prints the reward and terms directly to the console (Guaranteed without delay)
+tm_env.add_env_test_calback(print_callback.PrintRewardsToConsole())
+</code></pre>
+              
+            </div>
+          </div><footer>
+    <div class="rst-footer-buttons" role="navigation" aria-label="Footer Navigation">
+        <a href="../build-your-agent/" class="btn btn-neutral float-left" title="Build your Agent"><span class="icon icon-circle-arrow-left"></span> Previous</a>
+        <a href="../headless/" class="btn btn-neutral float-right" title="Headless">Next <span class="icon icon-circle-arrow-right"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+  </div>
+
+  Built with <a href="https://www.mkdocs.org/">MkDocs</a> using a <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+</footer>
+          
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" aria-label="Versions">
+  <span class="rst-current-version" data-toggle="rst-current-version">
+    
+    
+      <span><a href="../build-your-agent/" style="color: #fcfcfc">&laquo; Previous</a></span>
+    
+    
+      <span><a href="../headless/" style="color: #fcfcfc">Next &raquo;</a></span>
+    
+  </span>
+</div>
+    <script src="../js/jquery-3.6.0.min.js"></script>
+    <script>var base_url = "..";</script>
+    <script src="../js/theme_extra.js"></script>
+    <script src="../js/theme.js"></script>
+      <script src="../javascripts/mathjax.js"></script>
+      <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+      <script src="../search/main.js"></script>
+    <script>
+        jQuery(function () {
+            SphinxRtdTheme.Navigation.enable(true);
+        });
+    </script>
+
+</body>
+</html>

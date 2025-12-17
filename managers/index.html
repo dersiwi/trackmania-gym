@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><link rel="canonical" href="https://dersiwi.github.io/trackmania-gym/managers/" />
+      <link rel="shortcut icon" href="../img/favicon.ico" />
+    <title>Managers - trackmania-gym Documentation</title>
+    <link rel="stylesheet" href="../css/theme.css" />
+    <link rel="stylesheet" href="../css/theme_extra.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
+        <link href="../stylesheets/extra.css" rel="stylesheet" />
+    
+      <script>
+        // Current page data
+        var mkdocs_page_name = "Managers";
+        var mkdocs_page_input_path = "managers.md";
+        var mkdocs_page_url = "/trackmania-gym/managers/";
+      </script>
+    
+    <!--[if lt IE 9]>
+      <script src="../js/html5shiv.min.js"></script>
+    <![endif]-->
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+      <script>hljs.highlightAll();</script> 
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+    <div class="wy-side-scroll">
+      <div class="wy-side-nav-search">
+          <a href=".." class="icon icon-home"> trackmania-gym Documentation
+        </a><div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="../search.html" method="get">
+      <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" title="Type search term here" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="..">Home</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../installation/">Installation</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../refline/">Measure Of Progress</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../project-structure/">Process-Structure</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../environment/">Environment</a>
+                </li>
+              </ul>
+              <ul class="current">
+                <li class="toctree-l1 current"><a class="reference internal current" href="#">Managers</a>
+    <ul class="current">
+    <li class="toctree-l2"><a class="reference internal" href="#observation-manager-trackmania_envobservationsobservation_managerobservationmanager">Observation-Manager trackmania_env.observations.observation_manager.ObservationManager</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#observation-spaces">Observation-Spaces</a>
+        <ul>
+    <li class="toctree-l4"><a class="reference internal" href="#vectorized-observations">Vectorized Observations</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#observation-term-observationsobservation_termobservationterm">Observation-Term observations.observation_term.ObservationTerm</a>
+        <ul>
+    <li class="toctree-l4"><a class="reference internal" href="#special-observationterms">Special Observationterms</a>
+    </li>
+        </ul>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#reward-manager-trackmania_envrewardsreward_calculationrewardcalculator">Reward-Manager trackmania_env.rewards.reward_calculation.RewardCalculator</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#reward-term-rewardsreward_calculationrewardterm">Reward-Term rewards.reward_calculation.RewardTerm</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#reward-normalization-rewardsnormalizerrewardnormalizer">Reward-Normalization rewards.normalizer.RewardNormalizer</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#termination-manager-trackmania_envterminationstermination_maangerterminationmanager">Termination-Manager trackmania_env.terminations.termination_maanger.TerminationManager</a>
+    </li>
+    </ul>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../build-your-agent/">Build your Agent</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../testing/">Live-Testing</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../headless/">Headless</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../future_work/">Future Work</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../about/">About</a>
+                </li>
+              </ul>
+      </div>
+    </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+      <nav class="wy-nav-top" role="navigation" aria-label="Mobile navigation menu">
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="..">trackmania-gym Documentation</a>
+        
+      </nav>
+      <div class="wy-nav-content">
+        <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href=".." class="icon icon-home" aria-label="Docs"></a></li>
+      <li class="breadcrumb-item active">Managers</li>
+    <li class="wy-breadcrumbs-aside">
+    </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+            <div class="section" itemprop="articleBody">
+              
+                <h1 id="managers">Managers</h1>
+<p>In order to keep the calculation of Terminations, Rewards and Observations as modular as possible, we created a Term-Manager-Architecture. This means all three, Observation-, Reward-, and Terminationmanager hold terms, which implement the actual calculation. Each manager has a list of Terms and puts together into one unified output. </p>
+<p>All managers extend <code>trackmania_env.manager.Manager</code> and all Terms extend <code>trackmania_env.manager.ManagerTerm</code>. These baseclasses mostly implement the passing of the environment-variable, as each Manager and Term is given an instance of the environment after instanciation, which it can access using <code>self.env</code>. This is very useful for accessing position-buffers (or other) and the ReferenceLineManager of the envrionment.</p>
+<p>The calculation-interface is implemented by the specific Term, i.e. <code>ObservationTerm</code>. </p>
+<h2 id="observation-manager-trackmania_envobservationsobservation_managerobservationmanager">Observation-Manager <code>trackmania_env.observations.observation_manager.ObservationManager</code></h2>
+<p>The observation manager consists of a list of <code>ObservationTerm</code>. At the beginning of the step method, the observation is given the raw-observations by the environment, which he then propagates to all its Observation-Terms. These then return the processed observations.</p>
+<h3 id="observation-spaces">Observation-Spaces</h3>
+<p>The observation-manager supports two types of <a href="https://gymnasium.farama.org/api/spaces/">observation-spaces</a>, a Dictionary-Observation-Space and a Box-Observation-Space. In case of the dictionary observation space, the keys of the dictionary are the names of the observation-terms and the valuse are the processed observation by this term. In case of the Box-Observationspace the collection functions similar to the Dictionary-Observation but the Observation-Manager flattens and stacks the Observations into a single Box-Observation.</p>
+<p>It is also possible to switch between observation spaces outside of the environment (this may be useful for storing Box-Observation in a replay-buffer, but using Dictionary-Observation in a feature-extractor). To switch the space of the Observation after obtaining it from the environment use:</p>
+<pre><code class="language-py">from trackmania_env.utils.spacetransform import SpaceTransformer
+obstransform = SpaceTransformer.get_instance()
+# get a box observation, turn it into dictionary and back into box (vectorized case)
+boxobs, _, _, _, _ = tm_env.step(action)
+obsdict = obstransform.numpy_to_dict_vectorized(o)              # dict_to_numpy(..) (non-vectorized)
+backtoboxobx = obstransform.dict_to_numpy_vectorized(obsdict)   # numpy_to_dict(..) (non-vectorized)
+</code></pre>
+<h4 id="vectorized-observations">Vectorized Observations</h4>
+<p>In case of training vectorized, both the Dictionary-Observation-Space and a Box-Observation-Space, are vectorized in the first dimension, i.e. have sahpe <code>(N, obs_dim)</code> in case of the Box-Space and <code>(N, ...)</code> for each observation-term in case of the Dictionary-Space. <code>N</code> is the number of environments.</p>
+<h3 id="observation-term-observationsobservation_termobservationterm">Observation-Term <code>observations.observation_term.ObservationTerm</code></h3>
+<p>Every obsertvation term implements this abstract class, where the most important method are <code>_get_obs(obs)</code> and <code>_normalize(obs)</code>. The observation-collection
+inside the observation-term works like this:</p>
+<pre><code class="language-py">obs, info = self._get_obs(raw_observations, **kwargs)   #this needs to be implemented by every term
+if self.normalize:  
+    obs = self._normalize(obs)                          #this needs to be implemented by every term
+return obs, info
+</code></pre>
+<p>Other methods in the abstract class like <code>flatten()</code>, <code>get_flatten_dim()</code>, <code>get_native_shape()</code> exist in order to flatten and potentially rebuild the observation-term, like so:</p>
+<pre><code class="language-py">flattened_obs = obsterm.flatten(native_obs)
+assert flattened_obs.shape[0] == obsterm.get_flatten_dim()
+native_obs = flattened_obs.reshape(obsterm.get_native_shape())
+</code></pre>
+<p>This is necessary in order to switch between Dictionary- and Box-Observation-Space. Feel free to take a look at one of the implemented ObservationManagers in <code>observations.implementations</code> on how a Observation-Manager is instanciated.</p>
+<h4 id="special-observationterms">Special Observationterms</h4>
+<ul>
+<li><code>VectorlikeTerm</code> : If the native shape of an Observation-Term is <code>(N,)</code>, then it can extend this class. This class already implements <code>flatten()</code>, <code>get_flatten_dim()</code>, <code>get_native_shape()</code>.</li>
+<li><code>GroupedObservationTerm</code> : This is a grouping term for <code>VectorlikeTerm</code>, which is mostly used in Instanciation of the Observation-Manger. It is especially useful if you want to process observations in the same Encoder, like e.g. all car-related metadata.</li>
+</ul>
+<h2 id="reward-manager-trackmania_envrewardsreward_calculationrewardcalculator">Reward-Manager <code>trackmania_env.rewards.reward_calculation.RewardCalculator</code></h2>
+<p>The reward manager basically sums the rewards of all of its term together. The weights (as of course the sum is a weighed sum of rewards), are applied by the term individually.</p>
+<pre><code class="language-py">rew = 0
+for term in self.reward_terms:
+    termvalue = term.calculate_reward_term(raw_obs, processed_obs, rf, ot)
+    rew += termvalue
+return rew
+</code></pre>
+<p><code>rf</code> == race finished (boolean), <code>ot</code> == other terimations (dictionary)</p>
+<h3 id="reward-term-rewardsreward_calculationrewardterm">Reward-Term <code>rewards.reward_calculation.RewardTerm</code></h3>
+<p>Every reward-term needs to implement <code>_get_term(raw_obs, processed_obs, rf, ot)</code> which calculates the reward using its input, the environment or nothing (i.e. static 'alive'-rewards). This calculation is then used by the RewardTerm-class to be clipped and weighted:</p>
+<pre><code class="language-py">termval = self._get_term(observations, processed_obs, rf, ot)
+clipped_val = np.clip(termval, a_min = self.clip_min, a_max=self.clip_max)
+return clipped_val * self.weight
+</code></pre>
+<h3 id="reward-normalization-rewardsnormalizerrewardnormalizer">Reward-Normalization <code>rewards.normalizer.RewardNormalizer</code></h3>
+<p>If you set normalization of reward to true, this noramlizes the rewards using running average and variance </p>
+<div class="arithmatex">\[
+\frac{r - \mu}{\sqrt{\sigma} + \varepsilon}.
+\]</div>
+<p>Update Running average and variance after normalizing.</p>
+<h2 id="termination-manager-trackmania_envterminationstermination_maangerterminationmanager">Termination-Manager <code>trackmania_env.terminations.termination_maanger.TerminationManager</code></h2>
+<p>The termination manager also collects its reward terms and builds two final outputs; <code>terminated</code> and <code>truncated</code> each term returns a tuple of both, specifying if any is true. One speciality about the termination manager is that it has two default terms:</p>
+<ul>
+<li><code>stuck</code>   : Terminates the episode if the car is stuck for a certain amount of environment-step (stuck is defined by not moving for more than a specified amount of abosolute distance, can be changed in config. This is actually calculated in the position buffer of the environment by <code>moved_more_than_threshold</code>.).</li>
+<li><code>timeout</code> : Maximal number of environment step before the episode terminates (necessary in every MDP, if you seriously want to avoid it, set it to a billion).</li>
+</ul>
+              
+            </div>
+          </div><footer>
+    <div class="rst-footer-buttons" role="navigation" aria-label="Footer Navigation">
+        <a href="../environment/" class="btn btn-neutral float-left" title="Environment"><span class="icon icon-circle-arrow-left"></span> Previous</a>
+        <a href="../build-your-agent/" class="btn btn-neutral float-right" title="Build your Agent">Next <span class="icon icon-circle-arrow-right"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+  </div>
+
+  Built with <a href="https://www.mkdocs.org/">MkDocs</a> using a <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+</footer>
+          
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" aria-label="Versions">
+  <span class="rst-current-version" data-toggle="rst-current-version">
+    
+    
+      <span><a href="../environment/" style="color: #fcfcfc">&laquo; Previous</a></span>
+    
+    
+      <span><a href="../build-your-agent/" style="color: #fcfcfc">Next &raquo;</a></span>
+    
+  </span>
+</div>
+    <script src="../js/jquery-3.6.0.min.js"></script>
+    <script>var base_url = "..";</script>
+    <script src="../js/theme_extra.js"></script>
+    <script src="../js/theme.js"></script>
+      <script src="../javascripts/mathjax.js"></script>
+      <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+      <script src="../search/main.js"></script>
+    <script>
+        jQuery(function () {
+            SphinxRtdTheme.Navigation.enable(true);
+        });
+    </script>
+
+</body>
+</html>

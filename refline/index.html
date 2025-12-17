@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><link rel="canonical" href="https://dersiwi.github.io/trackmania-gym/refline/" />
+      <link rel="shortcut icon" href="../img/favicon.ico" />
+    <title>Measure Of Progress - trackmania-gym Documentation</title>
+    <link rel="stylesheet" href="../css/theme.css" />
+    <link rel="stylesheet" href="../css/theme_extra.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
+        <link href="../stylesheets/extra.css" rel="stylesheet" />
+    
+      <script>
+        // Current page data
+        var mkdocs_page_name = "Measure Of Progress";
+        var mkdocs_page_input_path = "refline.md";
+        var mkdocs_page_url = "/trackmania-gym/refline/";
+      </script>
+    
+    <!--[if lt IE 9]>
+      <script src="../js/html5shiv.min.js"></script>
+    <![endif]-->
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+      <script>hljs.highlightAll();</script> 
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+    <div class="wy-side-scroll">
+      <div class="wy-side-nav-search">
+          <a href=".." class="icon icon-home"> trackmania-gym Documentation
+        </a><div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="../search.html" method="get">
+      <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" title="Type search term here" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="..">Home</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../installation/">Installation</a>
+                </li>
+              </ul>
+              <ul class="current">
+                <li class="toctree-l1 current"><a class="reference internal current" href="#">Measure Of Progress</a>
+    <ul class="current">
+    <li class="toctree-l2"><a class="reference internal" href="#referencelinemanager">ReferenceLineManager</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#methods">Methods</a>
+        <ul>
+    <li class="toctree-l4"><a class="reference internal" href="#example-usage">Example Usage</a>
+    </li>
+        </ul>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#visualize-it">Visualize it</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#in-game">In-Game</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#matplotlib">Matplotlib</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#create-your-own">Create your own</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#saving-convention">Saving Convention</a>
+    </li>
+        </ul>
+    </li>
+    </ul>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../project-structure/">Process-Structure</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../environment/">Environment</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../managers/">Managers</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../build-your-agent/">Build your Agent</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../testing/">Live-Testing</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../headless/">Headless</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../future_work/">Future Work</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../about/">About</a>
+                </li>
+              </ul>
+      </div>
+    </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+      <nav class="wy-nav-top" role="navigation" aria-label="Mobile navigation menu">
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="..">trackmania-gym Documentation</a>
+        
+      </nav>
+      <div class="wy-nav-content">
+        <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href=".." class="icon icon-home" aria-label="Docs"></a></li>
+      <li class="breadcrumb-item active">Measure Of Progress</li>
+    <li class="wy-breadcrumbs-aside">
+    </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+            <div class="section" itemprop="articleBody">
+              
+                <h1 id="measure-of-progress">Measure of Progress</h1>
+<p>Similar to other projects, we also use a reference-line along the track in order to measure the progress of the agent (car) algon the track. The main reason for this is because there is no built-in measure. The reference line is defined in world-coordinates (or track-coordinates).</p>
+<h2 id="referencelinemanager">ReferenceLineManager</h2>
+<p>The <code>trackmania_env.utils.reference_line_manager.ReferenceLineManager</code> is one of the most important managers of the environment, as it keeps track of the progress of the car. Once per environment-step, the refline-manager is given the current position of the car and then calculates the next-reference-line points and the distance to the next-reference-line point. This is done by the environment automatically. Afterwards, other components can interact with the reference-line-manager using these methods:</p>
+<h3 id="methods">Methods</h3>
+<ul>
+<li><code>get_distance_to_next_point()</code> - returns index to next point, absolute distance to next point, and relative distance that has been covered</li>
+<li><code>calculate_lateral_difference(idx, carpos)</code> - takes the index of the next reference line point and the position of the agent (car) in world-coordinates. It calculates the absolute distance of the car to the reference line (orthogonally projects the car-position onto the reference line and returns the magnitude of the support vector). Assumes the reference line to be in the center of the track.</li>
+<li><code>get_discrete_distance(i)</code> - Say d(i) is the accumulated distance for all line-segments until reference line point with index i, then this method returns; d(i) - d(i-1), only the distance between i and i-1.</li>
+</ul>
+<h4 id="example-usage">Example Usage</h4>
+<pre><code class="language-py"># i is the index of the next point
+i, d, drel = self.env.reference_line.get_distance_to_next_point()
+</code></pre>
+<h2 id="visualize-it">Visualize it</h2>
+<p>Its important to validate the reference line before training; best and basically only way is to visualize it.</p>
+<h3 id="in-game">In-Game</h3>
+<p>Start the game using the modloader TMLoader. Then execute</p>
+<pre><code class="language-sh">python tracks\reference_line\create_refline\add_vcp_as_triggers.py tracks/reference_line/Level1.npy
+</code></pre>
+<p>which should then look something like this</p>
+<p><img _="," alt="Reference Line Visualized" class="center" src="../images/refline-vis.png" width="400" /></p>
+<h3 id="matplotlib">Matplotlib</h3>
+<p>Use <code>tracks.reference_line.plot.py</code>, which is a quick-and-dirty script to quickly visualize the reference line as a 3D Plot in matplotlib. The script assumes the reference line is stored in <code>tracks/reference_line</code> as a numpy-file. When in base-directory of the repository execute:</p>
+<pre><code class="language-sh">python .\tracks\reference_line\plot.py Level1.npy #or any other Refline
+</code></pre>
+<h2 id="create-your-own">Create your own</h2>
+<p>When introducing a new map to the learning setup or just wanting a reference line that is not in the center, its necessary to create your own. Follow these steps:</p>
+<ol>
+<li>Start TMNF using TMloader and load the map for which you want to create a reference line</li>
+<li>Drive the reference line you desire (it does not matter how fast you drive, you can take your time)</li>
+<li>Save the replay</li>
+<li>Execute <code>python tracks/reference_line/create_refline/gbx_to_vcp.py [path_to_your_replay] [path_to_npy-file]</code></li>
+<li>The <code>.npy</code> file is your reference-line</li>
+<li>Make sure to inspect it in order to check if everything is as you please!</li>
+</ol>
+<h3 id="saving-convention">Saving Convention</h3>
+<p>In this repository, we always name the reference-line-file EXACTLY as the track-file. So if your track is called <code>abc.Challenge.Gbx</code> your refernce-line should be called <code>abc.npy</code>. This is important, as the Reference-Line-Manager loads the reference-line dynamically and is only given the track name.</p>
+<p>Also save your reference line in the reference_line directory, as it is expected here.</p>
+              
+            </div>
+          </div><footer>
+    <div class="rst-footer-buttons" role="navigation" aria-label="Footer Navigation">
+        <a href="../installation/" class="btn btn-neutral float-left" title="Installation"><span class="icon icon-circle-arrow-left"></span> Previous</a>
+        <a href="../project-structure/" class="btn btn-neutral float-right" title="Process-Structure">Next <span class="icon icon-circle-arrow-right"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+  </div>
+
+  Built with <a href="https://www.mkdocs.org/">MkDocs</a> using a <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+</footer>
+          
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" aria-label="Versions">
+  <span class="rst-current-version" data-toggle="rst-current-version">
+    
+    
+      <span><a href="../installation/" style="color: #fcfcfc">&laquo; Previous</a></span>
+    
+    
+      <span><a href="../project-structure/" style="color: #fcfcfc">Next &raquo;</a></span>
+    
+  </span>
+</div>
+    <script src="../js/jquery-3.6.0.min.js"></script>
+    <script>var base_url = "..";</script>
+    <script src="../js/theme_extra.js"></script>
+    <script src="../js/theme.js"></script>
+      <script src="../javascripts/mathjax.js"></script>
+      <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+      <script src="../search/main.js"></script>
+    <script>
+        jQuery(function () {
+            SphinxRtdTheme.Navigation.enable(true);
+        });
+    </script>
+
+</body>
+</html>

@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><link rel="canonical" href="https://dersiwi.github.io/trackmania-gym/environment/" />
+      <link rel="shortcut icon" href="../img/favicon.ico" />
+    <title>Environment - trackmania-gym Documentation</title>
+    <link rel="stylesheet" href="../css/theme.css" />
+    <link rel="stylesheet" href="../css/theme_extra.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
+        <link href="../stylesheets/extra.css" rel="stylesheet" />
+    
+      <script>
+        // Current page data
+        var mkdocs_page_name = "Environment";
+        var mkdocs_page_input_path = "environment.md";
+        var mkdocs_page_url = "/trackmania-gym/environment/";
+      </script>
+    
+    <!--[if lt IE 9]>
+      <script src="../js/html5shiv.min.js"></script>
+    <![endif]-->
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+      <script>hljs.highlightAll();</script> 
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+    <div class="wy-side-scroll">
+      <div class="wy-side-nav-search">
+          <a href=".." class="icon icon-home"> trackmania-gym Documentation
+        </a><div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="../search.html" method="get">
+      <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" title="Type search term here" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="..">Home</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../installation/">Installation</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../refline/">Measure Of Progress</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../project-structure/">Process-Structure</a>
+                </li>
+              </ul>
+              <ul class="current">
+                <li class="toctree-l1 current"><a class="reference internal current" href="#">Environment</a>
+    <ul class="current">
+    <li class="toctree-l2"><a class="reference internal" href="#order-of-operations">Order of Operations</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#vectorized-environment">Vectorized Environment</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#spaces">Spaces</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#resources">Resources</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#multiple-tracks">Multiple tracks</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#continuous-actions">Continuous Actions</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#2d-continuous">2D Continuous</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#4d-continuous">4D Continuous</a>
+    </li>
+        </ul>
+    </li>
+    </ul>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../managers/">Managers</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../build-your-agent/">Build your Agent</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../testing/">Live-Testing</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../headless/">Headless</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../future_work/">Future Work</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../about/">About</a>
+                </li>
+              </ul>
+      </div>
+    </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+      <nav class="wy-nav-top" role="navigation" aria-label="Mobile navigation menu">
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="..">trackmania-gym Documentation</a>
+        
+      </nav>
+      <div class="wy-nav-content">
+        <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href=".." class="icon icon-home" aria-label="Docs"></a></li>
+      <li class="breadcrumb-item active">Environment</li>
+    <li class="wy-breadcrumbs-aside">
+    </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+            <div class="section" itemprop="articleBody">
+              
+                <h1 id="environment">Environment</h1>
+<p>The environment is implemented as a Gymnasium-Envioronment. For an in depth tutorial on how to create environment instances see <a href="https://gymnasium.farama.org/tutorials/gymnasium_basics/environment_creation/">here</a>. </p>
+<p>We chose a task-based manager architecture, where we employ managers to calculate Rewards, Observations and Terminations. Under the hood, the main task of the environment is to send actions to the TMInteraction-Process and gather raw-observations (images and game-states). Each manager, i.e. Reward-, Observation- and Termination-Manager has access to these raw-observations.</p>
+<p>In this project, multiple versions of an environment are implemented. The main one that is talked about in this article is <code>trackmania_env.envs.single_agent_env2.TMNF_Single_Agent_Env</code>. Other environments that are implemented use this environment. Other environments include:</p>
+<ul>
+<li><code>envs.sec_env.CrashProofEnvironment</code> this is just a wrapper for the original environment, as we sometimes had problems with the game not resetting after the agent reached the finish-line. This led to crashes during trainings. This wrapper-environment catches these crashes and restarts the whole pipeline. We mainly use this environment.</li>
+<li><code>vectorized.VectorizedTMEnvironment</code> is a vectorized version of the environment. It stores the environments and exposes a batched interface.</li>
+<li><code>vectorized.SB3Vectorized</code> is a wrapper-environment for <code>VectorizedTMEnvironment</code> that is compatilble with stable-baselines3. This is used in <code>scripts/sb3_train_vectoried</code>.</li>
+</ul>
+<h3 id="order-of-operations">Order of Operations</h3>
+<p>The order of operations in the environment in the step-method.</p>
+<ol>
+<li>Send <code>step</code>-command to the Process-Wrapper</li>
+<li>Advance the reference line</li>
+<li>Calculate Terminations</li>
+<li>Calculate Observations</li>
+<li>Calculate Rewards</li>
+</ol>
+<h3 id="vectorized-environment">Vectorized Environment</h3>
+<p>We also implemented a vectorized version of the environment, which allows you to collect rollouts from multiple game-instances at the same time, speeding up training time. Training with a vectorized environment and stable-baselines3 is implemented in </p>
+<pre><code class="language-sh">python scripts/sb3_train_vectorized.py
+</code></pre>
+<p>A script for testing and manual inputs to the environment is implemented in </p>
+<pre><code>python scripts/tests/step_vectorized.py
+</code></pre>
+<h4 id="spaces">Spaces</h4>
+<p>The vectorized environment expects action in the shape of <code>(N,)</code>, returns rewards and terminations in the same shape, if <code>N</code> is the number of environments. The info returned by the vecroized is a list with <code>N</code> entries, one for each environment. The shape of vectorized observations are documented with the <a href="../managers/#vectorized-observations">observataion-manager</a>.</p>
+<h4 id="resources">Resources</h4>
+<p>For each environment, a new game-instances is spawned. Therefore you have to test how many environments your system can handle. On a system using 32 GB of Ram and a 5070 TI (16GB VRAM) 5 environments seem to work fine.</p>
+<h4 id="multiple-tracks">Multiple tracks</h4>
+<p>The vectorized environment also supports the stepping on multiple tracks, i.e. you can pass 10 track but only spawn 5 environmetns, in order to diversify your domain.</p>
+<h2 id="continuous-actions">Continuous Actions</h2>
+<p>We have also begun implementing a continous actionspace. As of now; this, and can be used via <code>scripts/tests/step_continuous.py</code>. </p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>This is still in early development. Once we confirm it works as intended workings will be described here. Until then, code is your friend.</p>
+</div>
+<h3 id="2d-continuous">2D Continuous</h3>
+<p>In this mode, the action-space is two dimensional, i.e. <span class="arithmatex">\(a \in [-1,1]^2\)</span>. The first index is the steering, the second one the acceleration. For steering, less than zero is left, &gt;= 0 is right. For acceleration; greater than 0 is gas, smaller than 0 is breaking.</p>
+<p>The specifics of the continuization will be documented after more tesing.</p>
+<h3 id="4d-continuous">4D Continuous</h3>
+<p>Not implemented yet.</p>
+              
+            </div>
+          </div><footer>
+    <div class="rst-footer-buttons" role="navigation" aria-label="Footer Navigation">
+        <a href="../project-structure/" class="btn btn-neutral float-left" title="Process-Structure"><span class="icon icon-circle-arrow-left"></span> Previous</a>
+        <a href="../managers/" class="btn btn-neutral float-right" title="Managers">Next <span class="icon icon-circle-arrow-right"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+  </div>
+
+  Built with <a href="https://www.mkdocs.org/">MkDocs</a> using a <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+</footer>
+          
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" aria-label="Versions">
+  <span class="rst-current-version" data-toggle="rst-current-version">
+    
+    
+      <span><a href="../project-structure/" style="color: #fcfcfc">&laquo; Previous</a></span>
+    
+    
+      <span><a href="../managers/" style="color: #fcfcfc">Next &raquo;</a></span>
+    
+  </span>
+</div>
+    <script src="../js/jquery-3.6.0.min.js"></script>
+    <script>var base_url = "..";</script>
+    <script src="../js/theme_extra.js"></script>
+    <script src="../js/theme.js"></script>
+      <script src="../javascripts/mathjax.js"></script>
+      <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+      <script src="../search/main.js"></script>
+    <script>
+        jQuery(function () {
+            SphinxRtdTheme.Navigation.enable(true);
+        });
+    </script>
+
+</body>
+</html>
