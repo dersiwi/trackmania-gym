@@ -1,4 +1,5 @@
-
+# Future work
+In this section we post ideas that we may or may not follow up on, but found interesting.
 
 ## Reference Points and Generalization
 One important consideration is how we handle the reference line, especially if we aim to improve generalization in the future. Ideally, for true generalization, the goal would be to train an agent on multiple tracks and then test it on a completely unseen track, expecting it to drive well without additional guidance. However, in our current setup, the agent relies heavily on having a reference line, even on new, unseen tracks. This reliance somewhat contradicts the idea of zero-shot driving, where the agent should generalize without needing such prior information.

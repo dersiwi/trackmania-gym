@@ -3,9 +3,11 @@ nav:
   - Home : index.md 
   - Installation : installation.md
   - Measure Of Progress : refline.md
-  - Structure : project-structure.md
+  - Process-Structure : project-structure.md
+  - Environment : environment.md
   - Managers : managers.md
   - Live-Testing : testing.md
+  - Headless : headless.md
   - Future Work : future_work.md
   - About : about.md
 markdown_extensions:

@@ -46,7 +46,7 @@ you use the plugin provided in `game_intertaction/plugin/python_link.as`.
 
 ### If on Linux
 
-You need to make sure you have wine installed, as this is necessary to translate windows-based systemcalls into linux-based systemcalls (in order to be able to execute the game TMNF):
+You need to make sure you have wine and winetricks installed, as this is necessary to translate windows-based systemcalls into linux-based systemcalls (in order to be able to execute the game TMNF):
 ```sh
 sudo apt install winetricks
 winetricks dxvk
@@ -55,6 +55,7 @@ You also have to have build-tools installed, i.e.
 ```
 sudo apt install xdotool libxdo-dev
 ```
+To be quite fair, i hope you figure it out to make the game run; it took me some time as i had no idea how wine works, but there are a lot of great tutorials.
 
 ## Game-Setup
 
@@ -64,7 +65,7 @@ This is optional, but in order for your game not to be on full-screen the whole 
 </center>
 
 ### Does everything work?
-If you have installed everythingh correctly and placed he platform-cfg into the right location, then you should be able to execute the scripts. Try manual-stepping:
+If you have installed everythingh correctly and placed he platform-cfg into the right location, then you should be able to execute the scripts. Try one of the scripts in `scripts/tests`, for example manual-stepping:
 ```sh
 python scripts/tests/manual_stepping.py
 ```
