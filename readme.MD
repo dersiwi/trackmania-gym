@@ -33,7 +33,7 @@ These agents are also able to generalize to unseen tracks, although with some  r
 
 
 <center>
-    <img src="trackmania-gym-docs/docs/images/simple-validated-run.gif", width="400">
+    <img src="trackmania-gym-docs/docs/images/simple-validated-run.gif", width="400", class="center">
 </center>
 
 
