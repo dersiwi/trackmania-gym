@@ -24,12 +24,24 @@ This framework offers a modular design for experimenting with observations, rewa
 
 We are still actively working on this project and would appreciate any hints or bugs that we might have missed.
 
+Thank you for your interest and have fun.
+
 ## Experimental Results
 
 Our experiments show that Trackmania-Gym can train agents that reach at least human-like performance.
 These agents are also able to generalize to unseen tracks, although with some  reduction in performance.
 
 
-![Simple-Validated trained agent](images/simple-validated-run.gif){ width="400", .center }
+<center>
+    <img src="trackmania-gym-docs/docs/images/simple-validated-run.gif", width="400">
+</center>
+
 
 This is one of the agents we traied using Trackmania-Gym, in only around 5 hours on the map simple_validated1. Beware this was not our final agent, much rather an example.
+
+## License
+This project is licensed under the GNU General Public License v3.0.
+See the LICENSE file for details.
+
+Copyright (C) 2025 Simon Wilhelm Schübel <br>
+Copyright (C) 2025 Tahmur Hassan Mahmood

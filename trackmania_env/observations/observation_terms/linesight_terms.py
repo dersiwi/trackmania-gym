@@ -1,3 +1,8 @@
+"""
+This module includes code adapted and refactored from the Linesight-AI project
+(https://github.com/Linesight-RL/linesight). Credit to the original authors Donadigo @https://github.com/donadigo/TMInterfaceClientPython
+for the foundational implementation.
+"""
 from collections import deque
 
 import numpy as np
