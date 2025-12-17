@@ -118,6 +118,9 @@ class TMIProcessWrapper:
 
         self.actionmode = ActionMode.DISCRETE
         """The type of actions to expect (either discrete or continuous.)"""
+        self.simsteps_since_last_env_step : int = 0
+        self.actions_to_send = [(False, False, False, False)] * 5
+        self.curr_action_idx = len(self.actions_to_send)
         
     def __receive_frame(self) -> dict:
         """Receives a frame from self.ifaca If self._req_img_cmd_id != -1, it sends the aquired frame and simstate via the response-queue.
@@ -135,16 +138,42 @@ class TMIProcessWrapper:
         else: #<- if it's not set, then Process wrapper is in waitforstep-mode
             return response
 
-
+    def create_continuous_actions(self, action):
+        """ This method takes a 1 D continuous action within [-1, 1] and translates it into a list of booleans to send to the game.
+        """
+        self.actions_to_send = [(False, False, False, False)] * 5
+        if action >= 0:
+            if action > 0.8:
+                self.actions_to_send[-1] = (False, False, True, False)
+            if action > 0.6:
+                self.actions_to_send[-2] = (False, False, True, False)
+            if action > 0.4:
+                self.actions_to_send[-3] = (False, False, True, False)
+            if action > 0.2:
+                self.actions_to_send[-4] = (False, False, True, False)
+            self.actions_to_send[-5] = (False, False, True, False)
+        else:
+            if action < -0.8:
+                self.actions_to_send[-1] = (False, False, False, True)
+            if action < -0.6:
+                self.actions_to_send[-2] = (False, False, False, True)
+            if action < -0.4:
+                self.actions_to_send[-3] = (False, False, False, True)
+            if action < -0.2:
+                self.actions_to_send[-4] = (False, False, False, True)
+            self.actions_to_send[-5] = (False, False, False, True)
+            #self.actions_to_send = [(False, False, False, True)] * 5
+        self.curr_action_idx = 0
 
     def send_action(self, action : tuple[bool, bool, bool, bool]) -> dict:
         if self.actionmode == ActionMode.DISCRETE:
             left, right, acc, brake = action
             self.iface.set_input_state(left, right, acc, brake)
         elif self.actionmode == ActionMode.CONTINUOUS_2D:
+            self.create_continuous_actions(action[1])
             steering, breaking, acceleration = ActionMode.transform_continuous_2d(action)
             self.iface.execute_command(f"steer {int(steering)}")
-            self.iface.set_input_state(False, False, acceleration, breaking)
+            #self.iface.set_input_state(False, False, acceleration, breaking)
         elif self.actionmode == ActionMode.CONTINUOUS_4D:
             raise NotImplementedError("")
 
@@ -284,7 +313,8 @@ class TMIProcessWrapper:
             self.step_time = time.time()
             self.n_steps = 0
             self.ingame_time_tracking = 0
-
+        print(self.simsteps_since_last_env_step, self.ingame_time_passed)
+        self.simsteps_since_last_env_step = 0
 
     def syncloop(self):
         self._reconfigure_logger()
@@ -400,7 +430,13 @@ class TMIProcessWrapper:
                     self.ingame_time_passed = 0
                     self.ingame_time_tracking = 0
 
+                if self.curr_action_idx < len(self.actions_to_send):
+                    left, right, acc, brake = self.actions_to_send[self.curr_action_idx]
+                    self.iface.set_input_state(left, right, acc, brake)
+                    self.curr_action_idx += 1
+
                 self.sim_step_count += 1
+                self.simsteps_since_last_env_step += 1
 
                 # ============================ BEGIN ON RUN STEP ============================
 

@@ -37,21 +37,29 @@ def main(cfg : TrainConfig, run_id : Optional[str] = None):
     """
     cfg = load_and_merge_platform(cfg)
 
-    N_ENVS = 2
-    tracks = ["very_long_checkpoints.Challenge.Gbx", "curvy.Challenge.Gbx", "Level1.Challenge.Gbx"]
-    obs_as_dict = False
     tm_env = CrashProofEnvironment(cfg)
     tm_env.init_environment()
 
     print(tm_env.observation_space)
     print(tm_env.action_space)
+
+    speed = 0
         
     try:
         o, info = tm_env.reset()
         for i in range(100000):
-            o, rew, term, trun, inf = tm_env.step(np.random.random((2,)) * 2 - 1)
+            o, rew, term, trun, inf = tm_env.step(np.array([0.0, speed]))#tm_env.step(np.random.random((2,)) * 2 - 1)
+            
+            if i % 50 == 0:
+                speed += 0.2
+                print(f"Current speed {speed}")
+            if speed > 1:
+                speed = 0
+
             if i %  100 == 0:
                 print(f"Completed {i} steps")
+            if term or trun:
+                tm_env.reset()
 
 
 

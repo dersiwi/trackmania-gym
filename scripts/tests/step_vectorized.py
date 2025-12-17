@@ -59,6 +59,7 @@ def main(cfg : TrainConfig, run_id : Optional[str] = None):
                     print(obsterm, obsdict[obsterm].shape)
                 backtonumpy = obstransform.dict_to_numpy_vectorized(obsdict)
                 print(f"----------Obs shape back_from_obs : {backtonumpy.shape}----------")
+            
                 
 
 

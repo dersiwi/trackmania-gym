@@ -1,5 +1,5 @@
 defaults:
-  - obs_manager: sophy_obs.yaml
+  - obs_manager: next_point_obs.yaml
   - reward_manager: next_point_rewards.yaml
   - termination_manager: timeout.yaml
 
