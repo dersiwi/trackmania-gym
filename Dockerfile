@@ -9,7 +9,7 @@ COPY environment.yml /tmp/environment.yml
 RUN mamba env create -p /env -f /tmp/environment.yml && \
     conda clean -afy
 
-FROM ghcr.io/sgsiegens/tmnf-docker:latest
+FROM ghcr.io/sgsiegens/tmnf-docker-vulkan:latest
 USER root
 
 COPY --chown=${USER}:${USER} --from=conda-builder /env /env
@@ -20,7 +20,7 @@ COPY --chown=${USER}:${USER} . .
 
 # we excluded the outputs dir through our .dockerignore to avoid copy tons of pretained models, so we need to include it here again manually
 RUN mkdir -p checkpoints logs outputs runs wandb \
-    && chown -R wineuser:wineuser checkpoints logs outputs runs wandb
+    && chown -R ${USER}:${USER} checkpoints logs outputs runs wandb
 
 RUN cat <<EOF > configs/platforms.yaml
 platforms:
@@ -32,9 +32,9 @@ platforms:
   device: cuda
 EOF
 
-# we need this in order to use python without an env
+# we need this in order to use python without activating envs
 ENV PATH="/env/bin:$PATH"
 
-USER root
+USER ${USER}
 WORKDIR /home/${USER}/trackmania_gym
 CMD ["bash"]

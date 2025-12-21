@@ -3,8 +3,12 @@ __pycache__/
 .vscode/
 checkpoints/
 logs/
+models/
+!configs/models
 outputs/
 runs/
+test/
+trackmania-gym-docs/
 wandb/
 
 ppo.mkd
@@ -15,3 +19,5 @@ Dockerfile
 setupvgl.sh
 *.def
 *.sif
+LICENSE
+

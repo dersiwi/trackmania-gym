@@ -6,7 +6,7 @@ export PATH="${PATH}:/opt/VirtualGL/bin"
 export DISPLAY=":0"
 # Xvfb "${DISPLAY}" -ac -screen "0" "1920x1200x24" -dpi "72" +extension "RANDR" +extension "GLX" +iglx +extension "MIT-SHM" +render -nolisten "tcp" -noreset -shmem &
 
-Xorg -noreset -novtswitch -nolisten tcp +extension GLX +extension RANDR +extension RENDER -logfile ./10.log -config /etc/X11/xorg.conf "$DISPLAY" &
+Xorg -noreset -novtswitch -nolisten tcp +extension GLX +extension RANDR +extension RENDER -logfile /home/wineuser/trackmania_gym/10.log -config /etc/X11/xorg.conf "$DISPLAY" &
 
 # Wait for X11 to start
 echo "Waiting for X socket"
