@@ -14,23 +14,22 @@ USER root
 
 COPY --chown=${USER}:${USER} --from=conda-builder /env /env
 
-WORKDIR /home/${USER}/trackmania_gym
+RUN mkdir -p /home/${USER}/trackmania_gym \
+    && chown ${USER}:${USER} /home/${USER}/trackmania_gym 
 
-COPY --chown=${USER}:${USER} . .
-
-# we excluded the outputs dir through our .dockerignore to avoid copy tons of pretained models, so we need to include it here again manually
-RUN mkdir -p checkpoints logs outputs runs wandb \
-    && chown -R ${USER}:${USER} checkpoints logs outputs runs wandb
-
-RUN cat <<EOF > configs/platforms.yaml
+RUN mkdir -p /home/${USER}/configs \
+    && cat <<EOF > /home/${USER}/configs/platforms.yaml
 platforms:
   os: linux
   home: /home/${USER}
-  tmloader: /home/${USER}/.wine/drive_c/Program_Files_x86/TmNationsForever/TMLoader.exe
-  plugin: /home/${USER}/.wine/drive_c/users/${USER}/Documents/TMInterface/
-  map_dir: /home/${USER}/.wine/drive_c/users/${USER}/Documents/TmForever/Tracks/Challenges
+  tmloader: ${WINEPREFIX:-/home/${USER}/.wine}/drive_c/Program_Files_x86/TmNationsForever/TMLoader.exe
+  plugin: ${WINEPREFIX:-/home/${USER}/.wine}/drive_c/users/${USER}/Documents/TMInterface/
+  map_dir: ${WINEPREFIX:-/home/${USER}/.wine}/drive_c/users/${USER}/Documents/TmForever/Tracks/Challenges
   device: cuda
 EOF
+
+RUN chmod 755 /home/${USER}/configs \
+    && chmod 644 /home/${USER}/configs/platforms.yaml
 
 # we need this in order to use python without activating envs
 ENV PATH="/env/bin:$PATH"
