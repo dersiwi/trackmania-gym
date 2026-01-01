@@ -7,7 +7,7 @@ from game_interaction.ipc_fields import IPCCommands
 from multiprocessing import Process, Queue
 from configs.config import TrainConfig, EnvConfig
 
-def run_wrapper(gmi, launch_game : bool, cmd_q : Queue, res_q : Queue, track : str, img_w : int, img_h : int, camera_id:int ,env_cfg : EnvConfig): # apparently its better to run process like this to avoid pickel issues or smth?
+def run_wrapper(gmi, launch_game : bool, cmd_q : Queue, res_q : Queue, track : str, img_w : int, img_h : int, camera_id:int ,env_cfg : EnvConfig, debug: bool): # apparently its better to run process like this to avoid pickel issues or smth?
     """
     Method to run in the process-Wrapper. For arguments @see TMIProcessWrapper-constructor.
     """
@@ -19,6 +19,7 @@ def run_wrapper(gmi, launch_game : bool, cmd_q : Queue, res_q : Queue, track : s
                                 actions_per_second=  env_cfg.actions_per_second, 
                                 use_rewind= env_cfg.use_rewind,
                                 disable_waitforstep_after_n_consecutive_timeouts=  env_cfg.disable_waitforstep_after_n_consecutive_timeouts,
+                                debug= debug,
                                )
     wrapper.syncloop()
 
@@ -61,6 +62,7 @@ def start_process_and_wait_for_startsignal(train_config : TrainConfig, image_wid
                     image_height,
                     train_config.rl_env.obs_manager.camera_id,
                     train_config.rl_env.env,
+                    train_config.debug,
                     ))
     
     p.start()

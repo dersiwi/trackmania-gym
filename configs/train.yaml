@@ -9,6 +9,8 @@ defaults:
 platforms_config_path : "configs/platforms.yaml"
 extractors_out_dim: 64 # every extractor will produce an output with this dimension 
 #share_features_extractor: True # whether to share the features extractor between actor and critic when applicable
+debug: False
+headless: False
 
 learn_args:
   total_timesteps: 8000000
