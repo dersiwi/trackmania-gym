@@ -15,56 +15,52 @@ Stage: conda-builder
     	mamba env create -p /env -f environment.yml
     	conda clean -afy
 
-Bootstrap: docker
-From: ghcr.io/sgsiegens/tmnf-docker:latest
+Bootstrap: oras
+From: ghcr.io/sgsiegens/tmnf-singularity-vulkan:latest
 Stage: final
-
-%environment
-    	export PATH="/env/bin:$PATH"
-
-%setup
-    	mkdir -p ${SINGULARITY_ROOTFS}/home/wineuser/trackmania_gym
 
 %files from conda-builder
     	/env /env
 
-%files
-	configs            /home/wineuser/trackmania_gym/configs
-	game_interaction   /home/wineuser/trackmania_gym/game_interaction
-	models             /home/wineuser/trackmania_gym/models
-	neural_networks    /home/wineuser/trackmania_gym/neural_networks
-	plotting           /home/wineuser/trackmania_gym/plotting
-	scripts            /home/wineuser/trackmania_gym/scripts
-	tmn_sb3            /home/wineuser/trackmania_gym/tmn_sb3
-	trackmania_env     /home/wineuser/trackmania_gym/trackmania_env
-	tracks             /home/wineuser/trackmania_gym/tracks
-	utils              /home/wineuser/trackmania_gym/utils
-	setupvgl.sh         /usr/local/bin/setupvgl.sh
-
 %post
-	chmod 755 /usr/local/bin/setupvgl.sh
-	chown -R wineuser:wineuser /home/wineuser/.vnc
-    	chmod 755 /home/wineuser/.vnc/passwd
+        # change the path to whatever you like for binding later
+        mkdir -p /trackmania_gym
+        chmod 777 /trackmania_gym
 
-    	mkdir -p /home/wineuser/trackmania_gym
-	cd /home/wineuser/trackmania_gym
-	mkdir -p checkpoints logs outputs runs wandb 
-    	chown -R wineuser:wineuser /home/wineuser/trackmania_gym
-    	chown -R wineuser:wineuser /env
-
-    	cat <<EOF > /home/wineuser/trackmania_gym/configs/platforms.yaml
-		platforms:
-	 	 os: linux
-		 home: /home/wineuser
-	  	 tmloader: /home/wineuser/.wine/drive_c/Program_Files_x86/TmNationsForever/TMLoader.exe
-	  	 plugin: /home/wineuser/.wine/drive_c/users/wineuser/Documents/TMInterface/
-	  	 map_dir: /home/wineuser/.wine/drive_c/users/wineuser/Documents/TmForever/Tracks/Challenges
-	  	 device: cuda
-		EOF
+        mkdir -p /configs
+        touch /configs/platforms.yaml
+        chmod 666 /configs/platforms.yaml
 
 %runscript
-	exec /usr/local/bin/setupvgl.sh "$@"
-	
-	
-	
+
+        # this is really ugly since we are somewhat forced do just copy runscript of the final stage 
+        echo "Starting container for user: $(whoami)"
+
+        export WINE_PREFIXES_LOCATION="${WINE_PREFIXES_LOCATION:-/opt/wine-prefixes}"
+        export WINEARCH=win32
+
+        if [ "$(id -u)" -ne 0 ]; then
+            echo "Setting up Wine prefix for host user: $USER (effective UID: $(id -u))"
+            /usr/local/bin/setup-tmnf-prefix.sh
+            export USER_PREFIX="$WINE_PREFIXES_LOCATION/wine-$USER"
+            export WINEPREFIX="$USER_PREFIX"
+            echo "Finished setting up the new wine prefix"
+        else 
+            export USER="root"
+            export WINEPREFIX="$WINE_PREFIXES_LOCATION/tmnf"
+        fi
+
+        # Generate the config file
+        
+        echo "platforms:\n\
+        os: linux\n\
+        tmloader: \"${WINEPREFIX}/drive_c/Program_Files_x86/TmNationsForever/TMLoader.exe\"\n\
+        plugin: \"${WINEPREFIX}/drive_c/users/${USER}/Documents/TMInterface/\"\n\
+        map_dir: \"${WINEPREFIX}/drive_c/users/${USER}/Documents/TmForever/Tracks/Challenges\"\n\
+        device: cuda" > /configs/platforms.yaml
+
+        export PATH="/env/bin:$PATH"
+        
+        # NOTE: this needs to be chaned to the base-entrypoint.sh if you use the base image 
+        exec /usr/local/bin/vulkan-entrypoint.sh "$@"
 

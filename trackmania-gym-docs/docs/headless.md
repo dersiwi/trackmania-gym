@@ -19,6 +19,7 @@ To run the container and bind your code add the following params to you docker c
 ```
 
 For detailed information on GPU rendering options and the container's configuration, refer to the base image documentation [here](https://github.com/SgSiegens/TMNF-Docker).
+In addition you probably need to change the path of the `platform.yaml` inside the container to point to the right location.
 
 ## Using Containers on the bwUniCluster at KIT 
 
