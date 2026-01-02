@@ -1,0 +1,66 @@
+Bootstrap: docker
+From: condaforge/mambaforge:latest
+Stage: conda-builder
+
+%files
+	environment.yml environment.yml
+
+%post
+	export DEBIAN_FRONTEND=noninteractive
+
+	apt-get update && apt-get install -y --no-install-recommends \
+        	python3-dev build-essential libevdev-dev && \
+        	rm -rf /var/lib/apt/lists/*
+
+    	mamba env create -p /env -f environment.yml
+    	conda clean -afy
+
+Bootstrap: oras
+From: ghcr.io/sgsiegens/tmnf-singularity-vulkan:latest
+Stage: final
+
+%files from conda-builder
+    	/env /env
+
+%post
+        # change the path to whatever you like for binding later
+        mkdir -p /trackmania_gym
+        chmod 777 /trackmania_gym
+
+        mkdir -p /configs
+        touch /configs/platforms.yaml
+        chmod 666 /configs/platforms.yaml
+
+%runscript
+
+        # this is really ugly since we are somewhat forced do just copy runscript of the final stage 
+        echo "Starting container for user: $(whoami)"
+
+        export WINE_PREFIXES_LOCATION="${WINE_PREFIXES_LOCATION:-/opt/wine-prefixes}"
+        export WINEARCH=win32
+
+        if [ "$(id -u)" -ne 0 ]; then
+            echo "Setting up Wine prefix for host user: $USER (effective UID: $(id -u))"
+            /usr/local/bin/setup-tmnf-prefix.sh
+            export USER_PREFIX="$WINE_PREFIXES_LOCATION/wine-$USER"
+            export WINEPREFIX="$USER_PREFIX"
+            echo "Finished setting up the new wine prefix"
+        else 
+            export USER="root"
+            export WINEPREFIX="$WINE_PREFIXES_LOCATION/tmnf"
+        fi
+
+        # Generate the config file
+        
+        echo "platforms:\n\
+        os: linux\n\
+        tmloader: \"${WINEPREFIX}/drive_c/Program_Files_x86/TmNationsForever/TMLoader.exe\"\n\
+        plugin: \"${WINEPREFIX}/drive_c/users/${USER}/Documents/TMInterface/\"\n\
+        map_dir: \"${WINEPREFIX}/drive_c/users/${USER}/Documents/TmForever/Tracks/Challenges\"\n\
+        device: cuda" > /configs/platforms.yaml
+
+        export PATH="/env/bin:$PATH"
+        
+        # NOTE: this needs to be chaned to the base-entrypoint.sh if you use the base image 
+        exec /usr/local/bin/vulkan-entrypoint.sh "$@"
+

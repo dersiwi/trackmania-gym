@@ -303,7 +303,7 @@ class GameInstanceMangerLinux(GameInstanceManager):
     def launch_game(self, timeout=10):
         """Launches the game with timeout 10s to find process ids."""
 
-        self.game_spawning_lock.acquire()
+        if self.game_spawning_lock: self.game_spawning_lock.acquire()
 
         pid_before = set(self._get_tm_pids())
         launch_cmds = self.__get_launch_cmds()
@@ -312,10 +312,11 @@ class GameInstanceMangerLinux(GameInstanceManager):
             process = subprocess.Popen(launch_cmds, env=GameInstanceMangerLinux.xvfb_launch_dict)
         else:
             process = subprocess.Popen(launch_cmds)
-        launcher_process = psutil.Process(process.pid)
+
+        _ = psutil.Process(process.pid)
         self.__get_tmnf_process_id(pid_before, timeout)
         self._get_tm_window_id()
-        self.game_spawning_lock.release()
+        if self.game_spawning_lock: self.game_spawning_lock.release()
         return self.tm_process_id
 
     def _get_gameprocess_killcommand(self) -> str:

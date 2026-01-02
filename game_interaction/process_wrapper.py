@@ -28,7 +28,8 @@ class TMIProcessWrapper:
                  actions_per_second:int = 20,
                  use_rewind:bool = True,
                  camera_id:int = 2,
-                 disable_waitforstep_after_n_consecutive_timeouts:int= 5):
+                 disable_waitforstep_after_n_consecutive_timeouts:int= 5,
+                 debug:bool = False):
         """
         Parameters
         ---------
@@ -124,6 +125,8 @@ class TMIProcessWrapper:
         self.simsteps_since_last_env_step : int = 0 #this should always equal self.simsteps_between_envsteps
         self.actions_to_send = [(False, False, False, False)] * self.simsteps_between_envsteps
         self.curr_action_idx = len(self.actions_to_send)
+
+        self.debug = debug
         
     def __receive_frame(self) -> dict:
         """Receives a frame from self.ifaca If self._req_img_cmd_id != -1, it sends the aquired frame and simstate via the response-queue.
@@ -297,13 +300,14 @@ class TMIProcessWrapper:
         self.expect_next_step_command = False
         self.ingame_time_passed = 0
         self.n_steps += 1
+        # TODO: if debug=False can we then skip this whole if block ?
         if self.n_steps % 100 == 0 and self.n_steps > 0:
             gt= time.time() - self.step_time
-            self.logger.info(f"Executed {self.n_steps} in {gt}s. Actions per second : {self.n_steps / gt}s. And actions per ingame seconds game_seconds : {self.n_steps / (self.ingame_time_tracking / 1000)}")
+            if self.debug: self.logger.info(f"Executed {self.n_steps} in {gt}s. Actions per second : {self.n_steps / gt}s. And actions per ingame seconds game_seconds : {self.n_steps / (self.ingame_time_tracking / 1000)}")
             self.step_time = time.time()
             self.n_steps = 0
             self.ingame_time_tracking = 0
-        print(self.simsteps_since_last_env_step, self.ingame_time_passed)
+        if self.debug: print(self.simsteps_since_last_env_step, self.ingame_time_passed)
         self.simsteps_since_last_env_step = 0
 
     def syncloop(self):

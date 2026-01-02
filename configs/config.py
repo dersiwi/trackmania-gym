@@ -223,6 +223,8 @@ class TrainConfig:
     learn_args : Learnargs
     extractors_out_dim : int
     platforms_config_path : str
+    debug: bool
+    headless: bool
     policy : PolicyCfg | ActorCriticPolicyCfg
     platforms: PlatformConfig 
     models: ModelCfg 

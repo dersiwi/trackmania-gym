@@ -7,8 +7,11 @@ defaults:
   - lr_scheduler: no_scheduling.yaml
   - policy: basic_policy.yaml
 
+platforms_config_path : "configs/platforms.yaml"
 extractors_out_dim: 64 # every extractor will produce an output with this dimension 
-share_features_extractor: True # whether to share the features extractor between actor and critic when applicable
+#share_features_extractor: True # whether to share the features extractor between actor and critic when applicable
+debug: False
+headless: False
 
 learn_args:
   total_timesteps: 12000000
@@ -23,10 +26,6 @@ gmi:
   headless: False
   port: 8775
   track : simple1_validated.Challenge.Gbx
-
-image:
-  width: 128
-  height: 128
 
 wandb:
   use: True

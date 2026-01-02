@@ -2,9 +2,25 @@
 A Dockerfile is included to allow you to run the entire project in a containerized environment. This environment already has the game installed and headless rendering enabled.
 To build the container, run the following command in the project directory:
 ```bash
-docker build -t <name> .
+docker build -t <image name> .
 ```
-All necessary dependencies (like Python) are pre-installed within the container. For detailed information on GPU rendering options and the container's configuration, refer to the base image documentation [here](https://github.com/SgSiegens/TMNF-Docker).
+All necessary dependencies (like Python) are pre-installed within the container. When running the container, you only need to **bind your code into it**. This allows for fast prototyping, so you don’t have to rebuild the container 
+every time you change your code (rebuilding is only necessary if you update the conda environment YAML).
+We recommend **copying your code into a temporary scratch directory** instead of binding it directly from your host. Direct binding will write any changes made inside the container back to your host folder 
+([see](https://docs.docker.com/get-started/workshop/06_bind_mounts/)). You can copy your code using `cp` or `rsync`, for example:
+
+```bash
+rsync -av --progress --exclude='*.sif' --exclude='.*' path/to/your/code scratch/tmp/dir
+```
+
+To run the container and bind your code add the following params to you docker command
+```bash
+  --mount type=bind,src=path/to/your/code,target=/home/wineuser/trackmania_gym 
+```
+
+For detailed information on GPU rendering options and the container's configuration, refer to the base image documentation [here](https://github.com/SgSiegens/TMNF-Docker).
+In addition you probably need to change the path of the `platform.yaml` inside the container to point to the right location.
+
 ## Using Containers on the bwUniCluster at KIT 
 
 ### Connecting to the cluster
