@@ -124,6 +124,7 @@ def introscreen(cfg : TrainConfig, asciiart = welcome, askstart : bool = False):
             - RL-scheduler          : {cfg.lr_scheduler._target_}
             - n_env_steps           : {cfg.learn_args.total_timesteps}
             - tb-log-name           : {cfg.learn_args.tb_log_name}
+            - continuous-actions    : {cfg.rl_env.env.continuous_actions}, Mode : {cfg.rl_env.env.actionmode}
           If values are None, the loaded config does not have this attribute.
           """)
     if askstart and input("[y/Y] to start training.").strip().lower() not in ["y", "yes"]:

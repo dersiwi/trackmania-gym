@@ -11,7 +11,7 @@ from stable_baselines3.common.base_class import BaseAlgorithm
 from gymnasium import Env
 from utils.experiment_managers.core import ExperimentManager 
 from configs.config import TrainConfig
-  
+from trackmania_env.callbacks import *
 
 class Sb3ExperimentManager(ExperimentManager):
     """
@@ -68,6 +68,9 @@ class Sb3ExperimentManager(ExperimentManager):
             save_vecnormalize=False,
         )
         self.callbacks.append(checkpoint_callback)
+
+        self.callbacks.append(AccumRewardLogCallback())
+        self.callbacks.append(ReturnCallback())
 
     def add_artifacts(self):
         """Add best model and checkpoint-model artifact"""

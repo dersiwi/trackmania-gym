@@ -489,5 +489,5 @@ class TMIProcessWrapper:
                 self.handle_unanswered_commands()
 
         if self.launch_game:
-            self.logger.info("closing game with pid",self.gim.tm_process_id,id(self.gim))
+            self.logger.info(f"closing game with pid {self.gim.tm_process_id, id(self.gim)}")
             self.gim.close_game()
