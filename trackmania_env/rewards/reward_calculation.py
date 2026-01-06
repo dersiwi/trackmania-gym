@@ -72,7 +72,11 @@ class RewradCalculator(Manager):
         rew = 0
         info = {}
         for term in self.terms:
-            termvalue, terminfo = term.calculate_reward_term(observations, processed_obs, race_finished, other_terminations)
+            try:
+                termvalue, terminfo = term.calculate_reward_term(observations, processed_obs, race_finished, other_terminations)
+            except Exception as e:
+                self.logger.error(f"Failure to retrieve reward-term {term.name}, error-traceback : {e} \n\n Supplementing reward-term with zeros.")
+                termvalue, terminfo = 0, {term.name : 0}
             rew += termvalue
             info = info | terminfo
         info["total"] = rew

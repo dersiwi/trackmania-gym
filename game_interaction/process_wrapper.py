@@ -307,7 +307,7 @@ class TMIProcessWrapper:
             self.step_time = time.time()
             self.n_steps = 0
             self.ingame_time_tracking = 0
-        if self.debug: print(self.simsteps_since_last_env_step, self.ingame_time_passed)
+        if self.debug: self.logger.debug(self.simsteps_since_last_env_step, self.ingame_time_passed)
         self.simsteps_since_last_env_step = 0
 
     def syncloop(self):
@@ -489,5 +489,5 @@ class TMIProcessWrapper:
                 self.handle_unanswered_commands()
 
         if self.launch_game:
-            print("closing game with pid",self.gim.tm_process_id,id(self.gim))
+            self.logger.info("closing game with pid",self.gim.tm_process_id,id(self.gim))
             self.gim.close_game()

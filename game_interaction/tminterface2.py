@@ -10,7 +10,7 @@ import struct
 from enum import IntEnum, auto
 from sys import platform
 import numpy as np
-
+import logging
 from tminterface.structs import CheckpointData, SimStateData
 # tminterface is pip installed from https://github.com/donadigo/TMInterfaceClientPython
 
@@ -49,7 +49,8 @@ class TMInterface:
 
     def __init__(self, port: int):
         self.port = port
-        pass
+        self.logger = logging.getLogger(self.__class__.__name__)
+
 
     def close(self):
         self.sock.sendall(struct.pack("i", MessageType.C_SHUTDOWN))
@@ -57,7 +58,7 @@ class TMInterface:
         self.registered = False
 
     def signal_handler(self, sig, frame):
-        print("Shutting down...")
+        self.logger.info("Shutting down...")
         self.close()
 
     def register(self, timeout=None):
@@ -75,7 +76,7 @@ class TMInterface:
         self.sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
         self.sock.connect((HOST, self.port))
         self.registered = True
-        print(f"Connected. Timeout set to {timeout}ms.")
+        self.logger.info(f"Connected. Timeout set to {timeout}ms.")
 
     def rewind_to_state(self, state):
         self.sock.sendall(struct.pack("ii", MessageType.C_REWIND_TO_STATE, np.int32(len(state.data))))
