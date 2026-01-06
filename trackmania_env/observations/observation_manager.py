@@ -1,10 +1,11 @@
+import numpy as np
+import torch
+
+from gymnasium import spaces
+from gymnasium.spaces import Space
 from abc import ABC, abstractmethod
 from collections import Counter
 from typing import Any, Dict, List, Optional, Tuple, Union
-import numpy as np
-import gymnasium as gym
-from gymnasium import spaces
-from gymnasium.spaces import Space
 
 from tminterface.structs import SimStateData
 from trackmania_env.utils.reference_line_manager import ReferenceLineManager
@@ -12,7 +13,6 @@ from trackmania_env.observations.observation_term import ObservationTerm
 from trackmania_env.utils.spacetransform import SpaceTransformer
 
 from trackmania_env.manager import Manager
-
 class ObservationManager(ABC, Manager):
     def __init__(self, observation_terms : list[ObservationTerm], convert_torch : bool = True, normalize : bool = False, return_as_dict : bool = True):
         """
@@ -56,6 +56,12 @@ class ObservationManager(ABC, Manager):
     def _get_obs_as_dict(self, obs) -> tuple[Dict[str, np.ndarray], Dict[str, Any]]:
         observations = {}
         info = {}
+        
         for obsterm in self.terms:
-            observations[obsterm.name], info[obsterm.name] = obsterm.get_observation(obs)
+            try:
+                observations[obsterm.name], terminfo = obsterm.get_observation(obs)
+            except Exception as e:
+                self.logger.error(f"Failure to retrieve observation-term {obsterm.name}, error-traceback : {e} \n\n Supplementing obsterm with zeros.")
+                observations[obsterm.name], terminfo = np.zeros(obsterm.get_native_shape(), dtype = np.float32), {}
+            info = info | terminfo
         return observations, info

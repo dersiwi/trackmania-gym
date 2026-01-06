@@ -61,7 +61,7 @@ class ObservationTerm(ABC):
                 The input state dict {image, sim state}.
 
         Returns:
-            Tuple[str, np.ndarray]: A tuple (observation, info).
+            Tuple[np.ndarray, dict]: A tuple (observation, info).
         """
         obs, info = self._get_obs(game_states, **kwargs)
         if self.normalize:

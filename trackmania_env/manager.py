@@ -1,4 +1,4 @@
-
+import logging
 
 class ManagerTerm:
     """Baseclass for all Terms being used for Term-Based Managers"""
@@ -25,6 +25,7 @@ class Manager:
         """Term-List for this Manager"""
         self.env = None
         """Environment-Variable of the manager"""
+        self.logger = logging.getLogger(self.__class__.__name__)
 
     def set_env(self, env) -> None:
         """Sets the environment for the manager and also propagates the environment to each term."""
