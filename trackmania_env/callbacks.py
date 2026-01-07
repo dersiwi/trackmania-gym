@@ -56,3 +56,4 @@ class ReturnCallback(BaseCallback):
         infos : list[dict] = self.locals["infos"][0]
         if ReturnTracker.LOG_NAME in infos:
             wandb.log(infos[ReturnTracker.LOG_NAME])
+        return True # always return true.

@@ -6,6 +6,7 @@ sys.path.append(os.path.abspath(os.path.join(
 # Hydra related imports
 import hydra
 import traceback
+import numpy as np
 from typing import Optional
 
 
@@ -37,20 +38,21 @@ def main(cfg : TrainConfig, run_id : Optional[str] = None):
     print(tm_env.observation_space)
     print(tm_env.action_space)
 
-    speed = 0
+    speed, incspeed = 0, False
         
     try:
         o, info = tm_env.reset()
         for i in range(100000):
-            action = ActionMode.generate_random_action(ActionMode.CONTINUOUS_2D)
-            #print(f"[Aciton info]     :      steering : {action[0]},      acceleration {action[1]}")
-            o, rew, term, trun, inf = tm_env.step(action)#tm_env.step(np.random.random((2,)) * 2 - 1) - np.array([0.0, speed])
+            action = ActionMode.generate_random_action(mode=ActionMode.CONTINUOUS_2D) if not incspeed else np.array([0.0, speed])
+            print(f"[Aciton info]     :      steering : {action[0]},      acceleration {action[1]}")
+            o, rew, term, trun, inf = tm_env.step(action)
             
-            if i % 50 == 0:
-                speed += 0.2
-                print(f"Current speed {speed}")
-            if speed > 1:
-                speed = 0
+            if incspeed:
+                if i % 50 == 0:
+                    speed += 0.2
+                    print(f"Current speed {speed}")
+                if speed > 1:
+                    speed = 0
 
             if i %  100 == 0:
                 print(f"Completed {i} steps")
