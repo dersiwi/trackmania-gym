@@ -1,0 +1,3 @@
+name: "forward_reward"
+args:
+    drive_forward_reward : 1.0

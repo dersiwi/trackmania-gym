@@ -1,4 +1,5 @@
 import wandb
+import numpy as np
 from stable_baselines3.common.callbacks import BaseCallback
 
 from trackmania_env.utils.return_tracker import ReturnTracker
@@ -55,5 +56,46 @@ class ReturnCallback(BaseCallback):
     def _on_step(self):
         infos : list[dict] = self.locals["infos"][0]
         if ReturnTracker.LOG_NAME in infos:
-            wandb.log(infos[ReturnTracker.LOG_NAME])
+            wandb.log({"episode_return" : infos[ReturnTracker.LOG_NAME]})
         return True # always return true.
+    
+
+class ContinuousActionLogCallback(BaseCallback):
+    def __init__(self, verbose = 0):
+        super().__init__(verbose)
+        self.actionmin : dict[str, float] = {}
+        self.actionmax : dict[str, float] = {}
+        self.actionmean : dict[str, float] = {}
+        self.minprefix = "min_action_dim:"
+        self.maxprefix = "max_action_dim:"
+        self.meanprefix = "mean_action_dim:"
+        self.n_steps = 0
+
+
+    def _on_step(self):#info["action"]
+        infos : list[dict] = self.locals["infos"][0]
+        self.n_steps += 1
+        if "action" in infos:
+            if not type("action") == np.ndarray:
+                pass
+            action : np.ndarray = infos["action"]
+            for dimidx in range(action.shape[0]):
+                actionkey = str(dimidx)
+                if actionkey in self.actionmin:
+                    self.actionmin[self.minprefix + actionkey] = min(action[dimidx], self.actionmin[self.minprefix + actionkey])
+                    self.actionmax[self.maxprefix + actionkey] = max(action[dimidx], self.actionmax[self.maxprefix + actionkey])
+                    self.actionmean[self.meanprefix + actionkey] += action[dimidx] / self.n_steps #not reaaally true but close enough
+                else:
+                    self.actionmin[self.minprefix + actionkey] = action[dimidx]
+                    self.actionmax[self.maxprefix + actionkey] = action[dimidx]
+                    self.actionmean[self.meanprefix + actionkey] = action[dimidx]
+        
+        if ("terminated" in infos and infos["terminated"]) or ("truncated" in infos and infos["truncated"]):
+            wandb.log(self.actionmin)
+            wandb.log(self.actionmax)
+            wandb.log(self.actionmean)
+            self.actionmin : dict[str, float] = {}
+            self.actionmax : dict[str, float] = {}
+            self.actionmean : dict[str, float] = {}
+
+        return super()._on_step()

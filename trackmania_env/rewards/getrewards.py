@@ -1,6 +1,6 @@
 
 from trackmania_env.rewards.reward_calculation import RewradCalculator
-from trackmania_env.rewards.implementations.basic_rewards import BasicRewardCalculation
+from trackmania_env.rewards.implementations.basic_rewards import BasicRewardCalculation, ForwardReward
 from trackmania_env.rewards.implementations.linesight_rewards import LinesightRewardCalculator
 from trackmania_env.rewards.implementations.nextpointrewards import *
 from trackmania_env.rewards.implementations.sophy_rewards import SophyRewards
@@ -36,5 +36,7 @@ def get_reward_calculator(reward_calculator_cfg: RewardManagerCfg, normalize: bo
                                        use_punishment=reward_calculator_cfg.use_punishment, 
                                        steps_without_progress_until_punishment=reward_calculator_cfg.steps_without_progress_until_punishment,
                                        normalize=normalize)
+        case "forward_reward":
+            return ForwardReward(**reward_calculator_cfg.args, normalize = normalize)
         case _:
             raise NameError(f"Reward calculator '{name}' not known.")

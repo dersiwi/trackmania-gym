@@ -64,6 +64,7 @@ class TMNF_Single_Agent_Env(gym.Env):
             waitforstep_timeout_in_s:float,
             startposition_accuracy_threshold:float,
             gamma:float,
+            is_discrete:bool = True,
             **kwargs):
         
         """
@@ -132,6 +133,7 @@ class TMNF_Single_Agent_Env(gym.Env):
         # define observation and action space for gym
         self.observation_space = obs_manager.get_observation_space()
         self.action_space = gym.spaces.Discrete(len(ACTION_MAP))
+        self.is_discrete = is_discrete
 
         self._send_command_to_process_wrapper(IPCCommands.get_cmd_command(self.ipc_cmd_id, 
                                                                                              TMInterfaceCommands.set_variable(TMInterfaceCommands.Variables.SPEED, 
@@ -290,6 +292,7 @@ class TMNF_Single_Agent_Env(gym.Env):
         info["rewards"] = reward_info
         info["terminated"] = terminated
         info["truncated"] = truncated
+        info["action"] = action
         if terminated or truncated:
             info[ReturnTracker.LOG_NAME] = self.rt.get_return()
 
@@ -436,7 +439,7 @@ class ContinuousTMNF_Single_Agent_Env(TMNF_Single_Agent_Env):
         super().__init__(command_queue, response_queue, obs_manager, reward_calculator, termination_manger, 
                          track, reset_mode, n_previous_actions, position_buffer_size, position_moved_threshold,
                           ignore_stuck_for_n_steps_after_reset, game_speed, countdown_speed, waitforstep_timeout_in_s, 
-                          startposition_accuracy_threshold, gamma, **kwargs)
+                          startposition_accuracy_threshold, gamma, is_discrete=False, **kwargs)
         
         size = 2 if actionspace == ActionMode.CONTINUOUS_2D else 4
         assert actionspace == ActionMode.CONTINUOUS_2D or actionspace == ActionMode.CONTINUOUS_4D

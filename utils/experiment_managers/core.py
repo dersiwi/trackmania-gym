@@ -27,6 +27,7 @@ class ExperimentManager:
         self.hydra_run_dir = hydra_run_dir
         self.cfg = cfg
         self.resume = resume
+        self.use_wandb = cfg.wandb.use
         self.run, self.run_id = init_and_login_wandb(
             self.cfg, 
             wandbdir=self.hydra_run_dir,

@@ -114,6 +114,19 @@ class SpeedReward(RewardTerm):
 
     def _get_term(self, observations, processed_obs, race_finished, other_terminations):
         return observations[IPCFields.SIMSTATE].display_speed 
+
+class DriveForwardReward(RewardTerm):
+    def __init__(self, weight):
+        super().__init__(weight, "forward_rew", 0.0, 1.0)
+
+    def set_env(self, env):
+        assert not env.is_discrete, f"This reward term requires a continuous action-space, but got env.is_discrete={env.is_discrete}"
+        return super().set_env(env)
+
+    def _get_term(self, observations, processed_obs, race_finished, other_terminations):
+        if len(self.env.actions) == 0:
+            return 0.0
+        return 1.0 if self.env.actions[-1][1] > 0 else 0.0
     
 class RaceFinished(BoundedRewardterm):
     """Binary Reward, given if the race is finished."""
