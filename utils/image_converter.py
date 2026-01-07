@@ -1,7 +1,7 @@
 import numpy as np
 import torch
 from PIL import Image
-
+"""NOT USED, BUT FEEL FREE TO. @img_terms.ImgConverter does the same."""
 class ImageConverter:
 
     @staticmethod

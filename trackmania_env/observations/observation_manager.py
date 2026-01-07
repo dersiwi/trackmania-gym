@@ -1,5 +1,5 @@
 import numpy as np
-import torch
+import os
 
 from gymnasium import spaces
 from gymnasium.spaces import Space
@@ -10,6 +10,7 @@ from typing import Any, Dict, List, Optional, Tuple, Union
 from tminterface.structs import SimStateData
 from trackmania_env.utils.reference_line_manager import ReferenceLineManager
 from trackmania_env.observations.observation_term import ObservationTerm
+from trackmania_env.observations.observation_terms.img_terms import ImageObservationTerm
 from trackmania_env.utils.spacetransform import SpaceTransformer
 
 from trackmania_env.manager import Manager
@@ -36,6 +37,14 @@ class ObservationManager(ABC, Manager):
             self.obs_space = spaces.Dict(spacedict)
         else:
             self.obs_space = spaces.Box(-np.inf, np.inf, shape=(sum([term.get_flatten_dim() for term in self.terms])), dtype=np.float32)
+        
+        # set control-image logging
+        controlimgdir, df = os.path.join(os.getcwd(), "logs/control_images"), 1000000
+        self.logger.info(f"Setting control-image dumping directory to : '{controlimgdir}' and dumping freq to {df} env steps.")
+        for term in self.terms:
+            if isinstance(term, ImageObservationTerm):
+                term: ImageObservationTerm
+                term.set_dump_freq(freq = df, dirpath=controlimgdir)
 
     def get_observation_space(self) -> Space:
         """
