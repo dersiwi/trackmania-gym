@@ -435,17 +435,16 @@ class ContinuousTMNF_Single_Agent_Env(TMNF_Single_Agent_Env):
     def __init__(self, command_queue, response_queue, obs_manager, reward_calculator, termination_manger, 
                  track, reset_mode, n_previous_actions, position_buffer_size, position_moved_threshold, 
                  ignore_stuck_for_n_steps_after_reset, game_speed, countdown_speed, waitforstep_timeout_in_s, 
-                 startposition_accuracy_threshold, gamma, actionspace : int, **kwargs):
+                 startposition_accuracy_threshold, gamma, actiondim : int, **kwargs):
+        
         super().__init__(command_queue, response_queue, obs_manager, reward_calculator, termination_manger, 
                          track, reset_mode, n_previous_actions, position_buffer_size, position_moved_threshold,
                           ignore_stuck_for_n_steps_after_reset, game_speed, countdown_speed, waitforstep_timeout_in_s, 
                           startposition_accuracy_threshold, gamma, is_discrete=False, **kwargs)
         
-        size = 2 if actionspace == ActionMode.CONTINUOUS_2D else 4
-        assert actionspace == ActionMode.CONTINUOUS_2D or actionspace == ActionMode.CONTINUOUS_4D
-
-        self.action_space = gym.spaces.Box(low=-1, high = 1, shape = (size,), dtype=np.float32)
-        self._send_command_to_process_wrapper(IPCCommands.set_actionmode(self.ipc_cmd_id, actionspace))
+        self.action_space = gym.spaces.Box(low=-1, high = 1, shape = (actiondim,), dtype=np.float32)
+        self.actionmode = ActionMode.get_mode(continuous=True, dim = actiondim)
+        self._send_command_to_process_wrapper(IPCCommands.set_actionmode(self.ipc_cmd_id, self.actionmode))
 
     def _get_action(self, action):
         # TODO this should also be done via the ActionMode class in the parent-environemnt

@@ -39,11 +39,11 @@ def main(cfg : TrainConfig, run_id : Optional[str] = None):
     print(tm_env.action_space)
 
     speed, incspeed = 0, False
-        
+    mode = ActionMode.get_mode(cfg.rl_env.env.continuous_actions, cfg.rl_env.env.actiondim)
     try:
         o, info = tm_env.reset()
         for i in range(100000):
-            action = ActionMode.generate_random_action(mode=ActionMode.CONTINUOUS_2D) if not incspeed else np.array([0.0, speed])
+            action = ActionMode.generate_random_action(mode) if not incspeed else np.array([0.0, speed])
             print(f"[Aciton info]     :      steering : {action[0]},      acceleration {action[1]}")
             o, rew, term, trun, inf = tm_env.step(action)
             

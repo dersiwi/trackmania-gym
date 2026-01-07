@@ -42,7 +42,7 @@ def main(cfg : TrainConfig, run_id : Optional[str] = None):
     obstransform = SpaceTransformer.get_instance() # == tm_env.transformer
     print(tm_env.observation_space)
     print(tm_env.action_space)
-    action_mode = ActionMode.get_mode(cfg.rl_env.env.continuous_actions, cfg.rl_env.env.actionmode)
+    action_mode = ActionMode.get_mode(cfg.rl_env.env.continuous_actions, cfg.rl_env.env.actiondim)
     try:
         o, info = tm_env.reset()
         for i in range(100000):

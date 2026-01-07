@@ -9,8 +9,7 @@ from game_interaction.game_instance_manager2 import GameInstanceManager
 from game_interaction.ipc_fields import IPCFields, IPCCommands
 from game_interaction.tminterface_commands import TMInterfaceCommands
 
-from trackmania_env.utils.actionmap import ActionMode
-
+from trackmania_env.utils.actionmap import ActionMode, merge_action_sequences
 class TMIProcessWrapper:
 
     """
@@ -120,7 +119,7 @@ class TMIProcessWrapper:
         """These two log average execution times of all commands."""
 
         self.actionmode = ActionMode.DISCRETE
-        """The type of actions to expect (either discrete or continuous.)"""
+        """The type of actions to expect (either discrete or continuous.), can be changed via IPC-Command."""
 
         self.simsteps_since_last_env_step : int = 0 #this should always equal self.simsteps_between_envsteps
         self.actions_to_send = [(False, False, False, False)] * self.simsteps_between_envsteps
@@ -147,26 +146,40 @@ class TMIProcessWrapper:
     def create_continuous_actions(self, action):
         """ This method takes a 1 D continuous action within [-1, 1] and translates it into a list of booleans to send to the game.
         """
-        self.actions_to_send = [(False, False, False, False)] * self.simsteps_between_envsteps
-        multiplier = 1 if action >= 0 else - 1
-        steps = 1 / self.simsteps_between_envsteps # this is the amount of simulation steps between each environment step.
-        accelerate, decelerate = (False, False, True, False), (False, False, False, True)
-        
-        for i in range(1, len(self.actions_to_send) + 1):
-            if action * multiplier > 1 - steps * i:
-                self.actions_to_send[-i] = accelerate if multiplier == 1 else decelerate
-
+        if action < 0:
+            self.actions_to_send = ActionMode.produce_action_sequence(action * (-1), n_actions=self.simsteps_between_envsteps, discrete_idx=ActionMode.DiscreteIndexes.BRAKE, 
+                                                                      mappable_region=(0.0, 1.0))
+        else:
+            self.actions_to_send = ActionMode.produce_action_sequence(action, n_actions=self.simsteps_between_envsteps, discrete_idx=ActionMode.DiscreteIndexes.ACCELERATION,
+                                                                      mappable_region=(0.0, 1.0))
+            
         #set the current action index to zero to allow actions to be sent (automatically disables action-sending after index > len(actions_to_send))
         self.curr_action_idx = 0
 
+    def create_continuous_actions3d(self, acceleration : float, breaking : float):
+        accseq = ActionMode.produce_action_sequence(actionval = acceleration, n_actions=self.simsteps_between_envsteps, 
+                                                    discrete_idx=ActionMode.DiscreteIndexes.ACCELERATION, mappable_region=(-0.67, 0.67)) 
+        breakseq = ActionMode.produce_action_sequence(actionval = breaking, n_actions=self.simsteps_between_envsteps, 
+                                                      discrete_idx=ActionMode.DiscreteIndexes.BRAKE,mappable_region=(-0.67, 0.67))
+        self.actions_to_send = merge_action_sequences(accseq, breakseq)
+        self.curr_action_idx = 0
+
+    def send_continuous_steering(self, continuous_steering_value : float):
+        steering = ActionMode.transform_steering(continuous_steering_value)
+        self.iface.execute_command(f"steer {int(steering)}")
+    
     def send_action(self, action : tuple[bool, bool, bool, bool]) -> dict:
         if self.actionmode == ActionMode.DISCRETE:
             left, right, acc, brake = action
             self.iface.set_input_state(left, right, acc, brake)
         elif self.actionmode == ActionMode.CONTINUOUS_2D:
             self.create_continuous_actions(action[1])
-            steering, breaking, acceleration = ActionMode.transform_continuous_2d(action)
-            self.iface.execute_command(f"steer {int(steering)}")
+            self.send_continuous_steering(action[0])
+
+        elif self.actionmode == ActionMode.CONTINUOUS_3D:
+            self.create_continuous_actions3d(action[1], action[2])
+            self.send_continuous_steering(action[0])
+            
         elif self.actionmode == ActionMode.CONTINUOUS_4D:
             raise NotImplementedError("")
 

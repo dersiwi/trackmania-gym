@@ -72,8 +72,8 @@ class Sb3ExperimentManager(ExperimentManager):
             self.callbacks.append(AccumRewardLogCallback())
             self.callbacks.append(ReturnCallback())
             
-        if self.cfg.rl_env.env.continuous_actions:
-            self.callbacks.append(ContinuousActionLogCallback())
+            if self.cfg.rl_env.env.continuous_actions:
+                self.callbacks.append(ContinuousActionLogCallback())
 
     def add_artifacts(self):
         """Add best model and checkpoint-model artifact"""

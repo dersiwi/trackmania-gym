@@ -146,7 +146,7 @@ class EnvConfig:
     May be wrong, if doing framestacking,..."""
 
     continuous_actions : bool
-    actionmode : str | int
+    actiondim : int
 
     ignore_stuck_for_n_steps_after_reset : int
     increase_timeout_intervals : list[int]

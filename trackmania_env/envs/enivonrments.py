@@ -74,7 +74,7 @@ def get_environment(cfg : TrainConfig, control_queue : Queue, response_queue : Q
             TM_ENV_CLASS = TMNF_Single_Agent_Env
         tm_env = TM_ENV_CLASS(**constructor_kwargs)
     else:
-        tm_env = ContinuousTMNF_Single_Agent_Env(**constructor_kwargs, actionspace= cfg.rl_env.env.actionmode)
+        tm_env = ContinuousTMNF_Single_Agent_Env(**constructor_kwargs, actiondim= cfg.rl_env.env.actiondim)
 
     
     tm_env.orientationless_respawn_manager = OrientationlessRespawnManager(respawn_coordinates=OrientationlessRespawnManager.get_respawns_for_very_long_checkpoints())
