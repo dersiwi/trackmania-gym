@@ -6,7 +6,7 @@ from trackmania_env.envs.single_agent_env2 import TMNF_Single_Agent_Env, Continu
 from trackmania_env.envs.testenv_single_agent import TestEnvironment
 
 from trackmania_env.observations.observations import get_observation_manager_from_cfg
-from trackmania_env.rewards.getrewards import get_reward_calculator
+from trackmania_env.rewards.getrewards import get_reward_calculator_from_cfg
 from trackmania_env.terminations.get_termination_manager import get_termination_manager
 
 from trackmania_env.utils.orientationless_random_respawn_manager import OrientationlessRespawnManager
@@ -61,7 +61,7 @@ def get_environment(cfg : TrainConfig, control_queue : Queue, response_queue : Q
     """
 
     obs_manager = get_observation_manager_from_cfg(cfg = cfg, wrap_obs_in_test = cfg.rl_env.env.wrap_obs_in_test, normalize=cfg.rl_env.env.normalize_obs)
-    reward_calculator = get_reward_calculator(reward_calculator_cfg = cfg.rl_env.reward_manager, normalize=cfg.rl_env.env.normalize_rewards)
+    reward_calculator = get_reward_calculator_from_cfg(reward_calculator_cfg = cfg.rl_env.reward_manager, normalize=cfg.rl_env.env.normalize_rewards)
     termination_manager = get_termination_manager(termination_cfg= cfg.rl_env.termination_manager)
 
     constructor_kwargs = _get_env_constructor_args(cfg, control_queue, response_queue, obs_manager, reward_calculator, termination_manager)

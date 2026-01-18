@@ -24,7 +24,7 @@ gmi:
   tm_loader_profile_name: "default"
   headless: False
   port: 8775
-  track : straight_line.Challenge.Gbx
+  track : simple1_validated.Challenge.Gbx
 
 wandb:
   use: False
