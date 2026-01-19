@@ -29,7 +29,7 @@ BANNED =  ["nextpoint_reference_index"]
 class Plot_Rewards_Callback(NonBlockingPlot):
     def __init__(self,env:TMNF_Single_Agent_Env, keys_to_plot:list[str]=None, y_lim=(-1, 1), plot_total : bool = True,backend:str = "matplotlib"):
 
-        reward_terms: list[str] = [r.name for r in  env.rew_calculator.reward_terms]
+        reward_terms: list[str] = [r.name for r in  env.rew_calculator.terms]
         reward_terms.append("total") #TODO total is only created during runtime. for now it works but maybe come up with something better 
         if keys_to_plot is not None:
             assert set(keys_to_plot).issubset(reward_terms), f"{keys_to_plot} not found in reward terms"
