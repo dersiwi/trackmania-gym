@@ -61,7 +61,7 @@ class ReturnCallback(BaseCallback):
     
 
 class ContinuousActionLogCallback(BaseCallback):
-    def __init__(self, verbose = 0):
+    def __init__(self, verbose = 0, log_minmax = True):
         super().__init__(verbose)
         self.actionmin : dict[str, float] = {}
         self.actionmax : dict[str, float] = {}
@@ -70,6 +70,7 @@ class ContinuousActionLogCallback(BaseCallback):
         self.maxprefix = "max_action_dim:"
         self.meanprefix = "mean_action_dim:"
         self.n_steps = 0
+        self.log_minmax = log_minmax
 
 
     def _on_step(self):#info["action"]
@@ -91,8 +92,9 @@ class ContinuousActionLogCallback(BaseCallback):
                     self.actionmean[self.meanprefix + actionkey] = action[dimidx]
         
         if ("terminated" in infos and infos["terminated"]) or ("truncated" in infos and infos["truncated"]):
-            wandb.log(self.actionmin)
-            wandb.log(self.actionmax)
+            if self.log_minmax:
+                wandb.log(self.actionmin)
+                wandb.log(self.actionmax)
             wandb.log(self.actionmean)
             self.actionmin : dict[str, float] = {}
             self.actionmax : dict[str, float] = {}

@@ -92,14 +92,15 @@ class ImageObservationTerm(ObservationTerm):
     def _get_obs(self, game_states, **kwargs):
         #this will be a bgra img and already has the shape of img_height x img_width.
         # NOTE maybe think of doing the rescaling of the img here but i am not sure sicne the img rescaling does TMI on its own
-        img = game_states[IPCFields.IMG] 
-        img = self.img_converter.cnvt_img(img)
+        raw_img = game_states[IPCFields.IMG] 
+        img = self.img_converter.cnvt_img(raw_img)
         # NOTE: when we are sure this work we will removw the assert
         assert img.shape[0] == self.num_channels , f"Expected {self.num_channels} color channels, got {img.shape[0]}"
         
         # Dump images if active 
         if self.imgs_to_dump > 0 or (self.dump_freq > 0 and self.n_imgs % self.dump_freq == 0):
-            self.img_converter.save_image(img, filepath=os.path.join(self.dump_dir, f"control_img_{self.n_imgs}.png"))
+            self.img_converter.save_image(img, filepath=os.path.join(self.dump_dir, f"observation_img_{self.n_imgs}.png"))
+            self.img_converter.save_image(raw_img , filepath=os.path.join(self.dump_dir, f"raw_img_{self.n_imgs}.png"))
             self.imgs_to_dump = 5 if self.n_imgs % self.dump_freq == 0 else self.imgs_to_dump
             self.imgs_to_dump -= 1
 

@@ -66,16 +66,14 @@ def get_environment(cfg : TrainConfig, control_queue : Queue, response_queue : Q
 
     constructor_kwargs = _get_env_constructor_args(cfg, control_queue, response_queue, obs_manager, reward_calculator, termination_manager)
     
-    if not cfg.rl_env.env.continuous_actions:
-        if cfg.rl_env.env.test or test:
-            constructor_kwargs.update(dict(platform = cfg.platforms.os))
-            TM_ENV_CLASS = TestEnvironment
-        else :
-            TM_ENV_CLASS = TMNF_Single_Agent_Env
-        tm_env = TM_ENV_CLASS(**constructor_kwargs)
+    if not cfg.rl_env.env.continuous_actions and not cfg.rl_env.env.test or test:
+        tm_env = TMNF_Single_Agent_Env(**constructor_kwargs)
     else:
         tm_env = ContinuousTMNF_Single_Agent_Env(**constructor_kwargs, actiondim= cfg.rl_env.env.actiondim)
 
+    if cfg.rl_env.env.test or test:
+            constructor_kwargs.update(dict(platform = cfg.platforms.os))
+            tm_env = TestEnvironment(**constructor_kwargs)
     
     tm_env.orientationless_respawn_manager = OrientationlessRespawnManager(respawn_coordinates=OrientationlessRespawnManager.get_respawns_for_very_long_checkpoints())
 
