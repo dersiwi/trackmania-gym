@@ -6,9 +6,9 @@ from trackmania_env.rewards.reward_terms.basic_terms import (
     AccumulatedDistanceReward,
     RaceFinished,
     TerminationPunishment,
-    HasWallConatact,
     NoProgressPunishment,
 )
+from trackmania_env.rewards.reward_terms.penalty_terms import HasWallConatact
 
 
 class RaceFinishedRewards(RewradCalculator):

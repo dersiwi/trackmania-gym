@@ -1,7 +1,7 @@
 from typing import Any
 from collections import deque
 
-from trackmania_env.rewards.reward_calculation import RewardTerm
+from trackmania_env.rewards.reward_calculation import RewardTerm, BoundedRewardterm
 from trackmania_env.utils import constants
 from game_interaction.ipc_fields import IPCFields
 from tminterface.structs import SimStateData
@@ -74,6 +74,16 @@ class OffTrackPunishment(RewardTerm):
         self.last_time = 0
         self.total_off_course_time = 0
 
+class HasWallConatact(BoundedRewardterm):
+
+    def __init__(self, weight):
+        """Boolean term, returns if 1, if one of the tires has wall contact."""
+        super().__init__(weight, "wall_contact")
+
+    def _get_term(self, observations, processed_obs, race_finished, other_terminations):
+        #ssD : SimStateData = observations[IPCFields.SIMSTATE]
+        #svc : SceneVehicleCar = ssD.scene_mobil 
+        return observations[IPCFields.SIMSTATE].scene_mobil.has_any_lateral_contact
 
 class AccumulatedWallPenalty(RewardTerm):
     # Theroretical maximial Value of the reward-term, before weighting.

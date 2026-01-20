@@ -3,7 +3,6 @@ Contains basic reward terms
     - AccumulatedDistanceReward
     - LateralDistanceReward
     - TerminationPunishment
-    - HasWallContact
     - SpeedReward
     - RaceFinished
     - ConstantRewardTerm
@@ -89,17 +88,6 @@ class TerminationPunishment(BoundedRewardterm):
 
         other_term_reward = ot
         return other_term_reward
-    
-class HasWallConatact(BoundedRewardterm):
-
-    def __init__(self, weight):
-        """Boolean term, returns if 1, if one of the tires has wall contact."""
-        super().__init__(weight, "wall_contact")
-
-    def _get_term(self, observations, processed_obs, race_finished, other_terminations):
-        #ssD : SimStateData = observations[IPCFields.SIMSTATE]
-        #svc : SceneVehicleCar = ssD.scene_mobil 
-        return observations[IPCFields.SIMSTATE].scene_mobil.has_any_lateral_contact
 
 class SpeedReward(RewardTerm):
     """Awards display-speed of the player; not weighted, range ~[0,1000]"""

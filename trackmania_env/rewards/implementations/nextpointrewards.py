@@ -10,10 +10,9 @@ from trackmania_env.rewards.reward_terms.basic_terms import (
     SpeedReward,
     LateralDistanceReward,
     TerminationPunishment,
-    HasWallConatact,
     NoProgressPunishment,
 )
-
+from trackmania_env.rewards.reward_terms.penalty_terms import HasWallConatact
 class NextPointRewards(RewradCalculator):
     def __init__(
         self,
