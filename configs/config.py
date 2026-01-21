@@ -118,7 +118,8 @@ class WandbConfig:
     entity: str
     project: str
     checkpoint_freq: int 
-    eval_freq:int
+    eval_freq : int
+    logminmax_continuous : bool
     
 @dataclass
 class EnvConfig:

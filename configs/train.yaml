@@ -27,8 +27,9 @@ gmi:
   track : simple1_validated.Challenge.Gbx
 
 wandb:
-  use: False
+  use: True
   entity : tmnf-practical-ss25
   project : tmnf_ppo
   checkpoint_freq : 500000 # after how many steps should the model be saved automatically
   eval_freq : 3000000 # after how many steps should we check if there is a new better mode
+  logminmax_continuous : False # If actions are continuous and this is True, then wandb logs min- and max- of actions per episode.

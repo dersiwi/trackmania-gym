@@ -73,7 +73,7 @@ class Sb3ExperimentManager(ExperimentManager):
             self.callbacks.append(ReturnCallback())
             
             if self.cfg.rl_env.env.continuous_actions:
-                self.callbacks.append(ContinuousActionLogCallback(log_minmax=False))
+                self.callbacks.append(ContinuousActionLogCallback(log_minmax=self.cfg.wandb.logminmax_continuous))
 
     def add_artifacts(self):
         """Add best model and checkpoint-model artifact"""
