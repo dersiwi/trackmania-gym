@@ -1,0 +1,3 @@
+[submodule "DIME"]
+	path = DIME
+	url = https://github.com/SgSiegens/DIME
