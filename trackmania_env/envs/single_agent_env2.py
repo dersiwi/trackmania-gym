@@ -16,19 +16,22 @@ from queue import Queue, Empty
 
 from tminterface.structs import SimStateData
 
-from game_interaction.ipc_fields import IPCCommands
+from game_interaction.ipc_fields import IPCCommands, IPCFields
 from game_interaction.tminterface_commands import TMInterfaceCommands
-from game_interaction.ipc_fields import IPCFields
+from game_interaction.ipc_command_sender import IPCommandSender
 
 from trackmania_env.observations.observation_manager import ObservationManager 
 from trackmania_env.rewards.reward_calculation import RewradCalculator
 from trackmania_env.terminations.termination_manager import TerminationManager
+
+
 from trackmania_env.utils.reference_line_manager import ReferenceLineManager
 from trackmania_env.utils.random_respawn_manager import RandomRespawnManager
 from trackmania_env.utils.orientationless_random_respawn_manager import OrientationlessRespawnManager
 from trackmania_env.utils.return_tracker import ReturnTracker
 from trackmania_env.utils.position_buffer import PositionBuffer
 from trackmania_env.utils.actionmap import ACTION_MAP, ActionMode
+
 from trackmania_env.envs.info import EnvironmentInfo
 
 
@@ -95,9 +98,10 @@ class TMNF_Single_Agent_Env(gym.Env):
         # variables for IPC communication
         self.command_queue = command_queue
         self.response_queue = response_queue
-        self.ipc_cmd_id = 0
-        """Command id for interprocess communication"""
-        self.__ipc_timeout : int = 10
+
+        self.cmd_sender = IPCommandSender(command_queue, response_queue)
+
+
 
         self.logger = logging.getLogger(self.__class__.__name__)
 
@@ -135,12 +139,9 @@ class TMNF_Single_Agent_Env(gym.Env):
         self.action_space = gym.spaces.Discrete(len(ACTION_MAP))
         self.is_discrete = is_discrete
 
-        self._send_command_to_process_wrapper(IPCCommands.get_cmd_command(self.ipc_cmd_id, 
-                                                                                             TMInterfaceCommands.set_variable(TMInterfaceCommands.Variables.SPEED, 
-                                                                                                                              value=game_speed)))
-        self._send_command_to_process_wrapper(IPCCommands.get_cmd_command(self.ipc_cmd_id, 
-                                                                                                TMInterfaceCommands.set_variable(TMInterfaceCommands.Variables.COUNTDOWN_SPEED, 
-                                                                                                                                value=countdown_speed)))
+        self.cmd_sender.set_gamespeed(game_speed)
+        self.cmd_sender.set_countdownspeed(countdown_speed)
+
         # this is the defautl simstateData when the car first gets spawned. We will use this for the random reset
         self.default_ssD = None
         self.default_set = False
@@ -174,43 +175,9 @@ class TMNF_Single_Agent_Env(gym.Env):
         info[EnvironmentInfo.NEXT_REFLINE_IDX] = self.reference_line.next_point_idx
         return info
     
-
-    def _send_command_to_process_wrapper(self, command : dict[str, any], timeout = 10) -> dict[str, any]:
-        """Sends a command to the process wrapper, asserts answer matches command and returns answer from process wrapper"""
-        max_commnd_sending_attempts = 1
-        attempt = 0
-        while attempt <= max_commnd_sending_attempts:
-            attempt += 1
-            try:
-                self.command_queue.put_nowait(command)
-                response = self.response_queue.get(timeout=timeout)
-                assert response[IPCFields.CMD_ID] == self.ipc_cmd_id, f"Got unexepected command id from response. Expected {self.ipc_cmd_id}, got : {response['cmd_id']}"
-                self.ipc_cmd_id += 1
-                if not response[IPCFields.STATUS] == IPCFields.STATUS_OK:
-                    self.logger.error(f"Got error when executing command {command[IPCFields.CMD]}, with message : {response[IPCFields.ERROR]}")
-                    raise AttributeError()
-                return response
-            except Empty as e:
-                self.logger.error(f"Tried sending commmand '{command[IPCFields.CMD_ID]}' {attempt} times and got no response; queue is empty.")
-            except TimeoutError as tr:
-                self.logger.error(f"Tried sending commmand '{command[IPCFields.CMD_ID]}' {attempt} times and got timeout error.")
-            except AttributeError as at:
-                self.logger.error(f"Tried sending commmand '{command[IPCFields.CMD_ID]}' {attempt} times and Attribute Error.")
-
-            time.sleep(0.5) #<- waiting period between command-sends.
-
-        raise TMICommunicationFaildException(n_tries=attempt, message="Were not able to send command even after multiple tries.") # <- If this happens; the responding end most likely crashed.
-
-
     def __get_raw_obs(self) -> Dict:
         """Helper function to translate the the environment's state into an observation"""
-
-        try:
-            # request images, wait for response from process and check that cmd-id of response matches request-id.
-            imgs_and_simstate = self._send_command_to_process_wrapper(IPCCommands.get_req_img_command(self.ipc_cmd_id))
-        except TimeoutError as t:
-            self.logger.error(f"Timeout error while waiting for images: {t}")
-
+        imgs_and_simstate = self.cmd_sender.send_command(IPCCommands.get_req_img_command())
         imgs_and_simstate[IPCFields.ACTION] = self.actions[-1] # TODO this is pretty ugly but current the easiest and best option to inlcude the action 
         return imgs_and_simstate
     
@@ -227,7 +194,7 @@ class TMNF_Single_Agent_Env(gym.Env):
     def request_map(self, trackname : str) -> None:
         """Sends a map-request command to the porcess-wrapper. Furthermore reloads referenceline and random-respawn manager. Also 
         sets mechanism to find new start-position."""
-        self._send_command_to_process_wrapper(IPCCommands.get_cmd_command(self.ipc_cmd_id, TMInterfaceCommands.map(trackname)))
+        self.cmd_sender.send_command(IPCCommands.get_cmd_command(TMInterfaceCommands.map(trackname)))
         self.track = trackname
         self.reference_line : ReferenceLineManager = ReferenceLineManager.load_dynamically(trackname)
         self.random_respawn_manager = RandomRespawnManager(self.reference_line.reference_line)
@@ -262,7 +229,7 @@ class TMNF_Single_Agent_Env(gym.Env):
         #store action internally and send via TMInterface
         action = self._get_action(action)
         self.actions.append(action)
-        raw_obs = self._send_command_to_process_wrapper(IPCCommands.step(self.ipc_cmd_id, action))
+        raw_obs = self.cmd_sender.send_command(IPCCommands.step(action))
         raw_obs[IPCFields.ACTION] = action 
 
         ssD : SimStateData = raw_obs[IPCFields.SIMSTATE]
@@ -357,7 +324,7 @@ class TMNF_Single_Agent_Env(gym.Env):
             self.default_ssD = raw_obs[IPCFields.SIMSTATE]
 
         if not self.first_reset:
-            self._send_command_to_process_wrapper(IPCCommands.waitforstep(self.ipc_cmd_id, self.waitforstep_timeout))
+            self.cmd_sender.send_command(IPCCommands.waitforstep(self.waitforstep_timeout))
             self.first_reset = True
         if not self.start_position_set:
             self.start_position = np.array(raw_obs[IPCFields.SIMSTATE].position)
@@ -372,7 +339,7 @@ class TMNF_Single_Agent_Env(gym.Env):
         if self.start_position is not None:
             telepos += self.start_position
         self.logger.info(f"Sending command to teleport car to : {telepos}")
-        self._send_command_to_process_wrapper(IPCCommands.get_cmd_command(self.ipc_cmd_id, TMInterfaceCommands.teleport(telepos )))
+        self.cmd_sender.send_command(IPCCommands.get_cmd_command(TMInterfaceCommands.teleport(telepos)))
         self.__wrong_starting_position = 0
     
     def reset_car(self, position : np.ndarray | list[float]):
@@ -390,8 +357,7 @@ class TMNF_Single_Agent_Env(gym.Env):
             # after car has been resettet to its starting position
             random_starting_pos, teleport = self.orientationless_respawn_manager.get_respawn_coordinates()
             if teleport:
-                self._send_command_to_process_wrapper(IPCCommands.get_cmd_command(self.ipc_cmd_id, 
-                                                                                                    TMInterfaceCommands.teleport(random_starting_pos)))
+                self.cmd_sender.send_command(IPCCommands.get_cmd_command(TMInterfaceCommands.teleport(random_starting_pos)))
                 assert self.reference_line.next_point_idx == 0, f"Expected reference line to be resetted, but next_point_idx == {self.reference_line.next_point_idx}"
                 nearest_idx = self.reference_line.locate_along_refline(random_starting_pos)
                 self.reference_line.next_point_idx = max(nearest_idx - 3, 0) #put it a little behind, since calculation is performed again.
@@ -399,13 +365,11 @@ class TMNF_Single_Agent_Env(gym.Env):
         
     def __respawn_car(self):
         """Respawns car by 'clicking' enter - uses internal game mechanic; also respawns in correct orientation"""
-        self._send_command_to_process_wrapper(IPCCommands.get_cmd_command(self.ipc_cmd_id, 
-                                                                                    TMInterfaceCommands.key_action("press", "enter")))
+        self.cmd_sender.send_command(IPCCommands.get_cmd_command(TMInterfaceCommands.key_action("press", "enter")))
     
     def __reset_car_position(self):
         """Executes teleportation command to stored car-position; ignores rotation and keeps current rotation of car."""
-        self._send_command_to_process_wrapper(IPCCommands.get_cmd_command(self.ipc_cmd_id, 
-                                                                                    TMInterfaceCommands.teleport(self.start_position)))
+        self.cmd_sender.send_command(IPCCommands.get_cmd_command(TMInterfaceCommands.teleport(self.start_position)))
     
     def render(self, mode = "rgb_array") -> Optional[np.array]:
         """
@@ -428,7 +392,7 @@ class TMNF_Single_Agent_Env(gym.Env):
         raw_obs = self.__get_raw_obs()
         ssD = raw_obs[IPCFields.SIMSTATE] 
         reset_state = (self.random_respawn_manager.make_ssD_from_ref_point(ssD=self.default_ssD))
-        self._send_command_to_process_wrapper(IPCCommands.rewind_state(self.ipc_cmd_id, reset_state))
+        self.cmd_sender.send_command(IPCCommands.rewind_state(reset_state))
 
 
 class ContinuousTMNF_Single_Agent_Env(TMNF_Single_Agent_Env):
@@ -444,8 +408,8 @@ class ContinuousTMNF_Single_Agent_Env(TMNF_Single_Agent_Env):
         
         self.action_space = gym.spaces.Box(low=-1, high = 1, shape = (actiondim,), dtype=np.float32)
         self.actionmode = ActionMode.get_mode(continuous=True, dim = actiondim)
-        self._send_command_to_process_wrapper(IPCCommands.set_actionmode(self.ipc_cmd_id, self.actionmode))
-
+        self.cmd_sender.send_command(IPCCommands.set_actionmode(self.actionmode))
+        
     def _get_action(self, action):
         # TODO this should also be done via the ActionMode class in the parent-environemnt
         return action

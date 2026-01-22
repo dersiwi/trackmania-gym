@@ -2,7 +2,7 @@
 
 from game_interaction.process_wrapper import TMIProcessWrapper
 from game_interaction.game_instance_manager2 import GameInstanceManager
-from game_interaction.ipc_fields import IPCCommands
+from game_interaction.ipc_fields import IPCCommands, IPCFields
 
 from multiprocessing import Process, Queue
 from configs.config import TrainConfig, EnvConfig
@@ -68,8 +68,8 @@ def start_process_and_wait_for_startsignal(train_config : TrainConfig, image_wid
     p.start()
 
     # wait for trackmania to load map and start simulation.
-    control_queue.put_nowait(IPCCommands.get_startsignal(512))
+    control_queue.put_nowait(IPCCommands.get_startsignal())
     startsignal = response_queue.get(timeout = 60)
-    assert startsignal["cmd_id"] == 512 and startsignal["status"] == 0
+    assert startsignal[IPCFields.STATUS] == IPCFields.STATUS_OK
 
     return p, control_queue, response_queue

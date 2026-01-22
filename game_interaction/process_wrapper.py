@@ -225,11 +225,15 @@ class TMIProcessWrapper:
 
     def handle_unanswered_commands(self, max_unanswered_time : float = 20):
         """Removes all commands that are unanswered for more than"""
+        ids_to_delete = []
         for cmd_id in self.unanswered_commands:
             if time.time() - self.unanswered_commands[cmd_id] > max_unanswered_time:
-                self.logger.error(f"Got a command that was unanswered for more than {max_unanswered_time} seconds. Command id: {cmd_id}")
-                self.response_queue.put_nowait({IPCFields.CMD_ID : cmd_id, IPCFields.STATUS : IPCFields.STATUS_ERROR, IPCFields.ERROR : "Could not answer command in given timeframe."})
-                del self.unanswered_commands[cmd_id]
+                ids_to_delete.append(cmd_id)
+        
+        for cmd_id in ids_to_delete:
+            self.logger.error(f"Got a command that was unanswered for more than {max_unanswered_time} seconds. Command id: {cmd_id}")
+            self.response_queue.put_nowait({IPCFields.CMD_ID : cmd_id, IPCFields.STATUS : IPCFields.STATUS_ERROR, IPCFields.ERROR : "Could not answer command in given timeframe."})
+            del self.unanswered_commands[cmd_id]
 
         self.time_since_last_unanswered_handling = time.time()
 
@@ -249,14 +253,15 @@ class TMIProcessWrapper:
         
         # now handle command
         cmd_id : int = cmd[IPCFields.CMD_ID]
+        command = cmd[IPCFields.CMD]
         assert not cmd_id == -1, "Command id cannot be -1 as this is used as an internal error-code."
 
         if cmd_id == self.last_received_command_id:
             # just skip commands with doubled command-ids (commands may be sent more than once by other processes; due to error-handling e.g.)
-            self.logger.warning(f"Got command with id {cmd_id} more than once. Ignoring.")
-            return None
-
-        command = cmd[IPCFields.CMD]
+            self.logger.warning(f"Got command with id {cmd_id} and command=={command} more than once. Ignoring.")
+            self.answer_command({IPCFields.CMD_ID : cmd_id, IPCFields.STATUS : IPCFields.STATUS_ERROR, IPCFields.ERROR : f"Got command with id {cmd_id} and command=={command} more than once."})
+            return None 
+        
         self.unanswered_commands[cmd_id] = time.time()
 
         if command == IPCCommands.ACT:

@@ -56,7 +56,7 @@ def main(cfg : TrainConfig):
 
     finally:
         # Finalize training and close game all processes.
-        control_queue.put(IPCCommands.get_end_syncloop_command(1000)) 
+        control_queue.put(IPCCommands.get_end_syncloop_command()) 
         tmi_process.join()
         
 

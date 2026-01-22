@@ -52,52 +52,52 @@ class IPCCommands:
         SET_ACTIONMODE = 9
 
         @staticmethod
-        def get_act_command(command_id : int, action : tuple[bool, bool, bool, bool]) -> dict[str, any]:
+        def get_act_command(action : tuple[bool, bool, bool, bool]) -> dict[str, any]:
             """Creates command for IPC communication for request_image()"""
-            return {IPCFields.CMD_ID : command_id, IPCFields.CMD : IPCCommands.ACT, IPCFields.ARGS : action}
+            return {IPCFields.CMD_ID : 0, IPCFields.CMD : IPCCommands.ACT, IPCFields.ARGS : action}
             
         @staticmethod
-        def get_req_img_command(command_id : int, continuous : bool = False) -> dict[str, any]:
+        def get_req_img_command(continuous : bool = False) -> dict[str, any]:
             """Creates command for IPC communication for request_image()"""
-            return {IPCFields.CMD_ID : command_id, IPCFields.CMD : IPCCommands.REQ_IMG, IPCFields.ARGS : continuous}
+            return {IPCFields.CMD_ID : 0, IPCFields.CMD : IPCCommands.REQ_IMG, IPCFields.ARGS : continuous}
         
         @staticmethod
-        def get_end_syncloop_command(command_id : int) -> dict[str, any]:
+        def get_end_syncloop_command() -> dict[str, any]:
             """Returns command to end syncloop execution."""
-            return {IPCFields.CMD_ID : command_id, IPCFields.CMD : IPCCommands.END_SYNCLOOP, IPCFields.ARGS : None}
+            return {IPCFields.CMD_ID : 0, IPCFields.CMD : IPCCommands.END_SYNCLOOP, IPCFields.ARGS : None}
         
         @staticmethod
-        def get_cmd_command(command_id : int, command : str) -> dict[str, any]:
+        def get_cmd_command(command : str) -> dict[str, any]:
             """Returns a command (for TMIProcessWrapper) that tells the underlying TMInterface to send a command to the game-instance."""
-            return {IPCFields.CMD_ID : command_id, IPCFields.CMD : IPCCommands.EXECUTE_COMMAND, IPCFields.ARGS : command}
+            return {IPCFields.CMD_ID : 0, IPCFields.CMD : IPCCommands.EXECUTE_COMMAND, IPCFields.ARGS : command}
         
         @staticmethod
-        def get_startsignal(command_id : int) -> dict[str, any]:
+        def get_startsignal() -> dict[str, any]:
             """Returns a command which only sends a response, once the server is sending `SC_SYNC' commands; i.e. track has started."""
-            return {IPCFields.CMD_ID : command_id, IPCFields.CMD : IPCCommands.SIMULATION_STARTED}
+            return {IPCFields.CMD_ID : 0, IPCFields.CMD : IPCCommands.SIMULATION_STARTED}
         
         @staticmethod
-        def prevent_simulation_finish(command_id : int) -> dict[str, any]:
+        def prevent_simulation_finish() -> dict[str, any]:
             """Sends command to call ifcae.prevent_simulation_finish """
-            return {IPCFields.CMD_ID : command_id, IPCFields.CMD : IPCCommands.REVENT_SIM_FINISH}
+            return {IPCFields.CMD_ID : 0, IPCFields.CMD : IPCCommands.REVENT_SIM_FINISH}
         
         @staticmethod
-        def rewind_state(command_id : int, state : SimStateData) -> dict[str, any]:
+        def rewind_state(state : SimStateData) -> dict[str, any]:
             """Sends command to rewind the state to the given simstate """
-            return {IPCFields.CMD_ID : command_id, IPCFields.CMD : IPCCommands.REWIND_STATE, IPCFields.ARGS : state}
+            return {IPCFields.CMD_ID : 0, IPCFields.CMD : IPCCommands.REWIND_STATE, IPCFields.ARGS : state}
         
         @staticmethod
-        def step(command_id : int, action : tuple[bool, bool, bool, bool]) -> dict[str, any]:
+        def step(action : tuple[bool, bool, bool, bool]) -> dict[str, any]:
             """Sends a complete MDP step-command. Given action will be sent to agent, returns images and gamestates """
-            return {IPCFields.CMD_ID : command_id, IPCFields.CMD : IPCCommands.STEP, IPCFields.ARGS : action}
+            return {IPCFields.CMD_ID : 0, IPCFields.CMD : IPCCommands.STEP, IPCFields.ARGS : action}
 
         @staticmethod
-        def waitforstep(command_id : int, max_wait_duraion : float) -> dict[str, any]:
+        def waitforstep(max_wait_duraion : float) -> dict[str, any]:
             """Sends command to setp process wrapper into stepping mode """
-            return {IPCFields.CMD_ID : command_id, IPCFields.CMD : IPCCommands.WAITFORSTEP, IPCFields.ARGS : max_wait_duraion}
+            return {IPCFields.CMD_ID : 0, IPCFields.CMD : IPCCommands.WAITFORSTEP, IPCFields.ARGS : max_wait_duraion}
         
         @staticmethod
-        def set_actionmode(command_id : int, mode : int) -> dict[str, any]:
+        def set_actionmode(mode : int) -> dict[str, any]:
             """Sest the process-wrapper to expect eithert continuous or discrete actions. Default is discrete!
             @see from trackmania_env.utils.actionmap import ActionMode the modes you can choose from."""
-            return {IPCFields.CMD_ID : command_id, IPCFields.CMD : IPCCommands.SET_ACTIONMODE, IPCFields.ARGS : mode}
+            return {IPCFields.CMD_ID : 0, IPCFields.CMD : IPCCommands.SET_ACTIONMODE, IPCFields.ARGS : mode}

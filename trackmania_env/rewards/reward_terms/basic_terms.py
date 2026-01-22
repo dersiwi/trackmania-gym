@@ -8,7 +8,6 @@ Contains basic reward terms
     - ConstantRewardTerm
     - NoProgressPunishment
     - OffTrackPunishment
-    - AccumulatedWallPenalty
     """
 
 from trackmania_env.rewards.reward_calculation import RewardTerm, BoundedRewardterm
@@ -171,4 +170,3 @@ class NoProgressPunishment(RewardTerm):
     
     def reset(self):
         self.steps_since_last_progress = 0
-
