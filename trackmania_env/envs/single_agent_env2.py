@@ -260,6 +260,10 @@ class TMNF_Single_Agent_Env(gym.Env):
 
         self.n_steps += 1
         self.total_steps += 1
+        
+        # # Ensures reward is a scalar to prevent NumPy DeprecationWarnings
+        reward = reward.item()
+
         return processed_obs, reward, terminated, truncated, info
     
     def reset(self, seed = None, options = None)-> Tuple[gym.spaces.Dict,Dict[str,Any]]:
