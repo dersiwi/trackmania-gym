@@ -24,7 +24,7 @@ class ReturnTracker:
         Args:
             reward (float)  : Reward of the current environment step """
         self.discounted_rewards[1:] = self.discounted_rewards[:-1] * self.gamma
-        self.discounted_rewards[0] = reward
+        self.discounted_rewards[0] = reward.item()
 
 
     def get_return(self) -> np.ndarray:
