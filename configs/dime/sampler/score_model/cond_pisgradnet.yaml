@@ -1,0 +1,10 @@
+use_target_score: ${use_target_score}
+num_layers: 3
+num_hid: 256
+outer_clip: 1e4
+inner_clip: 1e2
+
+weight_init: 1e-8
+bias_init: 0.
+layer_norm: false
+time_coder_out: ${sampler.score_model.num_hid}

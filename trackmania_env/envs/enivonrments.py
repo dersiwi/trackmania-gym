@@ -13,6 +13,8 @@ from trackmania_env.utils.orientationless_random_respawn_manager import Orientat
 
 from configs.config import TrainConfig
 
+from omegaconf import OmegaConf
+
 
 
 def _get_env_constructor_args(cfg : TrainConfig, control_queue : Queue, response_queue : Queue,
@@ -45,7 +47,9 @@ def _get_env_constructor_args(cfg : TrainConfig, control_queue : Queue, response
         countdown_speed= env_cfg.countdown_speed,
         waitforstep_timeout_in_s= env_cfg.waitforstep_timeout_in_s,
         startposition_accuracy_threshold= env_cfg.startposition_accuracy_threshold,
-        gamma= cfg.sb3.algorithm_params.gamma # TODO : This is maybe not the greatest idea, as soon as we work with smth other than sb3 this has to go
+        gamma = OmegaConf.select(cfg, "sb3.algorithm_params.gamma") or \
+        OmegaConf.select(cfg, "alg.gamma", default=0.99)
+        # gamma= cfg.sb3.algorithm_params.gamma # TODO : This is maybe not the greatest idea, as soon as we work with smth other than sb3 this has to go
     )
     return constructor_kwargs
 
