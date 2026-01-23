@@ -86,7 +86,8 @@ class BaseJaxPolicy(BasePolicy):
             # Minimal dict support: flatten
             keys = list(self.observation_space.keys())
             vectorized_env = is_vectorized_observation(observation[keys[0]], self.observation_space[keys[0]])
-
+            
+            # TODO: We changed the way how the observations are concatenated, we need to figure out if this is ok
             processed_obs = []
             for key in keys:
                 batch_size = observation[key].shape[0] if vectorized_env else 1
