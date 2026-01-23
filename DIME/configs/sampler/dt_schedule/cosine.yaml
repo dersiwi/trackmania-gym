@@ -1,0 +1,5 @@
+_target_: diffusion.common.scheduler.get_cosine_schedule
+total_steps: ${alg.actor.diff_steps}
+min: 0.001
+s: 0.008
+pow: 2

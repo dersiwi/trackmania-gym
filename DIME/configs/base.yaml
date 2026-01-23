@@ -1,0 +1,26 @@
+#@package _global_
+defaults:
+  - alg: dime
+  - sampler: dis
+  - setup
+  - _self_
+
+seed: 0
+use_jit: true
+tot_time_steps: 1e6
+log_freq: 100
+step_size: ${alg.optimizer.lr_actor}
+step_size_betas: ${alg.optimizer.lr_actor}
+use_path_gradient: False
+use_target_score: False
+dt: 0.1
+learn_dt: True
+per_step_dt: False
+per_dim_friction: True
+# Related to the learning rate scheduler (not used in DIME)
+use_step_size_scheduler: False
+warmup: const
+iters: ${tot_time_steps}
+warmup_iters: 60_000
+
+env_name: dm_control/dog-run

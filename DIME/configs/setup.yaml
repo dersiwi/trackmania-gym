@@ -1,0 +1,6 @@
+wandb:
+  entity: null
+  group: DIME_${env_name}
+  project: DIME
+  job_type: lr${alg.optimizer.lr_actor}
+  activate: True
