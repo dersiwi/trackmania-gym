@@ -1,0 +1,126 @@
+rl_env:
+  obs_manager:
+    _target_: trackmania_env.observations.implementations.nextpoint_obs.NextPointObsManager
+    name: nextpointobs
+    img_width: 128
+    img_height: 128
+    colorspace: grayscale
+    camera_id: 2
+    convert_torch: true
+  reward_manager:
+    _target_: trackmania_env.rewards.implementations.simple_rewards.RaceFinishedRewards
+    race_finished_reward_weight: 300
+    scaled_by_steps_taken: true
+    accum_distance_weight: 100
+    accum_enhanced_by_amount_travelled: true
+    accum_exp_factor: 1.2
+    other_termination_punishment: -5
+    wall_contact_weight: -0.15
+    steps_without_progress_until_punishment: 512
+    use_punishment: true
+  termination_manager:
+    name: timeout
+    max_steps_until_reset: 2049
+    ignore_stuck_for_n_steps_after_reset: 80
+  env:
+    _partial_: true
+    _target_: trackmania_env.envs.single_agent_env2.TMNF_Single_Agent_Env
+    n_previous_actions: 10
+    reset_mode: respawn
+    position_buffer_size: 20
+    position_moved_threshold: 0.2
+    normalize_rewards: true
+    normalize_obs: true
+    obs_have_imgs: true
+    normalize_images: true
+    check_channels: true
+    store_imgs_as_uint8: false
+    game_speed: 70
+    countdown_speed: 70
+    wrap_obs_in_test: false
+    test: false
+    startposition_accuracy_threshold: 0.5
+    ignore_stuck_for_n_steps_after_reset: 80
+    automatic_prevent_sim_finish: true
+    disable_waitforstep_after_n_consecutive_timeouts: 5
+    actions_per_second: 20
+    waitforstep_timeout_in_s: 1.2
+    use_rewind: true
+    continuous_actions: true
+    actiondim: 3
+  wrappers:
+    monitor:
+      _partial_: true
+      _target_: stable_baselines3.common.monitor.Monitor
+sb3:
+  constructor:
+    _partial_: true
+    _target_: sb3_contrib.tqc.TQC
+    policy: MultiInputPolicy
+    verbose: 1
+  algorithm_params:
+    learning_rate: 0.0003
+    buffer_size: 1000000
+    learning_starts: 10000
+    batch_size: 256
+    tau: 0.005
+    gamma: 0.99
+    train_freq: 1
+    gradient_steps: 1
+    action_noise: null
+    replay_buffer_class: null
+    replay_buffer_kwargs: null
+    optimize_memory_usage: false
+    ent_coef: auto
+    target_update_interval: 1
+    target_entropy: auto
+    top_quantiles_to_drop_per_net: 2
+    use_sde: false
+    sde_sample_freq: -1
+    use_sde_at_warmup: false
+    stats_window_size: 100
+    seed: null
+    _init_setup_model: true
+wandb_callbacks:
+  _partial_: true
+  _target_: wandb.integration.sb3.WandbCallback
+  model_save_freq: 1000
+  gradient_save_freq: 100
+  log: all
+  verbose: 2
+models:
+  _target_: neural_networks.vision_encoder.conv_NNs.VisionModelSix
+lr_scheduler:
+  _target_: neural_networks.lr_schedulers.DropoffScheduler
+  initial_learning_rate: 0.00025
+  scheduling_beginn: 0.25
+  scheduling_type: linear
+  propagate_progress: true
+policy:
+  name: basic
+  type: MultiInputPolicy
+  extractors_out_dim: 64
+  share_features_extractor: false
+platforms_config_path: configs/platforms.yaml
+extractors_out_dim: 64
+debug: false
+headless: false
+learn_args:
+  total_timesteps: 8000000
+  log_interval: 1
+  reset_num_timesteps: true
+  progress_bar: true
+  tb_log_name: PPO
+gmi:
+  launch: true
+  tm_loader_profile_name: default
+  headless: false
+  port: 8775
+  track: simple1_validated.Challenge.Gbx
+wandb:
+  use: true
+  entity: tmnf-practical-ss25
+  project: tmnf_ppo
+  checkpoint_freq: 500000
+  eval_freq: 3000000
+  logminmax_continuous: false

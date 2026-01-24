@@ -7,9 +7,9 @@ constructor:
 
 algorithm_params:
   learning_rate: 0.0003              # Learning rate or scheduler for the policy and Q-networks
-  buffer_size: 500000              # Maximum size of the replay buffer
-  learning_starts: 100               # Number of steps before training starts (buffer warm-up)
-  batch_size: 512                    # Size of minibatch sampled from replay buffer
+  buffer_size: 100000              # Maximum size of the replay buffer
+  learning_starts: 10000              # Number of steps before training starts (buffer warm-up)
+  batch_size: 256                   # Size of minibatch sampled from replay buffer
   tau: 0.005                         # Soft update coefficient for the target network (Polyak averaging)
   gamma: 0.99                        # Discount factor
   train_freq: 1                      # How often to train (every `n` environment steps)
