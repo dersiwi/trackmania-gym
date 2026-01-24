@@ -81,6 +81,7 @@ class TMIProcessWrapper:
         self.__ui_disabled = False
         self.__cam_set = False
 
+        self.n_total_steps = 0
         self.n_steps = 0
         """Tracks number of steps to track step-frequency"""
         self.step_time = time.time()
@@ -223,7 +224,7 @@ class TMIProcessWrapper:
             self.logger.info(f"Average execution time of IPC-Commands {self.avg_cmd_exectime}s.")
         self.response_queue.put_nowait(response)
 
-    def handle_unanswered_commands(self, max_unanswered_time : float = 20):
+    def handle_unanswered_commands(self, max_unanswered_time : float = 30):
         """Removes all commands that are unanswered for more than"""
         ids_to_delete = []
         for cmd_id in self.unanswered_commands:
@@ -232,7 +233,7 @@ class TMIProcessWrapper:
         
         for cmd_id in ids_to_delete:
             self.logger.error(f"Got a command that was unanswered for more than {max_unanswered_time} seconds. Command id: {cmd_id}")
-            self.response_queue.put_nowait({IPCFields.CMD_ID : cmd_id, IPCFields.STATUS : IPCFields.STATUS_ERROR, IPCFields.ERROR : "Could not answer command in given timeframe."})
+            self.response_queue.put_nowait({IPCFields.CMD_ID : cmd_id, IPCFields.STATUS : IPCFields.STATUS_ERROR, IPCFields.ERROR : f"Could not answer command '{cmd_id}' in given timeframe."})
             del self.unanswered_commands[cmd_id]
 
         self.time_since_last_unanswered_handling = time.time()
@@ -245,6 +246,7 @@ class TMIProcessWrapper:
         """Checks command queue for ICP and handles command appropriately. Returns command."""
         # first get command
         assert self.command_queue is not None
+        
         try:
             cmd = self.command_queue.get_nowait()
         except Empty:
@@ -254,6 +256,7 @@ class TMIProcessWrapper:
         # now handle command
         cmd_id : int = cmd[IPCFields.CMD_ID]
         command = cmd[IPCFields.CMD]
+        #self.logger.info(f"Executing Command {command}, id : {cmd_id}, self.waitforstep_req_img_next_syncstep  = {self.waitforstep_req_img_next_syncstep}, self.waitforstep_answer_expected = {self.waitforstep_answer_expected},  self.expect_next_step_command= {self.expect_next_step_command}")
         assert not cmd_id == -1, "Command id cannot be -1 as this is used as an internal error-code."
 
         if cmd_id == self.last_received_command_id:
@@ -318,6 +321,7 @@ class TMIProcessWrapper:
         self.expect_next_step_command = False
         self.ingame_time_passed = 0
         self.n_steps += 1
+        self.n_total_steps += 1
         # TODO: if debug=False can we then skip this whole if block ?
         if self.n_steps % 100 == 0 and self.n_steps > 0:
             gt= time.time() - self.step_time

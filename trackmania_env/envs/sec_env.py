@@ -11,7 +11,9 @@ from multiprocessing import Process, Queue
 
 from configs.config import TrainConfig
 
-from trackmania_env.envs.single_agent_env2 import TMNF_Single_Agent_Env, TMICommunicationFaildException
+from trackmania_env.envs.single_agent_env2 import TMNF_Single_Agent_Env
+
+from game_interaction.ipc_command_sender import TMICommunicationFaildException
 
 from game_interaction.run_multiprocess_wrapper import start_process_and_wait_for_startsignal
 from game_interaction.ipc_fields import IPCCommands

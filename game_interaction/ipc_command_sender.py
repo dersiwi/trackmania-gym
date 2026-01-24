@@ -106,7 +106,7 @@ class IPCommandSender:
             except TimeoutError as tr:
                 self.logger.error(f"Tried sending commmand '{command[IPCFields.CMD_ID]}' {attempt} times and got timeout error.")
             except ResponseIsErrorException as rie:
-                self.logger.error(f"Tried sending commmand '{command[IPCFields.CMD_ID]}' {attempt} times and got ResponseIsErrorException.")
+                self.logger.error(f"Tried sending commmand '{response[IPCFields.CMD_ID]}' {attempt} times and got ResponseIsErrorException")
 
             command, attempt, retry = self._prepare_retry(command, attempt)
 
