@@ -50,3 +50,14 @@ def make_tmn_extractor(
             "Only gym.spaces.Box and gym.spaces.Dict are supported."
         )
 
+def get_extractor_class( observation_space: gym.Space):
+
+    if isinstance(observation_space, gym.spaces.Box):
+        return TMN_Box_Extractor    
+    elif isinstance(observation_space, gym.spaces.Dict):
+        return TMN_Dict_Extractor
+    else:
+        raise TypeError(
+            f"Unsupported observation space type: {type(observation_space).__name__}. "
+            "Only gym.spaces.Box and gym.spaces.Dict are supported."
+        )

@@ -2,6 +2,8 @@ _target_: trackmania_env.observations.implementations.sophy_obs.SophyObsManager
 name: "sophy"
 
 # image related
+obs_have_imgs: True
+check_channels: True
 img_width: 64
 img_height: 64
 store_imgs_as_uint8: True
