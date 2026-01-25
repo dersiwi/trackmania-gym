@@ -49,9 +49,10 @@ def main(cfg : TrainConfig, run_id : Optional[str] = None):
             env= tm_env,
             eval_freq= cfg.wandb.eval_freq,
             checkpoint_freq= cfg.wandb.checkpoint_freq,
+            n_envs=N_ENVS,
             )
         model = get_model_from_config(cfg = cfg, tm_env = tm_env, print_params= True, run_id= exp_manager.get_tensorboard_login_identifier())
-        model.learn(**cfg.learn_args)
+        model.learn(**cfg.learn_args, callback= exp_manager.get_callbacks())
     except Exception as e:
         traceback.print_exc()
 
