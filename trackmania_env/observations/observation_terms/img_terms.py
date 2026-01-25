@@ -53,25 +53,33 @@ class ImgConverter:
     
 class ImageObservationTerm(ObservationTerm):
 
-    def __init__(self,normalize = True, name="image", colorspace="grayscale", img_width : int = 128, img_height : int = 128, dtype=np.float32):
+    def __init__(self,normalize = True, name="image", colorspace="grayscale", img_width : int = 128, img_height : int = 128, store_as_uint8:bool = True ,norm_uint8:bool= False):
         super().__init__(name, normalize)
 
-        
-        self.dtype = dtype
+        self.dtype = np.uint8 if store_as_uint8 else np.float32
         self.img_converter = ImgConverter(colorspace)
         self.num_channels = self.img_converter.num_channels
+        self.norm_uint8 = norm_uint8
 
         self.img_width = img_width
         self.img_height = img_height
 
+        high_val = 1.0 if (normalize and (not np.issubdtype(self.dtype, np.integer) or self.norm_uint8)) else 255
+
         self.observation_space = Box(
             low=0,
-            high= 1 if normalize else 255, 
+            high= high_val, 
             shape=(self.img_converter.num_channels,img_height,img_width), 
             dtype=self.dtype)
         
         if self.normalize and np.issubdtype(self.dtype, np.integer):
-            print(f"Storing normalized images as uint8 will lead to data loss, Either disable normalization or set dtype to float32. \nCurrent dtype : {self.dtype}")
+            warning = f"""
+                WARNING: Potential data loss detected. Storing normalized values [0, 1] in
+                integer format ({self.dtype}) will cause non-integers (e.g., 0.4) to be 
+                capped to 0 or 1. If this was intended by setting norm_uint8=True then you 
+                can safely ignore this warning otherwise set store_as_uint8=False or disable normalization.
+            """
+            print(warning)
 
         self.dump_freq = -1 # only if greater 0 images are dumped
         self.dump_dir = None
@@ -109,7 +117,11 @@ class ImageObservationTerm(ObservationTerm):
         return img.astype(dtype=self.dtype), {}
 
     def _normalize(self, obs):
-        return (obs / 255).astype(self.dtype)
+        #NOTE: Per default if uint8 is set as dtype then we dont normalize unless norm_uint8 = True
+        if np.issubdtype(self.dtype, np.integer) and not self.norm_uint8:
+            return obs.astype(self.dtype)
+        else: 
+            return (obs / 255).astype(self.dtype)
     
 
     def flatten(self, processed_obs):

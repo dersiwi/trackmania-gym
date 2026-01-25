@@ -8,7 +8,7 @@ IMAGE_SIZE = 64
 """Image size as specified in sophy paper."""
 
 class SophyObsManager(ObservationManager):
-    def __init__(self, colorspace, convert_torch, normalize, img_width, img_height,maxlen_history:int = 3,lookahead_sec = 6,n_points = 60, img_dtype=np.float32,**kwargs):
+    def __init__(self, colorspace, convert_torch, normalize, img_width, img_height,maxlen_history:int = 3,lookahead_sec = 6,n_points = 60,  store_imgs_as_uint8:bool= True,norm_uint8_imgs:bool= False,**kwargs):
         #NOTE: this with the kwargs is only so that we could easily use configs to instantiate
         """
         Initializes the GT Sophy-style observation manager (https://arxiv.org/pdf/2406.12563v1).
@@ -34,7 +34,7 @@ class SophyObsManager(ObservationManager):
 
         super().__init__(
             observation_terms= [
-                ImageObservationTerm(colorspace= colorspace, img_height=img_height, img_width= img_width, dtype=img_dtype),
+                ImageObservationTerm(colorspace= colorspace, img_height=img_height, img_width= img_width, store_as_uint8=store_imgs_as_uint8,norm_uint8=norm_uint8_imgs),
                 PropriocentricTerm(maxlen_history=maxlen_history),
                 GlobalFeaturesTerm(lookahead_sec=lookahead_sec,n_points=n_points)
             ],

@@ -4,6 +4,8 @@ name: "nextpointobs"
 # image related
 img_width: 128
 img_height: 128
+store_imgs_as_uint8: True
+norm_uint8_imgs: False
 colorspace: "grayscale"
 camera_id: 2
 

@@ -4,6 +4,8 @@ name: "sophy"
 # image related
 img_width: 64
 img_height: 64
+store_imgs_as_uint8: True
+norm_uint8_imgs: False
 colorspace: "rgb"
 camera_id: 3
 
