@@ -5,7 +5,7 @@ sys.path.append(os.path.abspath(os.path.join(
 
 from game_interaction.ipc_fields import IPCCommands
 
-from game_interaction.run_multiprocess_wrapper import start_process_and_wait_for_startsignal
+from game_interaction.process_management import ProcessManagement
 from trackmania_env.envs.enivonrments import get_environment
 
 from trackmania_env.envs.testenv_single_agent import TestEnvironment
@@ -29,7 +29,8 @@ _HYDRA_PARAMS = {
 def main(cfg : TrainConfig):
     cfg = load_and_merge_platform(cfg)
 
-    tmi_process, control_queue, response_queue = start_process_and_wait_for_startsignal(cfg,cfg.rl_env.obs_manager.img_width, cfg.rl_env.obs_manager.img_height)
+    pm = ProcessManagement(cfg, cfg.rl_env.obs_manager.img_width, cfg.rl_env.obs_manager.img_height)
+    _, control_queue, response_queue = pm.start_process_and_wait_for_startsignal()
     tm_env : TestEnvironment = get_environment(cfg, control_queue, response_queue, test=True)
 
     obs, info = tm_env.reset()
@@ -56,8 +57,7 @@ def main(cfg : TrainConfig):
 
     tm_env.step_with_manual_input()
     
-    control_queue.put(IPCCommands.get_end_syncloop_command())
-    tmi_process.join()
+    pm.finalize_processes()
 
 if __name__ == "__main__":
     main()

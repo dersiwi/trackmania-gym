@@ -466,7 +466,7 @@ class TMIProcessWrapper:
                     self.__ui_disabled = True
 
                 if not self.__start_cmd_id == -1:
-                    self.answer_command({IPCFields.CMD_ID : self.__start_cmd_id, IPCFields.STATUS : IPCFields.STATUS_OK})
+                    self.answer_command({IPCFields.CMD_ID : self.__start_cmd_id, IPCFields.STATUS : IPCFields.STATUS_OK, IPCFields.ARGS : {"tm_pid" : self.gim.tm_process_id}})
                     self.__start_cmd_id = -1
                     self.logger.info("Sending back command that abcdefg is ready.")
 
