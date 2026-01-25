@@ -11,6 +11,7 @@ import os
 import time 
 from filelock import FileLock
 import psutil
+import logging
 if os.name == 'nt': 
     import win32process
     import win32gui 
@@ -69,7 +70,7 @@ class GameInstanceManager:
         self.game_activated = False
 
         assert os.path.exists(self.path_to_plugin), f"Python_Link.as was not found at '{self.path_to_plugin}'."
-
+        self.logger = logging.getLogger(self.__class__.__name__)
 
     def get_tminterface(self) -> TMInterface:
         """Get the TMInterface instance associated with this game-instance."""
@@ -83,7 +84,7 @@ class GameInstanceManager:
                     self.tminterface.register(10)
                     break
                 except ConnectionRefusedError as e:
-                    print(e)
+                    self.logger.error(e)
 
     def is_game_running(self) -> bool:
         return (self.tm_process_id is not None) and (self.tm_process_id in (p.pid for p in psutil.process_iter()))
@@ -144,7 +145,7 @@ class GameInstanceManagerWindows(GameInstanceManager):
             for hwnd in get_hwnds_for_pid(self.tm_process_id):
                 if win32gui.GetWindowText(hwnd).startswith("Track"):
                     self.tm_window_id = hwnd
-                    print(f"Found Trackmania window id: {self.tm_window_id=}")
+                    self.logger.info(f"Found Trackmania window id: {self.tm_window_id=}")
                     return
             if time.time() - begin > 10:
                 raise WindowsError("Could not find window within 10s.")
@@ -173,7 +174,7 @@ class GameInstanceManagerWindows(GameInstanceManager):
             for child in children:
                 if "TmForever" in child.name():
                     self.tm_process_id = child.pid
-                    print(f"Found Trackmania process id: {self.tm_process_id}")
+                    self.logger.info(f"Found Trackmania process id: {self.tm_process_id}")
                     return
 
             if not loader_proc.is_running():
@@ -256,8 +257,8 @@ class GameInstanceMangerLinux(GameInstanceManager):
                 elif (
                     len(c1_diff_c2) == 0 and len(c1) > 0
                 ) or window_search_depth >= 10:  # 10 is an arbitrary cutoff in this search we do not fully understand
-                    print(
-                        "Warning: Worker could not find the window of the game it just launched, stopped at window_search_depth",
+                    self.logger.warning(
+                        "Worker could not find the window of the game it just launched, stopped at window_search_depth",
                         window_search_depth,
                     )
                     break
@@ -283,7 +284,7 @@ class GameInstanceMangerLinux(GameInstanceManager):
                     self.tm_process_id = new_pids.pop()
                     break
                 else:
-                    print(f"[WARN] Multiple new PIDs detected: {new_pids}")
+                    self.logger.warning(f"Multiple new PIDs detected: {new_pids}")
                     self.tm_process_id = list(new_pids)[0]  # just pick the first one?
                     break
 
@@ -325,11 +326,11 @@ class GameInstanceMangerLinux(GameInstanceManager):
     def _set_window_focus(self):
         if not self.game_activated:
             xdo_instance = Xdo() 
-            print(f"[{os.getpid()}] Waiting for window {self.tm_window_id} to be viewable...")
+            self.logger.info(f"[{os.getpid()}] Waiting for window {self.tm_window_id} to be viewable...")
             xdo_instance.wait_for_window_map_state(self.tm_window_id, X.IsViewable)
-            print(f"[{os.getpid()}] Window {self.tm_window_id} is now viewable.")
-            print(f"DEBUG: tm_window_id type: {type(self.tm_window_id)}")
-            print(f"DEBUG: tm_window_id value: {self.tm_window_id}")
+            self.logger.info(f"[{os.getpid()}] Window {self.tm_window_id} is now viewable.")
+            self.logger.info(f"DEBUG: tm_window_id type: {type(self.tm_window_id)}")
+            self.logger.info(f"DEBUG: tm_window_id value: {self.tm_window_id}")
             xdo_instance.activate_window(self.tm_window_id)
             xdo_instance.raise_window(self.tm_window_id)
             self.game_activated= True

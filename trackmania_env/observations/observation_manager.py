@@ -1,18 +1,19 @@
+import numpy as np
+import os
+
+from gymnasium import spaces
+from gymnasium.spaces import Space
 from abc import ABC, abstractmethod
 from collections import Counter
 from typing import Any, Dict, List, Optional, Tuple, Union
-import numpy as np
-import gymnasium as gym
-from gymnasium import spaces
-from gymnasium.spaces import Space
 
 from tminterface.structs import SimStateData
 from trackmania_env.utils.reference_line_manager import ReferenceLineManager
 from trackmania_env.observations.observation_term import ObservationTerm
+from trackmania_env.observations.observation_terms.img_terms import ImageObservationTerm
 from trackmania_env.utils.spacetransform import SpaceTransformer
 
 from trackmania_env.manager import Manager
-
 class ObservationManager(ABC, Manager):
     def __init__(self, observation_terms : list[ObservationTerm], convert_torch : bool = True, normalize : bool = False, return_as_dict : bool = True):
         """
@@ -36,6 +37,14 @@ class ObservationManager(ABC, Manager):
             self.obs_space = spaces.Dict(spacedict)
         else:
             self.obs_space = spaces.Box(-np.inf, np.inf, shape=(sum([term.get_flatten_dim() for term in self.terms])), dtype=np.float32)
+        
+        # set control-image logging
+        controlimgdir, df = os.path.join(os.getcwd(), "logs/control_images"), 1000000
+        self.logger.info(f"Setting control-image dumping directory to : '{controlimgdir}' and dumping freq to {df} env steps.")
+        for term in self.terms:
+            if isinstance(term, ImageObservationTerm):
+                term: ImageObservationTerm
+                term.set_dump_freq(freq = df, dirpath=controlimgdir)
 
     def get_observation_space(self) -> Space:
         """
@@ -56,6 +65,12 @@ class ObservationManager(ABC, Manager):
     def _get_obs_as_dict(self, obs) -> tuple[Dict[str, np.ndarray], Dict[str, Any]]:
         observations = {}
         info = {}
+        
         for obsterm in self.terms:
-            observations[obsterm.name], info[obsterm.name] = obsterm.get_observation(obs)
+            try:
+                observations[obsterm.name], terminfo = obsterm.get_observation(obs)
+            except Exception as e:
+                self.logger.error(f"Failure to retrieve observation-term {obsterm.name}, error-traceback : {e} \n\n Supplementing obsterm with zeros.")
+                observations[obsterm.name], terminfo = np.zeros(obsterm.get_native_shape(), dtype = np.float32), {}
+            info = info | terminfo
         return observations, info

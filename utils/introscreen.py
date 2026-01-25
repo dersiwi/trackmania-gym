@@ -117,14 +117,17 @@ def introscreen(cfg : TrainConfig, asciiart = welcome, askstart : bool = False):
     """
     print(asciiart)
     print(f"""\n============================= General =============================
+            - Algorithm             : {cfg.sb3.constructor._target_}
             - Observation-Manager   : {cfg.rl_env.obs_manager.name}
               - use images          : {secure_attribute_retrieval(lambda : cfg.rl_env.env.obs_have_imgs)}
-            - Reward-Manager        : {cfg.rl_env.reward_manager.name}
+            - Reward-Manager        : {secure_attribute_retrieval(lambda : cfg.rl_env.reward_manager.name, cfg.rl_env.reward_manager._target_)}
             - Termination-Manager   : {cfg.rl_env.termination_manager.name}
             - RL-scheduler          : {cfg.lr_scheduler._target_}
             - n_env_steps           : {cfg.learn_args.total_timesteps}
             - tb-log-name           : {cfg.learn_args.tb_log_name}
+            - continuous-actions    : {cfg.rl_env.env.continuous_actions}, Dimension : {cfg.rl_env.env.actiondim}
           If values are None, the loaded config does not have this attribute.
           """)
     if askstart and input("[y/Y] to start training.").strip().lower() not in ["y", "yes"]:
+        print("nvm then")
         exit()

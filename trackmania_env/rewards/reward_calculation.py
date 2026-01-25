@@ -1,6 +1,4 @@
 from __future__ import annotations
-import wandb
-from stable_baselines3.common.callbacks import BaseCallback
 import numpy as np
 
 from trackmania_env.utils.reference_line_manager import ReferenceLineManager
@@ -72,7 +70,11 @@ class RewradCalculator(Manager):
         rew = 0
         info = {}
         for term in self.terms:
-            termvalue, terminfo = term.calculate_reward_term(observations, processed_obs, race_finished, other_terminations)
+            try:
+                termvalue, terminfo = term.calculate_reward_term(observations, processed_obs, race_finished, other_terminations)
+            except Exception as e:
+                self.logger.error(f"Failure to retrieve reward-term {term.name}, error-traceback : {e} \n\n Supplementing reward-term with zeros.")
+                termvalue, terminfo = 0, {term.name : 0}
             rew += termvalue
             info = info | terminfo
         info["total"] = rew
@@ -105,47 +107,3 @@ class RewradCalculator(Manager):
         if self.normalize:
             return self.normalizer.normalize_float(rewards)
         return rewards
-
-
-class RewardLogCallback(BaseCallback):
-    """
-    This custom RewardLogCallback should log the rewards on a per-step basis and also log each reward-term individually.
-    """
-    def __init__(self, verbose=0):
-        return super().__init__(verbose)
-
-    def _on_step(self) -> bool:
-        # have to call self.locals["infos"][0], because sb3 has an info-dict for each environment, since currently we only train with one environment, this index is always 0
-        infos : list[dict] = self.locals["infos"][0]
-
-        if "rewards" in infos and not len(infos["rewards"]) == 0:
-            wandb.log(infos["rewards"])
-
-        return True #always return true.
-    
-
-class AccumRewardLogCallback(BaseCallback):
-    """
-    This custom RewardLogCallback should log the individual, accumulated reward-terms after each episode ends.
-    """
-    def __init__(self, verbose=0):
-        super().__init__(verbose)
-        self.rewardterms_to_log = {}
-
-    def _on_step(self) -> bool:
-        # have to call self.locals["infos"][0], because sb3 has an info-dict for each environment, since currently we only train with one environment, this index is always 0
-        infos : list[dict] = self.locals["infos"][0]
-
-        if "rewards" in infos and not len(infos["rewards"]) == 0:
-
-            for rewterm in infos["rewards"]:
-                if rewterm in self.rewardterms_to_log:
-                    self.rewardterms_to_log[rewterm] += infos["rewards"][rewterm]
-                else:
-                    self.rewardterms_to_log[rewterm] = infos["rewards"][rewterm]
-
-        if ("terminated" in infos and infos["terminated"]) or ("truncated" in infos and infos["truncated"]):
-            wandb.log(self.rewardterms_to_log)
-            self.rewardterms_to_log = {}
-
-        return True #always return true.

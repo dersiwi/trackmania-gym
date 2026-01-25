@@ -19,7 +19,11 @@ class TerminationManager(Manager):
         terminated, truncated = stuck, timeout
         termination_dict = {"stuck" : stuck, "timeout" : timeout}
         for term in self.terms:
-            term_terminated, term_truncated = term.calculate_termination(observations)
+            try:
+                term_terminated, term_truncated = term.calculate_termination(observations)
+            except Exception as e:
+                self.logger.error(f"Failure to retrieve termination-term {term.name}, error-traceback : {e} \n\n Supplementing termination with 'False, False'.")
+                term_terminated = term_truncated = False
             termination_dict.update({term.name : term_terminated or term_truncated})
             terminated = terminated or term_terminated
             truncated = truncated or term_truncated

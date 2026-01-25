@@ -6,7 +6,7 @@ from trackmania_env.envs.single_agent_env2 import TMNF_Single_Agent_Env, Continu
 from trackmania_env.envs.testenv_single_agent import TestEnvironment
 
 from trackmania_env.observations.observations import get_observation_manager_from_cfg
-from trackmania_env.rewards.getrewards import get_reward_calculator
+from trackmania_env.rewards.getrewards import get_reward_calculator_from_cfg
 from trackmania_env.terminations.get_termination_manager import get_termination_manager
 
 from trackmania_env.utils.orientationless_random_respawn_manager import OrientationlessRespawnManager
@@ -61,21 +61,19 @@ def get_environment(cfg : TrainConfig, control_queue : Queue, response_queue : Q
     """
 
     obs_manager = get_observation_manager_from_cfg(cfg = cfg, wrap_obs_in_test = cfg.rl_env.env.wrap_obs_in_test, normalize=cfg.rl_env.env.normalize_obs)
-    reward_calculator = get_reward_calculator(reward_calculator_cfg = cfg.rl_env.reward_manager, normalize=cfg.rl_env.env.normalize_rewards)
+    reward_calculator = get_reward_calculator_from_cfg(reward_calculator_cfg = cfg.rl_env.reward_manager, normalize=cfg.rl_env.env.normalize_rewards)
     termination_manager = get_termination_manager(termination_cfg= cfg.rl_env.termination_manager)
 
     constructor_kwargs = _get_env_constructor_args(cfg, control_queue, response_queue, obs_manager, reward_calculator, termination_manager)
     
-    if not cfg.rl_env.env.continuous_actions:
-        if cfg.rl_env.env.test or test:
-            constructor_kwargs.update(dict(platform = cfg.platforms.os))
-            TM_ENV_CLASS = TestEnvironment
-        else :
-            TM_ENV_CLASS = TMNF_Single_Agent_Env
-        tm_env = TM_ENV_CLASS(**constructor_kwargs)
+    if not cfg.rl_env.env.continuous_actions and not cfg.rl_env.env.test or test:
+        tm_env = TMNF_Single_Agent_Env(**constructor_kwargs)
     else:
-        tm_env = ContinuousTMNF_Single_Agent_Env(**constructor_kwargs, actionspace= cfg.rl_env.env.actionmode)
+        tm_env = ContinuousTMNF_Single_Agent_Env(**constructor_kwargs, actiondim= cfg.rl_env.env.actiondim)
 
+    if cfg.rl_env.env.test or test:
+            constructor_kwargs.update(dict(platform = cfg.platforms.os))
+            tm_env = TestEnvironment(**constructor_kwargs)
     
     tm_env.orientationless_respawn_manager = OrientationlessRespawnManager(respawn_coordinates=OrientationlessRespawnManager.get_respawns_for_very_long_checkpoints())
 

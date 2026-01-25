@@ -56,7 +56,7 @@ def main(cfg : TrainConfig):
 
     tm_env.step_with_manual_input()
     
-    control_queue.put(IPCCommands.get_end_syncloop_command(1000)) #1000 doesnt matter.
+    control_queue.put(IPCCommands.get_end_syncloop_command())
     tmi_process.join()
 
 if __name__ == "__main__":

@@ -1,0 +1,2 @@
+_target_: trackmania_env.rewards.implementations.basic_rewards.ForwardReward
+drive_forward_reward : 1.0

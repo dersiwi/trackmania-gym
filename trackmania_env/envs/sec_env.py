@@ -11,7 +11,9 @@ from multiprocessing import Process, Queue
 
 from configs.config import TrainConfig
 
-from trackmania_env.envs.single_agent_env2 import TMNF_Single_Agent_Env, TMICommunicationFaildException
+from trackmania_env.envs.single_agent_env2 import TMNF_Single_Agent_Env
+
+from game_interaction.ipc_command_sender import TMICommunicationFaildException
 
 from game_interaction.run_multiprocess_wrapper import start_process_and_wait_for_startsignal
 from game_interaction.ipc_fields import IPCCommands
@@ -104,7 +106,7 @@ class CrashProofEnvironment(gym.Env):
         """
         self.logger.info("Finalizing tmi-process.")
 
-        self.control_queue.put(IPCCommands.get_end_syncloop_command(1000)) #1000 doesnt matter.
+        self.control_queue.put(IPCCommands.get_end_syncloop_command())
         self.tmi_process.join()
         time.sleep(10)
 

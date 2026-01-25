@@ -1,11 +1,10 @@
-name: "sophy"
-args:
-  progress_weight: 3.0        
-  off_course_penalty_weight: 10.0
-  wall_penalty_weight: 10.0       
-  steering_change_penalty_weight: 3.0  
-  steering_history_penalty_weight: 5.0 
-  c_d : 0.014
-  c_s : 182.883569
-  c_o :  0.034
-  maxlen_history: 3
+_target_: trackmania_env.rewards.implementations.sophy_rewards.SophyRewards
+progress_weight: 3.0        
+off_course_penalty_weight: 10.0
+wall_penalty_weight: 10.0       
+steering_change_penalty_weight: 3.0  
+steering_history_penalty_weight: 5.0 
+c_d : 0.014
+c_s : 182.883569
+c_o :  0.034
+maxlen_history: 3

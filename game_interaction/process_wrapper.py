@@ -9,8 +9,7 @@ from game_interaction.game_instance_manager2 import GameInstanceManager
 from game_interaction.ipc_fields import IPCFields, IPCCommands
 from game_interaction.tminterface_commands import TMInterfaceCommands
 
-from trackmania_env.utils.actionmap import ActionMode
-
+from trackmania_env.utils.actionmap import ActionMode, merge_action_sequences
 class TMIProcessWrapper:
 
     """
@@ -82,6 +81,7 @@ class TMIProcessWrapper:
         self.__ui_disabled = False
         self.__cam_set = False
 
+        self.n_total_steps = 0
         self.n_steps = 0
         """Tracks number of steps to track step-frequency"""
         self.step_time = time.time()
@@ -120,7 +120,7 @@ class TMIProcessWrapper:
         """These two log average execution times of all commands."""
 
         self.actionmode = ActionMode.DISCRETE
-        """The type of actions to expect (either discrete or continuous.)"""
+        """The type of actions to expect (either discrete or continuous.), can be changed via IPC-Command."""
 
         self.simsteps_since_last_env_step : int = 0 #this should always equal self.simsteps_between_envsteps
         self.actions_to_send = [(False, False, False, False)] * self.simsteps_between_envsteps
@@ -147,26 +147,40 @@ class TMIProcessWrapper:
     def create_continuous_actions(self, action):
         """ This method takes a 1 D continuous action within [-1, 1] and translates it into a list of booleans to send to the game.
         """
-        self.actions_to_send = [(False, False, False, False)] * self.simsteps_between_envsteps
-        multiplier = 1 if action >= 0 else - 1
-        steps = 1 / self.simsteps_between_envsteps # this is the amount of simulation steps between each environment step.
-        accelerate, decelerate = (False, False, True, False), (False, False, False, True)
-        
-        for i in range(1, len(self.actions_to_send) + 1):
-            if action * multiplier > 1 - steps * i:
-                self.actions_to_send[-i] = accelerate if multiplier == 1 else decelerate
-
+        if action < 0:
+            self.actions_to_send = ActionMode.produce_action_sequence(action * (-1), n_actions=self.simsteps_between_envsteps, discrete_idx=ActionMode.DiscreteIndexes.BRAKE, 
+                                                                      mappable_region=(0.0, 1.0))
+        else:
+            self.actions_to_send = ActionMode.produce_action_sequence(action, n_actions=self.simsteps_between_envsteps, discrete_idx=ActionMode.DiscreteIndexes.ACCELERATION,
+                                                                      mappable_region=(0.0, 1.0))
+            
         #set the current action index to zero to allow actions to be sent (automatically disables action-sending after index > len(actions_to_send))
         self.curr_action_idx = 0
 
+    def create_continuous_actions3d(self, acceleration : float, breaking : float):
+        accseq = ActionMode.produce_action_sequence(actionval = acceleration, n_actions=self.simsteps_between_envsteps, 
+                                                    discrete_idx=ActionMode.DiscreteIndexes.ACCELERATION, mappable_region=(-0.67, 0.67)) 
+        breakseq = ActionMode.produce_action_sequence(actionval = breaking, n_actions=self.simsteps_between_envsteps, 
+                                                      discrete_idx=ActionMode.DiscreteIndexes.BRAKE,mappable_region=(-0.67, 0.67))
+        self.actions_to_send = merge_action_sequences(accseq, breakseq)
+        self.curr_action_idx = 0
+
+    def send_continuous_steering(self, continuous_steering_value : float):
+        steering = ActionMode.transform_steering(continuous_steering_value)
+        self.iface.execute_command(f"steer {int(steering)}")
+    
     def send_action(self, action : tuple[bool, bool, bool, bool]) -> dict:
         if self.actionmode == ActionMode.DISCRETE:
             left, right, acc, brake = action
             self.iface.set_input_state(left, right, acc, brake)
         elif self.actionmode == ActionMode.CONTINUOUS_2D:
             self.create_continuous_actions(action[1])
-            steering, breaking, acceleration = ActionMode.transform_continuous_2d(action)
-            self.iface.execute_command(f"steer {int(steering)}")
+            self.send_continuous_steering(action[0])
+
+        elif self.actionmode == ActionMode.CONTINUOUS_3D:
+            self.create_continuous_actions3d(action[1], action[2])
+            self.send_continuous_steering(action[0])
+            
         elif self.actionmode == ActionMode.CONTINUOUS_4D:
             raise NotImplementedError("")
 
@@ -210,13 +224,17 @@ class TMIProcessWrapper:
             self.logger.info(f"Average execution time of IPC-Commands {self.avg_cmd_exectime}s.")
         self.response_queue.put_nowait(response)
 
-    def handle_unanswered_commands(self, max_unanswered_time : float = 20):
+    def handle_unanswered_commands(self, max_unanswered_time : float = 30):
         """Removes all commands that are unanswered for more than"""
+        ids_to_delete = []
         for cmd_id in self.unanswered_commands:
             if time.time() - self.unanswered_commands[cmd_id] > max_unanswered_time:
-                self.logger.error(f"Got a command that was unanswered for more than {max_unanswered_time} seconds. Command id: {cmd_id}")
-                self.response_queue.put_nowait({IPCFields.CMD_ID : cmd_id, IPCFields.STATUS : IPCFields.STATUS_ERROR, IPCFields.ERROR : "Could not answer command in given timeframe."})
-                del self.unanswered_commands[cmd_id]
+                ids_to_delete.append(cmd_id)
+        
+        for cmd_id in ids_to_delete:
+            self.logger.error(f"Got a command that was unanswered for more than {max_unanswered_time} seconds. Command id: {cmd_id}")
+            self.response_queue.put_nowait({IPCFields.CMD_ID : cmd_id, IPCFields.STATUS : IPCFields.STATUS_ERROR, IPCFields.ERROR : f"Could not answer command '{cmd_id}' in given timeframe."})
+            del self.unanswered_commands[cmd_id]
 
         self.time_since_last_unanswered_handling = time.time()
 
@@ -228,6 +246,7 @@ class TMIProcessWrapper:
         """Checks command queue for ICP and handles command appropriately. Returns command."""
         # first get command
         assert self.command_queue is not None
+        
         try:
             cmd = self.command_queue.get_nowait()
         except Empty:
@@ -236,14 +255,16 @@ class TMIProcessWrapper:
         
         # now handle command
         cmd_id : int = cmd[IPCFields.CMD_ID]
+        command = cmd[IPCFields.CMD]
+        #self.logger.info(f"Executing Command {command}, id : {cmd_id}, self.waitforstep_req_img_next_syncstep  = {self.waitforstep_req_img_next_syncstep}, self.waitforstep_answer_expected = {self.waitforstep_answer_expected},  self.expect_next_step_command= {self.expect_next_step_command}")
         assert not cmd_id == -1, "Command id cannot be -1 as this is used as an internal error-code."
 
         if cmd_id == self.last_received_command_id:
             # just skip commands with doubled command-ids (commands may be sent more than once by other processes; due to error-handling e.g.)
-            self.logger.warning(f"Got command with id {cmd_id} more than once. Ignoring.")
-            return None
-
-        command = cmd[IPCFields.CMD]
+            self.logger.warning(f"Got command with id {cmd_id} and command=={command} more than once. Ignoring.")
+            self.answer_command({IPCFields.CMD_ID : cmd_id, IPCFields.STATUS : IPCFields.STATUS_ERROR, IPCFields.ERROR : f"Got command with id {cmd_id} and command=={command} more than once."})
+            return None 
+        
         self.unanswered_commands[cmd_id] = time.time()
 
         if command == IPCCommands.ACT:
@@ -300,6 +321,7 @@ class TMIProcessWrapper:
         self.expect_next_step_command = False
         self.ingame_time_passed = 0
         self.n_steps += 1
+        self.n_total_steps += 1
         # TODO: if debug=False can we then skip this whole if block ?
         if self.n_steps % 100 == 0 and self.n_steps > 0:
             gt= time.time() - self.step_time
@@ -307,7 +329,7 @@ class TMIProcessWrapper:
             self.step_time = time.time()
             self.n_steps = 0
             self.ingame_time_tracking = 0
-        if self.debug: print(self.simsteps_since_last_env_step, self.ingame_time_passed)
+        if self.debug: self.logger.debug(self.simsteps_since_last_env_step, self.ingame_time_passed)
         self.simsteps_since_last_env_step = 0
 
     def syncloop(self):
@@ -489,5 +511,5 @@ class TMIProcessWrapper:
                 self.handle_unanswered_commands()
 
         if self.launch_game:
-            print("closing game with pid",self.gim.tm_process_id,id(self.gim))
+            self.logger.info(f"closing game with pid {self.gim.tm_process_id, id(self.gim)}")
             self.gim.close_game()

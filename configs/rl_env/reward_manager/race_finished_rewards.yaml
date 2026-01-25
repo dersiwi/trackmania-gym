@@ -1,15 +1,11 @@
-name: "race_finished"
-args:
-    accum_distance_weight : 100
-    race_not_finished_weight : 0.02 # not used
-    race_finished_reward_weight : 300
-    other_termination_punishment : 5
-    velocity_reward_weight : 1  #not used
-    backward_weight : 0 #not used
-    distance_to_center_weight : 1 #not used
-    velocity_change_reward_weight : 30 #not used
-    speed_reward_weight: 1 #not used
-    lateral_distance_mode : "gauss" #triangle, gauss, trapez
+_target_: trackmania_env.rewards.implementations.simple_rewards.RaceFinishedRewards
 
-steps_without_progress_until_punishment : 512
-use_punishment : True
+race_finished_reward_weight: 300
+scaled_by_steps_taken: True            
+accum_distance_weight: 100
+accum_enhanced_by_amount_travelled: True 
+accum_exp_factor: 1.2                   
+other_termination_punishment: -5
+wall_contact_weight: -0.15                
+steps_without_progress_until_punishment: 512
+use_punishment: True
