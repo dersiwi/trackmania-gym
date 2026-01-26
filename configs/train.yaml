@@ -10,6 +10,8 @@ platforms_config_path : "configs/platforms.yaml"
 extractors_out_dim: 64 # every extractor will produce an output with this dimension 
 #share_features_extractor: True # whether to share the features extractor between actor and critic when applicable
 debug: False
+img_dump_freq: 1e6 # this is only relevant if debug=True
+img_dump_path: null # this is only relevant if debug=True
 headless: False
 
 learn_args:

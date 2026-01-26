@@ -222,6 +222,8 @@ class TrainConfig:
     extractors_out_dim : int
     platforms_config_path : str
     debug: bool
+    img_dump_freq:int
+    img_dump_path:int | None
     headless: bool
     policy : PolicyCfg | ActorCriticPolicyCfg
     platforms: PlatformConfig 
