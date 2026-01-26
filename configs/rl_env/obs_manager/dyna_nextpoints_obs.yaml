@@ -2,8 +2,12 @@ _target_: trackmania_env.observations.implementations.dyn_nextpoint_obs.DynamicN
 name: "dyna_nextpoint"
 
 # image related
+obs_have_imgs: True
+check_channels: True
 img_width: 128
 img_height: 128
+store_imgs_as_uint8: True
+norm_uint8_imgs: False
 colorspace: "grayscale"
 camera_id: 2
 

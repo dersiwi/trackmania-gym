@@ -17,6 +17,8 @@ class LinesightObservationManager(ObservationManager):
         img_height,
         ref_line_path,
         map_path,
+        store_imgs_as_uint8:bool= True,
+        norm_uint8_imgs:bool= False,
         convert_torch: bool = True,
         normalize: bool = False,
         n_zone_centers_extrapolate_after_end_of_map: int = 1000,
@@ -69,6 +71,8 @@ class LinesightObservationManager(ObservationManager):
                     colorspace = colorspace,
                     img_height = img_height,
                     img_width  = img_width,
+                    store_as_uint8=store_imgs_as_uint8,
+                    norm_uint8=norm_uint8_imgs
                 ),
                 GroupedObservationTerm(name= "floats", observation_terms= [
                     DiscreteActionHistoryTerm(maxlen_history= n_prev_actions_in_inputs),

@@ -134,15 +134,12 @@ class EnvConfig:
     countdown_speed : float
     test : bool
     wrap_obs_in_test : bool
-    obs_have_imgs : bool
     n_previous_actions : int
     camera_id : int
 
     normalize_rewards : bool
     normalize_obs : bool
-    store_imgs_as_uint8 : bool
-    normalize_images : bool
-    check_channels : bool
+   
     """Executes a check of number of channels in order to determine if a observation-term is an imageterm.
     May be wrong, if doing framestacking,..."""
 
@@ -225,6 +222,8 @@ class TrainConfig:
     extractors_out_dim : int
     platforms_config_path : str
     debug: bool
+    img_dump_freq:int
+    img_dump_path:int | None
     headless: bool
     policy : PolicyCfg | ActorCriticPolicyCfg
     platforms: PlatformConfig 

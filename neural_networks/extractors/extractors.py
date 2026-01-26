@@ -52,7 +52,7 @@ class ExtractorConfig:
             return {k: v for k, v in d.items() if v is not None}
         return d
     
-    def create(policy_cfg: PolicyCfg, cfg: TrainConfig, vision_model_kwargs: Dict[str,Any], device: str) -> ExtractorConfig:
+    def create(policy_cfg: PolicyCfg, cfg: TrainConfig, vision_model_kwargs: Dict[str,Any], device: str,normalized_images:bool=False) -> ExtractorConfig:
         """Creates a base ExtractorConfig with all shared/common parameters."""
         policy_cfg = cfg.policy
         activation_fn_class = secure_attribute_retrieval(
@@ -64,9 +64,9 @@ class ExtractorConfig:
         
         return ExtractorConfig(
             vision_model_kwargs=vision_model_kwargs, 
-            normalized_image=cfg.rl_env.env.normalize_images,
+            normalized_image=secure_attribute_retrieval(lambda: cfg.rl_env.env.normalize_images,normalized_images),
             out_dim=secure_attribute_retrieval(lambda: policy_cfg.extractors_out_dim, 64),
-            check_channels=cfg.rl_env.env.check_channels,
+            check_channels=secure_attribute_retrieval(lambda: cfg.rl_env.obs_manager.check_channels,False),
             float_model=secure_attribute_retrieval(lambda: policy_cfg.float_net, None), 
             activation_fn=activation_fn_class,
             last_activation_fn=last_activation_fn_class,

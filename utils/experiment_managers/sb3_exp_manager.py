@@ -13,6 +13,9 @@ from utils.experiment_managers.core import ExperimentManager
 from configs.config import TrainConfig
 from trackmania_env.callbacks import *
 
+from omegaconf import OmegaConf
+
+
 class Sb3ExperimentManager(ExperimentManager):
     """
     A SB3 Manager that automatically configures and registers:
@@ -74,6 +77,9 @@ class Sb3ExperimentManager(ExperimentManager):
             
             if self.cfg.rl_env.env.continuous_actions:
                 self.callbacks.append(ContinuousActionLogCallback(log_minmax=self.cfg.wandb.logminmax_continuous))
+
+        if self.cfg.debug and OmegaConf.select(cfg=self.cfg,key="rl_env.obs_manager.obs_have_imgs",default=False):
+            self.callbacks.append(ImageDumpCallback(verbose=0,dump_freq=self.cfg.img_dump_freq,dump_dir=self.cfg.img_dump_path))
 
     def add_artifacts(self):
         """Add best model and checkpoint-model artifact"""

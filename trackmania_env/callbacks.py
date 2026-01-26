@@ -1,5 +1,10 @@
+import os
+from datetime import datetime
 import wandb
 import numpy as np
+import torch
+from gymnasium import spaces
+from PIL import Image
 from stable_baselines3.common.callbacks import BaseCallback
 
 from trackmania_env.utils.return_tracker import ReturnTracker
@@ -101,3 +106,133 @@ class ContinuousActionLogCallback(BaseCallback):
             self.actionmean : dict[str, float] = {}
 
         return super()._on_step()
+
+
+class ImageDumpCallback(BaseCallback):
+
+    def __init__(
+        self,
+        verbose: int = 0,
+        dump_freq: int = 1000000, # must be > 0 in order for images to be dumped
+        dump_dir: str | None = None,
+        dict_img_id: str | None = "image",
+    ):
+        super().__init__(verbose)
+
+        self.dump_dir = dump_dir
+        
+        if dump_dir is None:
+            dump_dir = f"./logs/image_dumps/{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+
+        self.dump_dir = os.path.abspath(dump_dir)
+        os.makedirs(self.dump_dir, exist_ok=True)
+
+        print(f"[ImageDumpCallback] Dumping images to: {self.dump_dir}")
+
+        self.dump_freq = dump_freq
+        self.dict_img_id = dict_img_id
+
+        self.n_imgs = 0
+        self.imgs_to_dump = 0
+
+        self.is_dict_obs = False
+        self.is_image_obs = False
+
+    @staticmethod
+    def is_image_space(space: spaces.Space) -> bool:
+        """Checks whether a Gymnasium space can be interpreted as an image."""
+        if not isinstance(space, spaces.Box):
+            return False
+
+        if space.shape is None:
+            return False
+
+        # Common image shapes:
+        # (H, W), (1, H, W), (H, W, C), (C, H, W)
+        if len(space.shape) in [2,3]:
+            return True
+
+        return False
+
+    def save_image(self, img: np.ndarray | torch.Tensor, filepath: str) -> None:
+        """Saves an image to the given path."""
+        if isinstance(img, torch.Tensor):
+            img = img.detach().cpu().numpy()
+
+        if img.ndim == 4 : img = img.squeeze(0) # remove batch dim
+        # Squeeze grayscale channel if needed
+        if img.ndim == 3 and img.shape[0] == 1:
+            img = img.squeeze(0)
+
+        img = (img * 255).astype(np.uint8)
+        Image.fromarray(img).save(filepath)
+
+    def set_dump_freq(self, freq: int, dirpath: str) -> None:
+        self.dump_freq = freq
+        self.dump_dir = dirpath
+        assert freq > 5, "Cannot go lower than 5 due to magic numbers"
+
+    def _on_training_start(self) -> None:
+
+        obs_space = self.training_env.observation_space
+
+        if isinstance(obs_space, spaces.Dict):
+            self.is_dict_obs = True
+
+            if self.dict_img_id not in obs_space.spaces:
+                raise KeyError(
+                    f"Dict observation space does not contain key '{self.dict_img_id}'. "
+                    f"Available keys: {list(obs_space.spaces.keys())}"
+                )
+
+            img_space = obs_space.spaces[self.dict_img_id]
+
+            if not self.is_image_space(img_space):
+                raise TypeError(
+                    f"Observation under key '{self.dict_img_id}' is not image-like. "
+                    f"Shape: {img_space.shape}"
+                )
+
+            self.is_image_obs = True
+
+        elif isinstance(obs_space, spaces.Box):
+            self.is_dict_obs = False
+
+            if not self.is_image_space(obs_space):
+                raise TypeError(
+                    f"Box observation space is not image-like. Shape: {obs_space.shape}"
+                )
+
+            self.is_image_obs = True
+
+        else:
+            raise TypeError(
+                f"Unsupported observation space type: {type(obs_space)}. "
+                "Only gymnasium.spaces.Box and spaces.Dict are supported."
+            )
+
+    def _on_step(self) -> bool:
+        if not self.is_image_obs:
+            return True
+
+        obs = self.locals["obs_tensor"]
+
+        if self.is_dict_obs:
+            img = obs[self.dict_img_id]
+        else:
+            img = obs
+
+        if self.imgs_to_dump > 0 or (self.dump_freq > 0 and self.n_imgs % self.dump_freq == 0):
+
+            filepath = os.path.join(
+                self.dump_dir, f"observation_img_{self.n_imgs}.png"
+            )
+            self.save_image(img, filepath)
+
+            self.imgs_to_dump = (
+                5 if self.dump_freq > 0 and self.n_imgs % self.dump_freq == 0 else self.imgs_to_dump
+            )
+            self.imgs_to_dump -= 1
+
+        self.n_imgs += 1
+        return True

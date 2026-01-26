@@ -17,7 +17,7 @@ from trackmania_env.observations.observation_terms.reference_line_terms import (
 from trackmania_env.observations.observation_terms.sophy_terms import GlobalFeaturesTerm
 
 class DynamicNextPointObsManager(ObservationManager):
-    def __init__(self,colorspace:str, convert_torch, img_width, img_height, normalize, lookahead_sec = 6,n_points = 60,**kwargs):
+    def __init__(self,colorspace:str, convert_torch, img_width, img_height, normalize, lookahead_sec = 6,n_points = 60, store_imgs_as_uint8:bool= True,norm_uint8_imgs:bool= False,**kwargs):
   
         grouped_floats_obs = GroupedObservationTerm(
             name="floats",
@@ -35,7 +35,7 @@ class DynamicNextPointObsManager(ObservationManager):
             convert_torch=convert_torch,
             normalize=normalize,
             observation_terms=[
-                ImageObservationTerm(name="image", colorspace=colorspace, img_width=img_width, img_height=img_height, dtype=np.float32),
+                ImageObservationTerm(name="image", colorspace=colorspace, img_width=img_width, img_height=img_height,store_as_uint8=store_imgs_as_uint8,norm_uint8=norm_uint8_imgs),
                 grouped_floats_obs
             ]
         )

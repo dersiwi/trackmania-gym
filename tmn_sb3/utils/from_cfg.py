@@ -27,7 +27,7 @@ from trackmania_env.envs.single_agent_env2 import TMNF_Single_Agent_Env
 from tmn_sb3.policies.async_policy import AsyncActorCriticPolicy
 from neural_networks.lr_schedulers import LR_Scheduler
 from neural_networks.extractors.extractors import ExtractorConfig
-from neural_networks.extractors import make_tmn_extractor
+from neural_networks.extractors import make_tmn_extractor,get_extractor_class
 
 
 def print_model_params(model : BaseAlgorithm):
@@ -67,7 +67,13 @@ def get_model_from_config(
         The fully constructed and configured Stable-Baselines3 algorithm ready for training or evaluation.
     """
     device = cfg.platforms.device
-    normalized_images = cfg.rl_env.env.normalize_images
+    store_uint8 = secure_attribute_retrieval(lambda: cfg.rl_env.obs_manager.store_imgs_as_uint8, False)
+    normalized_images = (
+        secure_attribute_retrieval(lambda: cfg.rl_env.obs_manager.norm_uint8_imgs, False)
+        if store_uint8
+        else cfg.rl_env.env.normalize_obs
+    )
+
 
     # extract algo params
     algorithm_params = OmegaConf.to_container(cfg.sb3.algorithm_params, resolve=True)
@@ -78,14 +84,14 @@ def get_model_from_config(
     policy_kwargs = None
 
     # vision model is created in the feature extractor
-    vision_model_kwargs = cfg.models if secure_attribute_retrieval(lambda: cfg.rl_env.env.obs_have_imgs, True) else None
-    base_ext_config = ExtractorConfig.create(policy_cfg, cfg, vision_model_kwargs = vision_model_kwargs, device = device)
+    vision_model_kwargs = cfg.models if secure_attribute_retrieval(lambda: cfg.rl_env.obs_manager.obs_have_imgs, False) else None
+    base_ext_config = ExtractorConfig.create(policy_cfg, cfg, vision_model_kwargs = vision_model_kwargs, device = device, normalized_images=normalized_images)
 
     if policy_cfg.name in {"basic","dqn"}:
 
         feature_extrac_kwargs = base_ext_config
         policy_kwargs = dict(
-            features_extractor_class=make_tmn_extractor,
+            features_extractor_class=get_extractor_class(tm_env.observation_space),
             features_extractor_kwargs=feature_extrac_kwargs.to_dict(),
             normalize_images= normalized_images,
         )
