@@ -41,7 +41,9 @@ def main(cfg : TrainConfig):
         while True:
             action, state = eval_policy.predict(observations, deterministic=True)
             observations, reward, terminated, truncated, info = tm_env.step(action)
-            if terminated or truncated: tm_env.reset()
+            print(f"{reward=}")
+            if terminated or truncated: 
+                observations,info = tm_env.reset()
 
     except Exception as e:
         traceback.print_exc()
