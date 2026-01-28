@@ -335,6 +335,61 @@ class GameInstanceMangerLinux(GameInstanceManager):
             xdo_instance.raise_window(self.tm_window_id)
             self.game_activated= True
 
+class GameInstanceManagerWSL(GameInstanceManager):
+
+    def to_win_path(self,unix_path: str | Path) -> str:
+        """Converts a WSL path (/mnt/c/...) to a Windows path (C:\...)."""
+        return subprocess.check_output(['wslpath', '-w', str(unix_path)]).decode().strip()
+
+    def is_game_running(self) -> bool:
+        """Checks Windows tasklist for the game process."""
+        try:
+            output = subprocess.check_output(["tasklist.exe", "/FI", "IMAGENAME eq TmForever.exe", "/FO", "CSV"]).decode()
+            return "TmForever.exe" in output
+        except:
+            return False
+
+    def launch_game(self):
+        self.tm_process_id = None
+        win_loader = self.to_win_path(self.TMLoader_path)
+        
+        # Launch using Windows PowerShell from WSL
+        launch_string = (
+            f"powershell.exe -ExecutionPolicy Bypass -Command "
+            f"\"Start-Process '{win_loader}' -ArgumentList 'run TmForever \\\"{self.TMLoader_profile_name}\\\" "
+            f"/configstring=\\\"set custom_port {self.tmi_port}\\\"'\""
+        )
+        
+        subprocess.Popen(launch_string, shell=True)
+        self.logger.info("Launched TMLoader via PowerShell interop.")
+
+        # Poll for the PID using tasklist.exe
+        start_wait = time.time()
+        while self.tm_process_id is None:
+            if time.time() - start_wait > 20:
+                raise TimeoutError("Trackmania process didn't appear in Windows tasklist.")
+            
+            output = subprocess.check_output(["tasklist.exe", "/FI", "IMAGENAME eq TmForever.exe", "/FO", "CSV"]).decode()
+            lines = output.strip().split('\n')
+            if len(lines) > 1:
+                # Format: "Image Name","PID","Session Name","Session#","Mem Usage"
+                self.tm_process_id = int(lines[1].split(',')[1].replace('"', ''))
+                self.logger.info(f"Found Windows PID: {self.tm_process_id}")
+            time.sleep(1)
+
+    def _get_gameprocess_killcommand(self) -> str:
+        return f"taskkill.exe /PID {self.tm_process_id} /F"
+
+    def _set_window_focus(self):
+        """WSL cannot use win32gui. We use PowerShell to set focus."""
+        if not self.game_activated:
+            ps_cmd = (
+                "$wshell = New-Object -ComObject WScript.Shell; "
+                "$wshell.AppActivate('Trackmania')"
+            )
+            subprocess.run(["powershell.exe", "-Command", ps_cmd])
+            self.game_activated = True
+
 if __name__ == "__main__":
 
     gmi = GameInstanceManager(Path(os.path.expanduser("~")) / "AppData" / "Local" / "TMLoader" / "TMLoader.exe",
