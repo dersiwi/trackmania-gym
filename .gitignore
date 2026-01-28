@@ -206,6 +206,7 @@ checkpoints/
 logs/
 models/
 !configs/models
+!DIME/models
 outputs/
 runs/
 test/
