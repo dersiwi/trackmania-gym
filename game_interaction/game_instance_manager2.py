@@ -31,7 +31,7 @@ class GameInstanceManager:
 
 
     @staticmethod
-    def get_instance(TMLoader_path : str, path_to_plugin : str, TMLoader_profile_name : str = "default", linux : bool = False, headless : bool = False,tmi_port:int = 8775,lock = None) -> GameInstanceManager:
+    def get_instance(TMLoader_path : str, path_to_plugin : str, TMLoader_profile_name : str = "default", os : str = "linux", headless : bool = False,tmi_port:int = 8775,lock = None) -> GameInstanceManager:
         """
         The GameInstanceManager launches the game from the operating systems side via a system command (launch_game() and close_game() start and end tmnf processes.)
         To get an instance of the GameInstanceManager use this method and specify the operating system by setting linux accordingly.
@@ -49,12 +49,36 @@ class GameInstanceManager:
         - headless : if True, starts the game headless (i.e. with virtual monitor) - as of now this is highly experimental and only has an effect on linux.
         """
 
-        if linux:
-            # TODO get Lock.
-            return GameInstanceMangerLinux(TMLoader_path, TMLoader_profile_name, path_to_plugin, lock, headless,tmi_port)
-        else:
-            return GameInstanceManagerWindows(TMLoader_path, TMLoader_profile_name, path_to_plugin, headless,tmi_port)
-
+        match os:
+            case "linux":
+                # TODO: get Lock.
+                return GameInstanceMangerLinux(
+                    TMLoader_path,
+                    TMLoader_profile_name,
+                    path_to_plugin,
+                    lock,
+                    headless,
+                    tmi_port,
+                )
+            case "windows":
+                return GameInstanceManagerWindows(
+                    TMLoader_path,
+                    TMLoader_profile_name,
+                    path_to_plugin,
+                    headless,
+                    tmi_port,
+                )
+            case "wsl":
+                return GameInstanceManagerWSL(
+                    TMLoader_path,
+                    TMLoader_profile_name,
+                    path_to_plugin,
+                    headless,
+                    tmi_port,
+                )
+            case _:
+                raise ValueError(f"No game instance manager for OS: {os}")
+        
 
     def __init__(self, TMLoader_path : str, TMLoader_profile_name : str, path_to_plugin : str, headless : bool,tmi_port:int):
         """Do not use this class directly. Instanciate via GameInstanceManager.get_instance()."""
