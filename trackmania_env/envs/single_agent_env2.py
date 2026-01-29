@@ -51,8 +51,7 @@ class TMNF_Single_Agent_Env(gym.Env):
     # init, step and reset have to be implemented for the class to be gym compatible
     def __init__(
             self,
-            command_queue : Queue,
-            response_queue : Queue,
+            ipcommandsender : IPCommandSender,
             obs_manager : ObservationManager,
             reward_calculator : RewradCalculator,
             termination_manger : TerminationManager,
@@ -95,11 +94,7 @@ class TMNF_Single_Agent_Env(gym.Env):
         self.actions : deque = deque([(False,False,False,False)] * self.n_prev_actions, maxlen=self.n_prev_actions)
         """list of actions that may be stored later."""
 
-        # variables for IPC communication
-        self.command_queue = command_queue
-        self.response_queue = response_queue
-
-        self.cmd_sender = IPCommandSender(command_queue, response_queue)
+        self.cmd_sender = ipcommandsender
 
 
 
@@ -396,12 +391,12 @@ class TMNF_Single_Agent_Env(gym.Env):
 
 
 class ContinuousTMNF_Single_Agent_Env(TMNF_Single_Agent_Env):
-    def __init__(self, command_queue, response_queue, obs_manager, reward_calculator, termination_manger, 
+    def __init__(self, ipcommandsender, obs_manager, reward_calculator, termination_manger, 
                  track, reset_mode, n_previous_actions, position_buffer_size, position_moved_threshold, 
                  ignore_stuck_for_n_steps_after_reset, game_speed, countdown_speed, waitforstep_timeout_in_s, 
                  startposition_accuracy_threshold, gamma, actiondim : int, **kwargs):
         
-        super().__init__(command_queue, response_queue, obs_manager, reward_calculator, termination_manger, 
+        super().__init__(ipcommandsender, obs_manager, reward_calculator, termination_manger, 
                          track, reset_mode, n_previous_actions, position_buffer_size, position_moved_threshold,
                           ignore_stuck_for_n_steps_after_reset, game_speed, countdown_speed, waitforstep_timeout_in_s, 
                           startposition_accuracy_threshold, gamma, is_discrete=False, **kwargs)

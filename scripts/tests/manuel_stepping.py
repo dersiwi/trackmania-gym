@@ -30,8 +30,8 @@ def main(cfg : TrainConfig):
     cfg = load_and_merge_platform(cfg)
 
     pm = ProcessManagement(cfg, cfg.rl_env.obs_manager.img_width, cfg.rl_env.obs_manager.img_height)
-    _, control_queue, response_queue = pm.start_process_and_wait_for_startsignal()
-    tm_env : TestEnvironment = get_environment(cfg, control_queue, response_queue, test=True)
+    ipcommandsender = pm.start_process_and_wait_for_startsignal()
+    tm_env : TestEnvironment = get_environment(cfg, ipcommandsender, test=True)
 
     obs, info = tm_env.reset()
 

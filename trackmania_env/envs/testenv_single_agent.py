@@ -1,17 +1,19 @@
-from trackmania_env.envs.single_agent_env2 import TMNF_Single_Agent_Env
-from trackmania_env.utils.actionmap import REVERSE_ACTION_MAP
+
 
 import keyboard
-from typing import Callable
 import time
-from pynput.keyboard import Key, Listener,KeyCode
 
-from queue import Queue
+from pynput.keyboard import Key, Listener,KeyCode
+from typing import Callable
+
+from game_interaction.ipc_command_sender import IPCommandSender
+
+from trackmania_env.envs.single_agent_env2 import TMNF_Single_Agent_Env
+from trackmania_env.utils.actionmap import REVERSE_ACTION_MAP
 
 from trackmania_env.observations.observation_manager import ObservationManager 
 from trackmania_env.rewards.reward_calculation import RewradCalculator
 from trackmania_env.terminations.termination_manager import TerminationManager
-from trackmania_env.utils.reference_line_manager import ReferenceLineManager
 
 class TestEnvironmentCallback():
     """TestEnviornmentCallbacks are used to track, log, do whatever with data obtained by an environment per setp."""
@@ -62,8 +64,7 @@ class KEYS:
 class TestEnvironment(TMNF_Single_Agent_Env):
 
     def __init__(self, 
-                 command_queue: Queue, 
-                 response_queue: Queue, 
+                 ipcommandsender : IPCommandSender, 
                  obs_manager: ObservationManager, 
                  reward_calculator: RewradCalculator, 
                  termination_manger: TerminationManager, 
@@ -81,7 +82,7 @@ class TestEnvironment(TMNF_Single_Agent_Env):
                  platform = "windows",
                  **kwargs):
 
-        super().__init__(command_queue, response_queue, obs_manager, reward_calculator, termination_manger, track, reset_mode, n_previous_actions, position_buffer_size, position_moved_threshold, ignore_stuck_for_n_steps_after_reset, game_speed, countdown_speed, waitforstep_timeout_in_s, startposition_accuracy_threshold, gamma, **kwargs)
+        super().__init__(ipcommandsender, obs_manager, reward_calculator, termination_manger, track, reset_mode, n_previous_actions, position_buffer_size, position_moved_threshold, ignore_stuck_for_n_steps_after_reset, game_speed, countdown_speed, waitforstep_timeout_in_s, startposition_accuracy_threshold, gamma, **kwargs)
 
         self.platform = platform
         self.action_modifier : Callable = None
