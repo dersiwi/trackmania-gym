@@ -5,19 +5,23 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 # Hydra related imports
 import hydra
 import traceback
+
 from hydra.core.hydra_config import HydraConfig
 from typing import Optional
 
 
 from configs.config import TrainConfig
 
+from trackmania_env.envs.vectorized import SB3Vectorized
 from trackmania_env.envs.sec_env import CrashProofEnvironment
+
 from utils.hydra_wandb_utils import load_and_merge_platform, secure_attribute_retrieval
 from utils.introscreen import introscreen
-
 from utils.experiment_managers.sb3_exp_manager import Sb3ExperimentManager
 
 from tmn_sb3.utils.from_cfg import get_model_from_config
+from multiprocessing import Lock
+
 
 _HYDRA_PARAMS = {
     "version_base": "1.3",
@@ -35,11 +39,17 @@ def main(cfg : TrainConfig, run_id : Optional[str] = None):
     """
     cfg = load_and_merge_platform(cfg)
     introscreen(cfg, askstart=secure_attribute_retrieval(lambda : cfg.ask_start, default=True))
-
-    tm_env = CrashProofEnvironment(cfg)
-    try:
+    
+    if cfg.vectorized.vectorize:
+        tm_env = SB3Vectorized(n_envs = cfg.vectorized.n_envs, 
+                               tracks=cfg.vectorized.tracks, 
+                               cfg=cfg, obs_as_dict=True, step_parallel=True, 
+                               lock = Lock())
+    else:
+        tm_env = CrashProofEnvironment(cfg)
         tm_env.init_environment()
-        
+    
+    try:
         exp_manager = Sb3ExperimentManager(
             cfg = cfg,
             hydra_run_dir= HydraConfig.get().run.dir,
@@ -47,9 +57,10 @@ def main(cfg : TrainConfig, run_id : Optional[str] = None):
             env= tm_env,
             eval_freq= cfg.wandb.eval_freq,
             checkpoint_freq= cfg.wandb.checkpoint_freq,
+            n_envs = cfg.vectorized.n_envs if cfg.vectorized.vectorize else 1
             )
 
-        model = get_model_from_config(cfg = cfg, tm_env = tm_env, print_params= True, run_id= exp_manager.get_tensorboard_login_identifier(), load_model_path=r"C:\Users\siwis\Documents\makecargofast\trackmania-gym\outputs\2026-01-22\00-21-05\models\checkpoints\checkpoint_500000_steps.zip")
+        model = get_model_from_config(cfg = cfg, tm_env = tm_env, print_params= True, run_id= exp_manager.get_tensorboard_login_identifier())#, load_model_path=r"C:\Users\siwis\Documents\makecargofast\trackmania-gym\outputs\2026-01-22\00-21-05\models\checkpoints\checkpoint_500000_steps.zip")
         model.learn(**cfg.learn_args, callback= exp_manager.get_callbacks())
     except Exception as e:
         traceback.print_exc()
@@ -60,7 +71,10 @@ def main(cfg : TrainConfig, run_id : Optional[str] = None):
     finally:
         exp_manager.after_training(model= model)
         # Finalize training and close game all processes.
-        tm_env.finalize_process(reinit=False)
+        if cfg.vectorized.vectorize:
+            tm_env.close()
+        else:
+            tm_env.finalize_process(reinit=False)
         
 
 if __name__ == "__main__": 

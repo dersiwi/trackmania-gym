@@ -19,6 +19,13 @@ learn_args:
   progress_bar: True
   tb_log_name: "PPO"
 
+vectorized:
+  vectorize : True
+  obs_as_dict : True
+  step_parallel : True 
+  n_envs : 3
+  tracks : ["another1.Challenge.Gbx", "another2.Challenge.Gbx", "another3.Challenge.Gbx", "simple1_validated.Challenge.Gbx"]
+
 gmi:
   launch: True
   tm_loader_profile_name: "default"
@@ -27,9 +34,9 @@ gmi:
   track : simple1_validated.Challenge.Gbx
 
 wandb:
-  use: True
+  use: False
   entity : tmnf-practical-ss25
   project : tmnf_ppo
-  checkpoint_freq : 500000 # after how many steps should the model be saved automatically
+  checkpoint_freq : 12500 # after how many steps should the model be saved automatically
   eval_freq : 3000000 # after how many steps should we check if there is a new better mode
   logminmax_continuous : False # If actions are continuous and this is True, then wandb logs min- and max- of actions per episode.

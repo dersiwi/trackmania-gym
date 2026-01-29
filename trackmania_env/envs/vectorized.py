@@ -64,7 +64,7 @@ class VectorizedTMEnvironment(gym.Env):
 
         port = self.cfg.gmi.port
         self.envs : list[CrashProofEnvironment] = [CrashProofEnvironment(train_cfg=self.cfg, port = port+i, return_obs_as_dict = obs_as_dict, lock = lock, skip = self.n_envs, suffix=f":idx={i}") for i in range(self.n_envs)]
-        
+
         # using a threadpool here is much much faster than initializing sequentially, as innit_environment also starts the game
         with ThreadPoolExecutor(max_workers=self.n_envs) as executor:
             _ = executor.map(lambda env : env.init_environment(), self.envs)

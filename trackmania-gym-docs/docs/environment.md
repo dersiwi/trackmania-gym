@@ -25,11 +25,7 @@ The order of operations in the environment in the step-method.
 
 ### Vectorized Environment
 
-We also implemented a vectorized version of the environment, which allows you to collect rollouts from multiple game-instances at the same time, speeding up training time. Training with a vectorized environment and stable-baselines3 is implemented in 
-```sh
-python scripts/sb3_train_vectorized.py
-```
-A script for testing and manual inputs to the environment is implemented in 
+We also implemented a vectorized version of the environment, which allows you to collect rollouts from multiple game-instances and therefore tracks at the same time, speeding up training time. Training with a vectorized environment and stable-baselines3 is also implemented in the `sb3_train_vectorized.py` and can be enabled using the `vectorized` arguments in the `train.yaml` config. A script for testing and manual inputs to the environment is implemented in 
 ```
 python scripts/tests/step_vectorized.py
 ```
