@@ -16,13 +16,14 @@ The main task of this class is to continuously respond to TCP-Messages sent by t
     The description of the prcess wrapper has to be technical, and if you do not plan on modifying the environment or how Trackmania-Gym Interacts with the game you will most likely not need to know this.
 
 ### Start of the Process
-This is the encapsulated way of starting the ProcessWrapper. This method starts the Game and ProcessWrapper and waits for a Connected-Signal from the ProcessWrapper. I.e. once this method returns, control- and response-queues can immediately be used.
+This is the encapsulated way of starting the ProcessWrapper. The ProcessManger is responsible for starting the ProcessWrapper and handles all process-kills. This method starts the Game and ProcessWrapper and waits for a Connected-Signal from the ProcessWrapper. I.e. once this method returns, control- and response-queues can immediately be used.
 ```py
 # instanciation of process-wrapper
-from game_interaction.run_multiprocess_wrapper import start_process_and_wait_for_startsignal
-p, control_queue, response_queue = start_process_and_wait_for_startsignal(...)
+from game_interaction.process_management import ProcessManagement
+pm = ProcessManagement(cfg, img_width, img_height, port=self.port, lock = self.lock)
+_, control_queue, response_queue = pm.start_process_and_wait_for_startsignal()
 ``` 
-`p` is the process-object, the `control_queue` is what is used to send commands to the ProcessWrapper and `response_queue` is where the answer can be expected. 
+the `control_queue` is what is used to send commands to the ProcessWrapper and `response_queue` is where the answer can be expected. The process-object is held by pm.
 
 ### ICP-Commands
 These are the available commands that the process wrapper can respond to. In this example, a step-command is sent with command id 10 (this is not relevant really).

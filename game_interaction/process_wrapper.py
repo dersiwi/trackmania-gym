@@ -43,10 +43,7 @@ class TMIProcessWrapper:
         """
         self.launch_game : bool = launch_game
         self.gim = gim
-        if launch_game:
-            self.gim.launch_game()
-            self.gim.register_iface(10)
-        self.iface : TMInterface = gim.get_tminterface()
+        
         self.command_queue : MultiprocessingQueue = command_queue
         self.response_queue : MultiprocessingQueue = response_queue
 
@@ -332,6 +329,23 @@ class TMIProcessWrapper:
         if self.debug: self.logger.debug(self.simsteps_since_last_env_step, self.ingame_time_passed)
         self.simsteps_since_last_env_step = 0
 
+
+    def start_running(self) -> None:
+        """Entry point to start the process-wrapper processs."""
+        if self.launch_game:
+            self.gim.launch_game()
+            self.gim.register_iface(10)
+        self.iface : TMInterface = self.gim.get_tminterface()
+
+        try:
+            self.syncloop()
+        except Exception as e:
+            self.response_queue.put_nowait({IPCFields.CMD_ID : -1, IPCFields.STATUS : IPCFields.STATUS_ERROR, IPCFields.ERROR : f"Got exceptioon {e} from running within syncloop."})
+
+        if self.launch_game:
+            self.logger.info(f"closing game with pid {self.gim.tm_process_id, id(self.gim)}")
+            self.gim.close_game()
+
     def syncloop(self):
         self._reconfigure_logger()
         self.logger.info("Started syncloop.")
@@ -466,7 +480,7 @@ class TMIProcessWrapper:
                     self.__ui_disabled = True
 
                 if not self.__start_cmd_id == -1:
-                    self.answer_command({IPCFields.CMD_ID : self.__start_cmd_id, IPCFields.STATUS : IPCFields.STATUS_OK})
+                    self.answer_command({IPCFields.CMD_ID : self.__start_cmd_id, IPCFields.STATUS : IPCFields.STATUS_OK, IPCFields.ARGS : {"tm_pid" : self.gim.tm_process_id}})
                     self.__start_cmd_id = -1
                     self.logger.info("Sending back command that abcdefg is ready.")
 
@@ -510,6 +524,4 @@ class TMIProcessWrapper:
             if time.time() - self.time_since_last_unanswered_handling > self.max_time_between_command_check:
                 self.handle_unanswered_commands()
 
-        if self.launch_game:
-            self.logger.info(f"closing game with pid {self.gim.tm_process_id, id(self.gim)}")
-            self.gim.close_game()
+

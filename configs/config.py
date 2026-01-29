@@ -8,7 +8,7 @@ class GMIConfig:
     tm_loader_profile_name: str
     headless: bool
     port: int
-    track : str
+    track : str 
     reference_line : str
     camera: int
 
@@ -192,6 +192,13 @@ class Learnargs:
     progress_bar : bool
     tb_log_name : str
 
+@dataclass
+class Vectorized:
+    vectorize : bool
+    n_envs : int
+    tracks : list[str]
+    obs_as_dict : bool
+    step_parallel : bool 
 
 @dataclass
 class PolicyCfg:
@@ -219,6 +226,7 @@ class TrainConfig:
     gmi: GMIConfig
     image: ImageConfig
     learn_args : Learnargs
+    vectorized : Vectorized
     extractors_out_dim : int
     platforms_config_path : str
     debug: bool

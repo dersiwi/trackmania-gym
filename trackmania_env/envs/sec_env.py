@@ -13,10 +13,9 @@ from configs.config import TrainConfig
 
 from trackmania_env.envs.single_agent_env2 import TMNF_Single_Agent_Env
 
-from game_interaction.ipc_command_sender import TMICommunicationFaildException
+from game_interaction.ipc_command_sender import TMICommunicationFaildException, IPCommandSender
 
-from game_interaction.run_multiprocess_wrapper import start_process_and_wait_for_startsignal
-from game_interaction.ipc_fields import IPCCommands
+from game_interaction.process_management import ProcessManagement
 from trackmania_env.envs.enivonrments import get_environment
 
 class CrashProofEnvironment(gym.Env):
@@ -32,26 +31,25 @@ class CrashProofEnvironment(gym.Env):
     once more; however truncated is set to True. The learner process can then call reset, in order to keep disruption to trajectory collection mininmal.   
     """
 
-    def __init__(self, train_cfg : TrainConfig, port : int = 8775, return_obs_as_dict : bool = True, lock = None):
+    def __init__(self, train_cfg : TrainConfig, port : int = 8775, return_obs_as_dict : bool = True, lock = None, skip : int = 0, suffix : str = ""):
         """
         Args:
             train_cfg (TrainConfig) : Configuration file used for initialization of enviroment
             port (int)              : TCP-port id for communication between TMInterface and ProcessWrapper
+            skip (int)              : In case of crash initiailize to port = port + skip
+            suffix (str)            : Suffix to append to the logging name. Defaults to no suffix, i.e. ''
         """
         super().__init__()
 
         self.cfg : TrainConfig = train_cfg
         self.port : int = port
+        self.skip = skip
         self.env : TMNF_Single_Agent_Env = None
 
         self.obs_manager = None
         self.rew_calculator = None
         self.reference_line = None
         self.termination_manager = None
-
-        self.tmi_process : Process  = None
-        self.control_queue : Queue  = None
-        self.response_queue : Queue = None
 
         self.env_initalizations : int = 0
         self.queue_empty_error  : int = 0
@@ -61,10 +59,17 @@ class CrashProofEnvironment(gym.Env):
         self.total_timesteps = 0
         self._step_recorded_at_timestep = -1
         self._last_obs, self._last_rew, self._last_terminated, self._last_truncated, self._last_info = None, None, None, None, None
-        self.logger = logging.getLogger(self.__class__.__name__)
+        self.logger = logging.getLogger(self.__class__.__name__ + suffix)
         self.logger.info(f"Initialized with port {self.port}")
 
         self.lock = lock 
+
+        self.pm = ProcessManagement(train_config=self.cfg, image_width=self.cfg.rl_env.obs_manager.img_width, image_height=self.cfg.rl_env.obs_manager.img_height, 
+                                        port=self.port, lock = self.lock)
+        self.ipcsender : IPCommandSender = None
+
+        self.reinit_recursion_depth = 0
+        
         
     def _set_env_variables(self):
         self.obs_manager = self.env.obs_manager
@@ -89,12 +94,12 @@ class CrashProofEnvironment(gym.Env):
         
         self.env_initalizations += 1
         self.logger.info(f"Initializing environment for the {self.env_initalizations}-th time.")
-        self.tmi_process, self.control_queue, self.response_queue = start_process_and_wait_for_startsignal(train_config=self.cfg, 
-                                                                                            image_width=self.cfg.rl_env.obs_manager.img_width, 
-                                                                                            image_height=self.cfg.rl_env.obs_manager.img_height,
-                                                                                            port=self.port,
-                                                                                            lock = self.lock)
-        self.env = get_environment(self.cfg, self.control_queue, self.response_queue)
+        
+        self.pm = ProcessManagement(train_config=self.cfg, image_width=self.cfg.rl_env.obs_manager.img_width, image_height=self.cfg.rl_env.obs_manager.img_height, port=self.port, lock = self.lock)
+        
+        self.ipcsender = self.pm.start_process_and_wait_for_startsignal()
+
+        self.env = get_environment(self.cfg, self.ipcsender)
         self.env.obs_manager.return_as_dict = self.return_obs_as_dict
         self._set_env_variables()
 
@@ -104,17 +109,27 @@ class CrashProofEnvironment(gym.Env):
         Args:
             reinit (bool) : If set, it calls self.init_environment() after joining process.
         """
-        self.logger.info("Finalizing tmi-process.")
+        if self.reinit_recursion_depth > 10:
+            self.logger.error("Tried reinitializing environment over 10 times. Killing now.")
+            raise RuntimeError("Tried reinitializing environment over 10 times. Killing now.")
 
-        self.control_queue.put(IPCCommands.get_end_syncloop_command())
-        self.tmi_process.join()
+        try:
+            self.logger.info("Finalizing tmi-process.")
+            self.pm.finalize_processes()
+        except Exception as e:
+            self.logger.exception("Got exception when trying to call self.pm.finalize_processes().")
+
         time.sleep(10)
 
         if reinit:
+            self.reinit_recursion_depth += 1
+            self.port = self.port + self.skip
+            self.logger.info(f"Increased port to {self.port}")
             self.queue_empty_error += 1
             self.logger.error(f"Reinitializing environment after queue empty error. Total n errors : {self.queue_empty_error}")
             self.init_environment()
-            self.env.reset()
+            self.reset()
+            self.reinit_recursion_depth = 0
 
     def _answer_step_after_crash(self, action) -> tuple[gym.spaces.Dict,float,bool,bool, dict[str, any]]:
         if self.total_timesteps == 0:

@@ -42,7 +42,7 @@ def main(cfg : TrainConfig, run_id : Optional[str] = None):
     mode = ActionMode.get_mode(cfg.rl_env.env.continuous_actions, cfg.rl_env.env.actiondim)
     try:
         o, info = tm_env.reset()
-        for i in range(100000):
+        for i in range(1000):
             action = ActionMode.generate_random_action(mode) if not incspeed else np.array([0.0, speed])
             print(f"[Aciton info]     :      steering : {action[0]},      acceleration {action[1]}")
             o, rew, term, trun, inf = tm_env.step(action)
@@ -59,9 +59,6 @@ def main(cfg : TrainConfig, run_id : Optional[str] = None):
             if term or trun:
                 tm_env.reset()
 
-
-
-
     except Exception as e:
         traceback.print_exc()
 
@@ -70,8 +67,7 @@ def main(cfg : TrainConfig, run_id : Optional[str] = None):
 
     finally:
         # Finalize training and close game all processes.
-        for env in tm_env.envs:
-            env.finalize_process(reinit=False)
+        tm_env.finalize_process(reinit=False)
 
 if __name__ == "__main__": 
     main()

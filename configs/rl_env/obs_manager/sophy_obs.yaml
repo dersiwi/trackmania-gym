@@ -6,7 +6,7 @@ obs_have_imgs: True
 check_channels: True
 img_width: 64
 img_height: 64
-store_imgs_as_uint8: True
+store_imgs_as_uint8: False
 norm_uint8_imgs: False
 colorspace: "rgb"
 camera_id: 3

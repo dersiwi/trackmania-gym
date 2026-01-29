@@ -3,6 +3,7 @@ import numpy as np
 import gymnasium as gym
 import random 
 import time
+import logging
 
 from concurrent.futures import ThreadPoolExecutor
 
@@ -62,8 +63,8 @@ class VectorizedTMEnvironment(gym.Env):
         self.assign_random_track_at_alternation = assign_random_track_at_alternation
 
         port = self.cfg.gmi.port
-        self.envs : list[CrashProofEnvironment] = [CrashProofEnvironment(train_cfg=self.cfg, port = port+i, return_obs_as_dict = obs_as_dict,lock = lock) for i in range(self.n_envs)]
-        
+        self.envs : list[CrashProofEnvironment] = [CrashProofEnvironment(train_cfg=self.cfg, port = port+i, return_obs_as_dict = obs_as_dict, lock = lock, skip = self.n_envs, suffix=f":idx={i}") for i in range(self.n_envs)]
+
         # using a threadpool here is much much faster than initializing sequentially, as innit_environment also starts the game
         with ThreadPoolExecutor(max_workers=self.n_envs) as executor:
             _ = executor.map(lambda env : env.init_environment(), self.envs)
@@ -81,6 +82,8 @@ class VectorizedTMEnvironment(gym.Env):
 
         self.total_steps = 0
         self.average_step_time = 0
+
+        self.logger = logging.getLogger(self.__class__.__name__)
 
 
     def _build_observation_space(self) -> gym.spaces.Space:
@@ -151,9 +154,12 @@ class VectorizedTMEnvironment(gym.Env):
 
     def finalize_process(self, **kwargs) -> None:
         """Stops execution for all environments."""
-        for env in self.envs:
-            env.finalize_process(reinit=False)
-    
+        self.logger.info("Finalizing all environemnts.")        
+        # using a threadpool here is much much faster than initializing sequentially, as innit_environment also starts the game
+        with ThreadPoolExecutor(max_workers=self.n_envs) as executor:
+            _ = executor.map(lambda env : env.finalize_process(reinit=False), self.envs)
+
+
     def check_map_alternation(self) -> None:
         """Checks, whether an environment has made sufficiently many steps on its current map and if yes, it requests a new map."""
         if self.alternation_between_tracks and self._steps_per_track[0][self.curr_track_id[0]] % self.n_steps_per_track == 0:

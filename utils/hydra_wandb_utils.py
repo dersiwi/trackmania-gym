@@ -1,16 +1,21 @@
 
-import os
-import hydra
 import wandb
 from wandb.wandb_run import Run
 
 from omegaconf import OmegaConf, open_dict 
 from omegaconf.errors import ConfigAttributeError
 
-from trackmania_env.utils.return_tracker import ReturnLogCallback
-from trackmania_env.envs.single_agent_env2 import TMNF_Single_Agent_Env
 from configs.config import TrainConfig
 from typing import Callable
+
+class RuntimeCfg:
+
+    cfg : TrainConfig = None
+    """This is the global config variable, use this sparingly and only when absolutely necessary. """
+
+    @staticmethod
+    def setcfg(cfg : TrainConfig) -> None:
+        RuntimeCfg.cfg = cfg
 
 def secure_attribute_retrieval(getter : Callable, default : any = None):
     """Securely returns an attribute from the config.
@@ -69,8 +74,10 @@ def load_and_merge_yaml(cfg : TrainConfig, yaml_to_merge : str) -> TrainConfig:
         merged = OmegaConf.merge(cfg, yaml)
     return merged
 
+
+
 def load_and_merge_platform(cfg : TrainConfig) -> TrainConfig:
-    """Load and merge the standalone platform-yaml and merge it into the global 'cfg'-yaml."""
+    """Load and merge the standalone platform-yaml and merge it into the global 'cfg'-yaml. Also sets RuntimeCfg."""
     platform_path = None
     platform_default_path = "configs/platforms.yaml"
     try:
@@ -79,4 +86,6 @@ def load_and_merge_platform(cfg : TrainConfig) -> TrainConfig:
         print(f"[!!] Platform-path attribute missing in cfg; config too old? Trying default path : {platform_default_path}")
         platform_path = platform_default_path
     assert not platform_path is None
-    return load_and_merge_yaml(cfg, platform_path)
+    merged_cfg = load_and_merge_yaml(cfg, platform_path)
+    RuntimeCfg.setcfg(merged_cfg)
+    return merged_cfg

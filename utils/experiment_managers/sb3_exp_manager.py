@@ -27,7 +27,7 @@ class Sb3ExperimentManager(ExperimentManager):
         2. checkpoint-model
     """
     
-    def __init__(self, hydra_run_dir : str, cfg : TrainConfig, env : Env, eval_freq : int, checkpoint_freq : int, run_id = None, resume = None):
+    def __init__(self, hydra_run_dir : str, cfg : TrainConfig, env : Env, eval_freq : int, checkpoint_freq : int, run_id = None, resume = None, n_envs : int = 1):
         
         super().__init__(hydra_run_dir, cfg, run_id, resume)
         self.callbacks : List[EventCallback] = []
@@ -38,6 +38,7 @@ class Sb3ExperimentManager(ExperimentManager):
         
         self.eval_freq = eval_freq
         self.checkpoint_freq = checkpoint_freq
+        self.n_envs = n_envs
        
         self.append_callbacks(env)
         self.add_artifacts()
@@ -72,7 +73,7 @@ class Sb3ExperimentManager(ExperimentManager):
         )
         self.callbacks.append(checkpoint_callback)
         if self.use_wandb:
-            self.callbacks.append(AccumRewardLogCallback())
+            self.callbacks.append(AccumRewardLogCallback(n_envs=self.n_envs))
             self.callbacks.append(ReturnCallback())
             
             if self.cfg.rl_env.env.continuous_actions:

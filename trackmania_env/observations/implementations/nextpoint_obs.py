@@ -37,7 +37,7 @@ def make_float_obs(name:str, ref_line_lookahead:int, ref_line_stride:int) -> Gro
         )
 
 class NextPointObsManager(ObservationManager):
-    def __init__(self,colorspace:str, convert_torch, img_width, img_height, normalize,ref_line_lookahead:int = 10, ref_line_stride:int = 10,  store_imgs_as_uint8:bool= True,norm_uint8_imgs:bool= False,**kwargs):
+    def __init__(self,colorspace:str, convert_torch, img_width, img_height, normalize,ref_line_lookahead:int = 10, ref_line_stride:int = 10,  store_imgs_as_uint8:bool= False, norm_uint8_imgs:bool= False,**kwargs):
         super().__init__(
             convert_torch=convert_torch,
             normalize=normalize,

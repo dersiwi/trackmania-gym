@@ -10,13 +10,12 @@ from trackmania_env.rewards.getrewards import get_reward_calculator_from_cfg
 from trackmania_env.terminations.get_termination_manager import get_termination_manager
 
 from trackmania_env.utils.orientationless_random_respawn_manager import OrientationlessRespawnManager
-
+from game_interaction.ipc_command_sender import IPCommandSender
 from configs.config import TrainConfig
 
 
 
-def _get_env_constructor_args(cfg : TrainConfig, control_queue : Queue, response_queue : Queue,
-                              obs_manager, reward_calculator, termination_manager) -> dict:
+def _get_env_constructor_args(cfg : TrainConfig, ipcommandsender, obs_manager, reward_calculator, termination_manager) -> dict:
     """Creates constructor args that can be passed to the environment
     Args:
         cfg (TrainConfig)               : Configuration used to initialize environment
@@ -30,8 +29,7 @@ def _get_env_constructor_args(cfg : TrainConfig, control_queue : Queue, response
     """
     env_cfg = cfg.rl_env.env  
     constructor_kwargs = dict(
-        command_queue= control_queue,
-        response_queue= response_queue,
+        ipcommandsender= ipcommandsender,
         obs_manager= obs_manager,
         reward_calculator= reward_calculator,
         termination_manger= termination_manager,
@@ -49,7 +47,7 @@ def _get_env_constructor_args(cfg : TrainConfig, control_queue : Queue, response
     )
     return constructor_kwargs
 
-def get_environment(cfg : TrainConfig, control_queue : Queue, response_queue : Queue, test : bool = False) -> gym.Env:
+def get_environment(cfg : TrainConfig, ipcommandsender : IPCommandSender, test : bool = False) -> gym.Env:
     """Initializes environment according to given configuration file and applies wrappers, if specified in conifg.
     Args:
         cfg (TrainConfig)       : Configuration used to initialize environment
@@ -64,7 +62,7 @@ def get_environment(cfg : TrainConfig, control_queue : Queue, response_queue : Q
     reward_calculator = get_reward_calculator_from_cfg(reward_calculator_cfg = cfg.rl_env.reward_manager, normalize=cfg.rl_env.env.normalize_rewards)
     termination_manager = get_termination_manager(termination_cfg= cfg.rl_env.termination_manager)
 
-    constructor_kwargs = _get_env_constructor_args(cfg, control_queue, response_queue, obs_manager, reward_calculator, termination_manager)
+    constructor_kwargs = _get_env_constructor_args(cfg, ipcommandsender, obs_manager, reward_calculator, termination_manager)
     
     if not cfg.rl_env.env.continuous_actions and not cfg.rl_env.env.test or test:
         tm_env = TMNF_Single_Agent_Env(**constructor_kwargs)
