@@ -60,7 +60,7 @@ def main(cfg : TrainConfig, run_id : Optional[str] = None):
             n_envs = cfg.vectorized.n_envs if cfg.vectorized.vectorize else 1
             )
 
-        model = get_model_from_config(cfg = cfg, tm_env = tm_env, print_params= True, run_id= exp_manager.get_tensorboard_login_identifier())#, load_model_path=r"C:\Users\siwis\Documents\makecargofast\trackmania-gym\outputs\2026-01-22\00-21-05\models\checkpoints\checkpoint_500000_steps.zip")
+        model = get_model_from_config(cfg = cfg, tm_env = tm_env, print_params= True, run_id= exp_manager.get_tensorboard_login_identifier())
         model.learn(**cfg.learn_args, callback= exp_manager.get_callbacks())
     except Exception as e:
         traceback.print_exc()

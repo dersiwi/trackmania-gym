@@ -16,12 +16,6 @@ env:
   normalize_rewards : True
   normalize_obs : True
 
-  # all things related to image observations 
-  obs_have_imgs : True
-  normalize_images: True
-  check_channels: True
-  store_imgs_as_uint8 : False # if this is True, images are casted to uint8 by observation wrapper and not normalized (but remain in 0-255.) - Good for reducing replay buffer size and sb3 noramlizes images automaitcally
-
   game_speed : 70
   countdown_speed : 70
 

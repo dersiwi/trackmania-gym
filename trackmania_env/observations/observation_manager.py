@@ -38,13 +38,6 @@ class ObservationManager(ABC, Manager):
         else:
             self.obs_space = spaces.Box(-np.inf, np.inf, shape=(sum([term.get_flatten_dim() for term in self.terms])), dtype=np.float32)
         
-        # set control-image logging
-        controlimgdir, df = os.path.join(os.getcwd(), "logs/control_images"), 1000000
-        self.logger.info(f"Setting control-image dumping directory to : '{controlimgdir}' and dumping freq to {df} env steps.")
-        for term in self.terms:
-            if isinstance(term, ImageObservationTerm):
-                term: ImageObservationTerm
-                term.set_dump_freq(freq = df, dirpath=controlimgdir)
 
     def get_observation_space(self) -> Space:
         """
@@ -70,7 +63,16 @@ class ObservationManager(ABC, Manager):
             try:
                 observations[obsterm.name], terminfo = obsterm.get_observation(obs)
             except Exception as e:
-                self.logger.error(f"Failure to retrieve observation-term {obsterm.name}, error-traceback : {e} \n\n Supplementing obsterm with zeros.")
-                observations[obsterm.name], terminfo = np.zeros(obsterm.get_native_shape(), dtype = np.float32), {}
+                # NOTE: We intentionally terminate on errors here.
+                # Silently filling observations with zeros would corrupt the observation space,
+                # potentially leading to incorrect or unintended learning behavior.
+                # Previously, swallowing errors may have caused failures to go unnoticed.
+                raise RuntimeError(
+                    f"Failed to retrieve observation-term '{obsterm.name}'"
+                ) from e
+                self.logger.error(f"Failure to retrieve observation-term {obsterm.name}")
+                raise
+                # self.logger.error(f"Failure to retrieve observation-term {obsterm.name}, error-traceback : {e} \n\n Supplementing obsterm with zeros.")
+                # observations[obsterm.name], terminfo = np.zeros(obsterm.get_native_shape(), dtype = np.float32), {}
             info = info | terminfo
         return observations, info

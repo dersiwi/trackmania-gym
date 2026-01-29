@@ -37,12 +37,12 @@ def make_float_obs(name:str, ref_line_lookahead:int, ref_line_stride:int) -> Gro
         )
 
 class NextPointObsManager(ObservationManager):
-    def __init__(self,colorspace:str, convert_torch, img_width, img_height, normalize,ref_line_lookahead:int = 10, ref_line_stride:int = 10,**kwargs):
+    def __init__(self,colorspace:str, convert_torch, img_width, img_height, normalize,ref_line_lookahead:int = 10, ref_line_stride:int = 10,  store_imgs_as_uint8:bool= False, norm_uint8_imgs:bool= False,**kwargs):
         super().__init__(
             convert_torch=convert_torch,
             normalize=normalize,
             observation_terms=[
-                ImageObservationTerm(name="image", colorspace=colorspace, img_width=img_width, img_height=img_height, dtype=np.float32),
+                ImageObservationTerm(name="image", colorspace=colorspace, img_width=img_width, img_height=img_height, store_as_uint8=store_imgs_as_uint8,norm_uint8=norm_uint8_imgs),
                 make_float_obs(name= "flaots", ref_line_stride= ref_line_stride, ref_line_lookahead= ref_line_lookahead)
             ]
         )

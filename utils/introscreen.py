@@ -119,7 +119,7 @@ def introscreen(cfg : TrainConfig, asciiart = welcome, askstart : bool = False):
     print(f"""\n============================= General =============================
             - Algorithm             : {cfg.sb3.constructor._target_}
             - Observation-Manager   : {cfg.rl_env.obs_manager.name}
-              - use images          : {secure_attribute_retrieval(lambda : cfg.rl_env.env.obs_have_imgs)}
+            - use images            : {secure_attribute_retrieval(lambda : cfg.rl_env.obs_manager.obs_have_imgs)}
             - Reward-Manager        : {secure_attribute_retrieval(lambda : cfg.rl_env.reward_manager.name, cfg.rl_env.reward_manager._target_)}
             - Termination-Manager   : {cfg.rl_env.termination_manager.name}
             - RL-scheduler          : {cfg.lr_scheduler._target_}

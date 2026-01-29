@@ -1,8 +1,12 @@
 _target_: trackmania_env.observations.implementations.linesight_obs_wrapper.LinesightObservationManager
 name: "linesight"
 
+obs_have_imgs: True
+check_channels: True
 img_width: 128
 img_height: 128
+store_imgs_as_uint8: False
+norm_uint8_imgs: False
 colorspace: "grayscale"
 camera_id: 2
 
