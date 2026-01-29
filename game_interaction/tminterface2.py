@@ -167,3 +167,54 @@ class TMInterface:
         self.execute_command("set autorewind false")
         self.execute_command("set auto_reload_plugins true")
         self.execute_command(f"map {map_to_load}")
+
+import subprocess
+import socket
+import struct
+import signal
+from sys import platform
+
+def get_wsl_host_ip():
+    """Reads the gateway IP which represents the Windows Host from WSL's perspective."""
+    try:
+        host_ip = subprocess.check_output("ip route show | grep default | awk '{print $3}'", shell=True).decode().strip()
+        return host_ip
+    except Exception:
+        # Fallback for older WSL versions or edge cases
+        return "127.0.0.1"
+
+class TMInterfaceWSL(TMInterface):
+    def __init__(self, port: int):
+        super().__init__(port)
+        self.host = get_wsl_host_ip()
+
+    def register(self, timeout=None):
+        """Overrides the base register to connect to the Windows Host IP instead of localhost."""
+        self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        signal.signal(signal.SIGINT, self.signal_handler)
+        
+        # Timeout logic copied from base for compatibility
+        if timeout is not None:
+            if platform in ["linux", "linux2"]: 
+                timeout_pack = struct.pack("ll", timeout, 0)
+            else:
+                timeout_pack = struct.pack("q", timeout * 1000)
+            self.sock.setsockopt(socket.SOL_SOCKET, socket.SO_RCVTIMEO, timeout_pack)
+            self.sock.setsockopt(socket.SOL_SOCKET, socket.SO_SNDTIMEO, timeout_pack)
+            
+        self.sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
+
+        self.logger.info(f"WSL: Attempting to connect to Windows Host at {self.host}:{self.port}...")
+        
+        try:
+            # We use self.host (the Windows IP) instead of the global HOST
+            self.sock.connect((self.host, self.port))
+            self.registered = True
+            self.logger.info(f"Connected to Windows Host. Timeout: {timeout}ms.")
+        except ConnectionRefusedError:
+            self.logger.error(
+                f"Connection Refused. Ensure the TMInterface plugin on Windows is "
+                f"listening on 0.0.0.0 and Port {self.port} is open in Windows Firewall."
+            )
+            raise
+

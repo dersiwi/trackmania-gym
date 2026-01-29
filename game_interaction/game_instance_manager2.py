@@ -24,7 +24,7 @@ from pathlib import Path
 
 
 from multiprocessing import Lock
-from game_interaction.tminterface2 import TMInterface
+from game_interaction.tminterface2 import TMInterface,TMInterfaceWSL
 
 class GameInstanceManager:
     
@@ -75,12 +75,13 @@ class GameInstanceManager:
                     path_to_plugin,
                     headless,
                     tmi_port,
+                    is_wsl= True
                 )
             case _:
                 raise ValueError(f"No game instance manager for OS: {os}")
         
 
-    def __init__(self, TMLoader_path : str, TMLoader_profile_name : str, path_to_plugin : str, headless : bool,tmi_port:int):
+    def __init__(self, TMLoader_path : str, TMLoader_profile_name : str, path_to_plugin : str, headless : bool,tmi_port:int, is_wsl:bool=False):
         """Do not use this class directly. Instanciate via GameInstanceManager.get_instance()."""
 
         self.TMLoader_path : str = TMLoader_path
@@ -90,7 +91,7 @@ class GameInstanceManager:
         self.tmi_port = tmi_port
         self.tm_process_id = None
         self.tm_window_id  = None
-        self.tminterface = TMInterface(self.tmi_port)
+        self.tminterface = TMInterfaceWSL(self.tmi_port) if is_wsl else TMInterface(self.tmi_port)
         self.game_activated = False
 
         assert os.path.exists(self.path_to_plugin), f"Python_Link.as was not found at '{self.path_to_plugin}'."
