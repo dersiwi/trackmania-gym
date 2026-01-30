@@ -67,13 +67,14 @@ class ProcessManagement:
         else:
             self.logger.error(f"Expected the startsignal to contain ARGS, but thats not the case, its only {startsignal}")
     
-    def start_process_and_wait_for_startsignal(self, timeout: float = 15, mcs: int = 2, wfr: float = 0.5) -> IPCommandSender:
+    def start_process_and_wait_for_startsignal(self, timeout: float = 15, mcs: int = 2, wfr: float = 0.5, track : str = None) -> IPCommandSender:
         """Starts a process that wrapps TMIProcessWrapper to communicate with Trackmania instance. Waits for established communication after launching process.
         If no connection can be found or no answer received, Queue.Empty-Error is thrown.
         Args:
             - timeout (float)   : timeout passed onto the sender
             - mcs   (int)       : mcs passed to sender
             - wfr   (float)     : wfr passed to sender
+            - track (str)       : String specifiying track-file. Defaults to None and then uses self.train_config.gmi.track
         
         
         Returns:
@@ -81,13 +82,13 @@ class ProcessManagement:
                 - cq : control-Queue to be able to send commands to the running process @see TMIProcessWrapper for format
                 - rq : response-Queue to be able to receive answers from running process @see TMIProcessWrapper for format (depends on command.)
         """
-    
+        defaulttrack = self.train_config.gmi.track if track is None else track
         p = Process(target=run_wrapper, 
                     args=(self.game_instance_manager,
                         self.train_config.gmi.launch,
                         self.control_queue,
                         self.response_queue,
-                        self.train_config.gmi.track,
+                        defaulttrack,
                         self.image_width,
                         self.image_height,
                         self.train_config.rl_env.obs_manager.camera_id,

@@ -31,13 +31,15 @@ class CrashProofEnvironment(gym.Env):
     once more; however truncated is set to True. The learner process can then call reset, in order to keep disruption to trajectory collection mininmal.   
     """
 
-    def __init__(self, train_cfg : TrainConfig, port : int = 8775, return_obs_as_dict : bool = True, lock = None, skip : int = 0, suffix : str = ""):
+    def __init__(self, train_cfg : TrainConfig, port : int = 8775, return_obs_as_dict : bool = True, 
+                 lock = None, skip : int = 0, suffix : str = "", track : str = None):
         """
         Args:
             train_cfg (TrainConfig) : Configuration file used for initialization of enviroment
             port (int)              : TCP-port id for communication between TMInterface and ProcessWrapper
             skip (int)              : In case of crash initiailize to port = port + skip
             suffix (str)            : Suffix to append to the logging name. Defaults to no suffix, i.e. ''
+            track (str)             : Track that is passed to the process-wrapper instance. Defaults to None and then process-wrapper uses cfg.gmi.track
         """
         super().__init__()
 
@@ -63,6 +65,7 @@ class CrashProofEnvironment(gym.Env):
         self.logger.info(f"Initialized with port {self.port}")
 
         self.lock = lock 
+        self.track = track
 
         self.pm = ProcessManagement(train_config=self.cfg, image_width=self.cfg.rl_env.obs_manager.img_width, image_height=self.cfg.rl_env.obs_manager.img_height, 
                                         port=self.port, lock = self.lock)
@@ -97,7 +100,7 @@ class CrashProofEnvironment(gym.Env):
         
         self.pm = ProcessManagement(train_config=self.cfg, image_width=self.cfg.rl_env.obs_manager.img_width, image_height=self.cfg.rl_env.obs_manager.img_height, port=self.port, lock = self.lock)
         
-        self.ipcsender = self.pm.start_process_and_wait_for_startsignal()
+        self.ipcsender = self.pm.start_process_and_wait_for_startsignal(track = self.track)
 
         self.env = get_environment(self.cfg, self.ipcsender)
         self.env.obs_manager.return_as_dict = self.return_obs_as_dict

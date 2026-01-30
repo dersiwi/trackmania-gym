@@ -25,8 +25,8 @@ vectorized:
   vectorize : True
   obs_as_dict : True
   step_parallel : True 
-  n_envs : 3
-  tracks : ["another1.Challenge.Gbx", "another2.Challenge.Gbx", "another3.Challenge.Gbx", "simple1_validated.Challenge.Gbx"]
+  n_envs : 5
+  tracks : ["another1.Challenge.Gbx", "another2.Challenge.Gbx", "another3.Challenge.Gbx", "simple1_validated.Challenge.Gbx", "curvy.Challenge.Gbx"]
 
 gmi:
   launch: True
@@ -39,6 +39,6 @@ wandb:
   use: False
   entity : tmnf-practical-ss25
   project : tmnf_ppo
-  checkpoint_freq : 12500 # after how many steps should the model be saved automatically
+  checkpoint_freq : 100000 # after how many steps should the model be saved automatically
   eval_freq : 3000000 # after how many steps should we check if there is a new better mode
   logminmax_continuous : False # If actions are continuous and this is True, then wandb logs min- and max- of actions per episode.

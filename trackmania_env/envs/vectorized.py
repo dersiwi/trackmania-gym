@@ -50,7 +50,7 @@ class VectorizedTMEnvironment(gym.Env):
         self.return_obs_as_dict : bool = obs_as_dict
         self.curr_track_id = [random.randint(0, len(tracks) - 1) if assign_rangom_track_at_init else i % len(tracks) for i in range(n_envs)]
         """Stores the current track id for each environment. self.tracks[self.curr_track_id[i]] stores the track name for environment i."""
-        self._steps_per_track = [[0 for i in range(len(self.tracks))] for i in range(self.n_envs)]
+        self._steps_per_track = [[0 for i in range(len(self.tracks))] for j in range(self.n_envs)]
         """Stores the amount of steps each environment did in each track"""
 
         self.step_parallel = step_parallel
@@ -63,7 +63,9 @@ class VectorizedTMEnvironment(gym.Env):
         self.assign_random_track_at_alternation = assign_random_track_at_alternation
 
         port = self.cfg.gmi.port
-        self.envs : list[CrashProofEnvironment] = [CrashProofEnvironment(train_cfg=self.cfg, port = port+i, return_obs_as_dict = obs_as_dict, lock = lock, skip = self.n_envs, suffix=f":idx={i}") for i in range(self.n_envs)]
+        self.envs : list[CrashProofEnvironment] = [CrashProofEnvironment(train_cfg=self.cfg, port = port+i, return_obs_as_dict = obs_as_dict, 
+                                                                         lock = lock, skip = self.n_envs, suffix=f":idx={i}", 
+                                                                         track = self.tracks[self.curr_track_id[i]]) for i in range(self.n_envs)]
 
         # using a threadpool here is much much faster than initializing sequentially, as innit_environment also starts the game
         with ThreadPoolExecutor(max_workers=self.n_envs) as executor:
