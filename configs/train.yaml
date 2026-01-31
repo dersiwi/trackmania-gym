@@ -22,7 +22,7 @@ learn_args:
   tb_log_name: "PPO"
 
 vectorized:
-  vectorize : True
+  vectorize : False
   obs_as_dict : True
   step_parallel : True 
   n_envs : 5

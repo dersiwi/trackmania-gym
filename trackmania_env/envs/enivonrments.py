@@ -2,7 +2,7 @@ from multiprocessing import Queue
 import gymnasium as gym
 
 
-from trackmania_env.envs.single_agent_env2 import TMNF_Single_Agent_Env, ContinuousTMNF_Single_Agent_Env
+from trackmania_env.envs.single_agent_env2 import TMNF_Single_Agent_Env, ContinuousTMNF_Single_Agent_Env,FakeContinuousTMNF_Single_Agent_Env
 from trackmania_env.envs.testenv_single_agent import TestEnvironment
 
 from trackmania_env.observations.observations import get_observation_manager_from_cfg
@@ -65,9 +65,14 @@ def get_environment(cfg : TrainConfig, ipcommandsender : IPCommandSender, test :
     constructor_kwargs = _get_env_constructor_args(cfg, ipcommandsender, obs_manager, reward_calculator, termination_manager)
     
     if not cfg.rl_env.env.continuous_actions and not cfg.rl_env.env.test or test:
-        tm_env = TMNF_Single_Agent_Env(**constructor_kwargs)
+        # NOTE: I know this is ugly and may lead to confusion but its just for testing purposes we dont plan on
+        # adopting this probably
+        if cfg.rl_env.env.fake_cont:
+            tm_env = FakeContinuousTMNF_Single_Agent_Env(**constructor_kwargs)
+        else:
+            tm_env = TMNF_Single_Agent_Env(**constructor_kwargs)
     else:
-        tm_env = ContinuousTMNF_Single_Agent_Env(**constructor_kwargs, actiondim= cfg.rl_env.env.actiondim)
+         tm_env = ContinuousTMNF_Single_Agent_Env(**constructor_kwargs, actiondim= cfg.rl_env.env.actiondim)
 
     if cfg.rl_env.env.test or test:
             constructor_kwargs.update(dict(platform = cfg.platforms.os))

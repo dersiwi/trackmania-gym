@@ -7,6 +7,7 @@ from typing import Any,Dict,Tuple,Optional,List
 
 import gymnasium as gym
 import numpy as np
+import torch
 import logging
 import time
 
@@ -260,6 +261,12 @@ class TMNF_Single_Agent_Env(gym.Env):
 
         self.n_steps += 1
         self.total_steps += 1
+
+        # the reward must be a float variable to allign with the gymnasium specification
+        if isinstance(reward,np.ndarray) or torch.is_tensor(reward):
+            reward = float(reward.item())
+
+
         return processed_obs, reward, terminated, truncated, info
     
     def reset(self, seed = None, options = None)-> Tuple[gym.spaces.Dict,Dict[str,Any]]:
@@ -408,3 +415,27 @@ class ContinuousTMNF_Single_Agent_Env(TMNF_Single_Agent_Env):
     def _get_action(self, action):
         # TODO this should also be done via the ActionMode class in the parent-environemnt
         return action
+
+
+class FakeContinuousTMNF_Single_Agent_Env(TMNF_Single_Agent_Env):
+
+    def __init__(self, ipcommandsender, obs_manager, reward_calculator, termination_manger, 
+                 track, reset_mode, n_previous_actions, position_buffer_size, position_moved_threshold, 
+                 ignore_stuck_for_n_steps_after_reset, game_speed, countdown_speed, waitforstep_timeout_in_s, 
+                 startposition_accuracy_threshold, gamma, **kwargs):
+        
+        super().__init__(ipcommandsender, obs_manager, reward_calculator, termination_manger, 
+                         track, reset_mode, n_previous_actions, position_buffer_size, position_moved_threshold,
+                          ignore_stuck_for_n_steps_after_reset, game_speed, countdown_speed, waitforstep_timeout_in_s, 
+                          startposition_accuracy_threshold, gamma, is_discrete=True, **kwargs)
+        # apparently symmetric action space help rl algos to learn better so we use [-1,1] but rescale later
+        self.action_space = gym.spaces.Box(low=-1.0, high = 1.0, shape = (1,), dtype=np.float32)
+        
+    def _get_action(self, action):
+        scaled = (action[0] + 1) / 2 * len(ACTION_MAP) # map to [0,len(ActionMap)] in other words [0,12] 
+        a = int(scaled)
+        a = np.clip(a, 0, len(ACTION_MAP) - 1)
+
+        discrete_action = ACTION_MAP[a]
+        return discrete_action
+

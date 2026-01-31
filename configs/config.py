@@ -143,6 +143,8 @@ class EnvConfig:
     """Executes a check of number of channels in order to determine if a observation-term is an imageterm.
     May be wrong, if doing framestacking,..."""
 
+    fake_cont: bool
+
     continuous_actions : bool
     actiondim : int
 
