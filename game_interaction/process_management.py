@@ -37,7 +37,7 @@ class ProcessManagement:
             TMLoader_path = train_config.platforms.tmloader,
             path_to_plugin = train_config.platforms.plugin,
             TMLoader_profile_name= train_config.gmi.tm_loader_profile_name,
-            linux = train_config.platforms.os == "linux",
+            os = train_config.platforms.os,
             headless= train_config.gmi.headless,
             tmi_port= port,
             lock=lock,)
