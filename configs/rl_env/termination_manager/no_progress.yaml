@@ -1,4 +1,4 @@
 name: "no_progress"
 max_steps_until_reset : 2048  ##aka timeout
 ignore_stuck_for_n_steps_after_reset : 80 
-terminate_after_steps_without_progress : 1024
+terminate_after_steps_without_progress : 4096

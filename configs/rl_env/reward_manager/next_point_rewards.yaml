@@ -16,3 +16,6 @@ sigma: 1.0
 yshift: -1
 multiplicator: 5
 dist_scale: 0.3
+enhanced_by_amount_travelled: False
+exponential_factor: 1.0
+scaled_by_steps_taken: False

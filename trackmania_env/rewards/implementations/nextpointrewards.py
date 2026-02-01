@@ -32,6 +32,9 @@ class NextPointRewards(RewradCalculator):
         multiplicator: float = 5,
         dist_scale: float = 0.3,
         normalize: bool = False,
+        enhanced_by_amount_travelled: bool = False,
+        exponential_factor:float = 1.0,
+        scaled_by_steps_taken:bool = False,
         **kwargs,
     ):
         """
@@ -73,8 +76,8 @@ class NextPointRewards(RewradCalculator):
             )
 
         self.terms: list[RewardTerm] = [
-            AccumulatedDistanceReward(accum_distance_weight),
-            RaceFinished(race_finished_reward_weight),
+            AccumulatedDistanceReward(accum_distance_weight,enhanced_by_amount_travelled=enhanced_by_amount_travelled,exponential_factor=exponential_factor),
+            RaceFinished(race_finished_reward_weight,scaled_by_steps_taken=scaled_by_steps_taken),
             ConstantRewardTerm((-1) * race_not_finished_weight),
             SpeedReward(speed_reward_weight / SpeedReward.THEORETICAL_MAX_VALUE),
             LateralDistanceReward(distance_to_center_weight, lateral_distance_mode),
