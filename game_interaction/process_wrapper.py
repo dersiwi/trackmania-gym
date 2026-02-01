@@ -340,6 +340,7 @@ class TMIProcessWrapper:
         try:
             self.syncloop()
         except Exception as e:
+            self.logger.exception("Exception in syncloop execution.")
             self.response_queue.put_nowait({IPCFields.CMD_ID : -1, IPCFields.STATUS : IPCFields.STATUS_ERROR, IPCFields.ERROR : f"Got exceptioon {e} from running within syncloop."})
 
         if self.launch_game:
