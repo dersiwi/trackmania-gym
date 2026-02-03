@@ -12,7 +12,9 @@ def l2normalize(x: torch.Tensor, axis: int, eps=1e-8) -> torch.Tensor:
 
 # RSNorm implementation. section 3.2 input embedding
 class RSNorm(nn.Module):
-    def __init__(self, dim: int, eps: float = 1e-5, momentum: float | None = None) -> None:
+    def __init__(
+        self, dim: int, eps: float = 1e-5, momentum: float | None = None
+    ) -> None:
         super().__init__()
         self.dim = dim
         self.eps = eps
@@ -26,7 +28,7 @@ class RSNorm(nn.Module):
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         if self.training:
             with torch.no_grad():
-                batch_mean = x.mean(dim=0,keepdim=False)
+                batch_mean = x.mean(dim=0, keepdim=False)
                 batch_var = x.var(dim=0, unbiased=False)
                 batch_count = x.shape[0]
 
@@ -104,6 +106,35 @@ class HyperDense(nn.Module):
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         return self.w(x)
+
+
+# the emdding block from figure 3 + 4.1
+# NOTE: we include the RSNorm in this implementation but the original implementation uses gym wrappers see https://github.com/DAVIAN-Robotics/SimbaV2/tree/86899c277cdc697b2b02d827243de1ea93f20a1d/scale_rl/agents/wrappers
+class HyperEmbedder(nn.Module):
+    def __init__(
+        self,
+        in_features: int,
+        out_features: int,
+        scaler_init: float,
+        scaler_scale: float,
+        c_shift: float,
+        gain: float = 1.0,
+    ) -> None:
+        super().__init__()
+        self.w = HyperDense(
+            in_features=in_features, out_features=out_features, gain=gain
+        )
+        self.scaler = Scaler(dim=out_features, init=scaler_init, scale=scaler_scale)
+        self.register_buffer("c_shift", torch.tensor(c_shift, dtype=torch.float))
+
+    def forward(self, x: torch.Tensor):
+        new_axis = torch.ones((x.shape[:-1] + (1,))) * self.c_shift
+        x = torch.concatenate([x, new_axis], dim=-1)
+        x = l2normalize(x, axis=-1)
+        x = self.w(x)
+        x = self.scaler(x)
+        x = l2normalize(x, axis=-1)
+        return x
 
 
 # the mlp used in the LERP residual block before the LERP happens. see Figure 3
