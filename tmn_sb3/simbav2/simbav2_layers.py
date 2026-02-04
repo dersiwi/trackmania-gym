@@ -1,7 +1,9 @@
-# this is a pytorch implementation of the nn architectur from the paper  "Hyperspherical Normalization for Scalable Deep Reinforcement Learning" https://arxiv.org/pdf/2502.15280
+# this is a pytorch implementation of the nn architectur from the paper
+# "Hyperspherical Normalization for Scalable Deep Reinforcement Learning" https://arxiv.org/pdf/2502.15280
 
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 from torch.distributions import Distribution, Independent, Normal, TransformedDistribution
 from torch.distributions.transforms import TanhTransform
 
@@ -153,7 +155,7 @@ class HyperMLP(nn.Module):
         x = self.w1(x)
         x = self.scaler(x)
         # `eps` is required to prevent zero vector.
-        x = nn.functional.relu(x) + self.eps
+        x = F.relu(x) + self.eps
         x = self.w2(x)
         x = l2normalize(x, axis=-1)
         return x
@@ -213,15 +215,15 @@ class HyperNormalTanhPolicy(nn.Module):
         super().__init__()
 
         self.mean_w1 = HyperDense(in_features=in_features, out_features=hidden_features, gain=gain)
-        self.mean_scaler = Scaler(dim=in_features, init=scaler_init, scale=scaler_scale)
+        self.mean_scaler = Scaler(dim=hidden_features, init=scaler_init, scale=scaler_scale)
 
         self.mean_w2 = HyperDense(in_features=hidden_features, out_features=action_dim, gain=gain)
         self.mean_bias = nn.Parameter(data=torch.zeros(size=(action_dim,)), requires_grad=True)
 
         self.std_w1 = HyperDense(in_features=in_features, out_features=hidden_features, gain=gain)
-        self.std_scaler = Scaler(dim=in_features, init=scaler_init, scale=scaler_scale)
+        self.std_scaler = Scaler(dim=hidden_features, init=scaler_init, scale=scaler_scale)
 
-        self.std_w2 = HyperDense(in_features=action_dim, out_features=action_dim, gain=gain)
+        self.std_w2 = HyperDense(in_features=hidden_features, out_features=action_dim, gain=gain)
         self.std_bias = nn.Parameter(data=torch.zeros(size=(action_dim,)), requires_grad=True)
 
     def forward(self, x: torch.Tensor, temperature: float = 1.0) -> Distribution:
@@ -234,7 +236,7 @@ class HyperNormalTanhPolicy(nn.Module):
         log_std = self.std_w2(log_std) + self.std_bias
 
         # normalize log-stds for stability
-        log_std = self.log_std_min + (self.log_std_max - self.log_std_min) * 0.5 * (1 + nn.functional.tanh(log_std))
+        log_std = self.log_std_min + (self.log_std_max - self.log_std_min) * 0.5 * (1 + F.tanh(log_std))
 
         # this should represent a MultivariateNormalDiag see https://github.com/pytorch/pytorch/pull/11178
         dist = Independent(Normal(loc=mean, scale=torch.exp(log_std) * temperature), 1)
@@ -243,3 +245,39 @@ class HyperNormalTanhPolicy(nn.Module):
         # TODO: think about only returning the mean & std since SB3 has its own distributions we coulduse
 
         return dist
+
+
+# HyperCategoricalCritic probably better fitting
+# Implements the final computation block from Figure 3: Linear → Scale → Linear.
+# Produces log-probabilities over discrete return atoms (the categorical distribution over Q-values). Section 4.3
+class HyperCategoricalValue(nn.Module):
+    def __init__(
+        self,
+        in_features: int,
+        hidden_features: int,
+        num_bins: int,
+        min_v: float,
+        max_v: float,
+        scaler_init: float,
+        scaler_scale: float,
+        gain: float = 1.0,
+    ) -> None:
+        super().__init__()
+        self.w1 = HyperDense(in_features=in_features, out_features=hidden_features, gain=gain)
+        self.scaler = Scaler(dim=hidden_features, init=scaler_init, scale=scaler_scale)
+        self.w2 = HyperDense(in_features=hidden_features, out_features=num_bins, gain=gain)
+        self.bias = nn.Parameter(data=torch.zeros(size=(num_bins,)))
+        self.register_buffer("bin_values", torch.linspace(start=min_v, end=max_v, steps=num_bins))
+
+    def forward(self, x: torch.Tensor):
+        # the name value might be a bit confusing here. latent_x would make more sense since only at the end of the function
+        # we truly calculate the values
+        value = self.w1(x)
+        value = self.scaler(value)
+        value = self.w2(value) + self.bias
+
+        # return log probability of bins
+        log_prob = F.log_softmax(value, dim=1)
+        value = torch.sum(torch.exp(log_prob) * self.bin_values, dim=1)
+
+        return value
