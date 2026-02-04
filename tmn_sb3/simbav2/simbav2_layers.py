@@ -2,6 +2,8 @@
 
 import torch
 import torch.nn as nn
+from torch.distributions import Distribution, Independent, Normal, TransformedDistribution
+from torch.distributions.transforms import TanhTransform
 
 
 def l2normalize(x: torch.Tensor, axis: int, eps=1e-8) -> torch.Tensor:
@@ -12,9 +14,7 @@ def l2normalize(x: torch.Tensor, axis: int, eps=1e-8) -> torch.Tensor:
 
 # RSNorm implementation. section 3.2 input embedding
 class RSNorm(nn.Module):
-    def __init__(
-        self, dim: int, eps: float = 1e-5, momentum: float | None = None
-    ) -> None:
+    def __init__(self, dim: int, eps: float = 1e-5, momentum: float | None = None) -> None:
         super().__init__()
         self.dim = dim
         self.eps = eps
@@ -66,9 +66,7 @@ class Scaler(nn.Module):
         super().__init__()
         self.init = init
         self.scale = scale
-        self.scaler = nn.Parameter(
-            data=torch.ones(dim) * self.scale, requires_grad=True
-        )
+        self.scaler = nn.Parameter(data=torch.ones(dim) * self.scale, requires_grad=True)
         assert self.scale != 0.0, "You can't initialize scale to 0"
         forward_scaler = self.init / self.scale
         self.register_buffer("forward_scaler", torch.tensor(forward_scaler))
@@ -99,9 +97,7 @@ class HyperDense(nn.Module):
         self.out_dim = out_features
         self.gain = gain
         # NOTE: bias must be set to false see https://github.com/DAVIAN-Robotics/SimbaV2/blob/master/scale_rl/agents/simbaV2/simbaV2_layer.py#L31
-        self.w = nn.Linear(
-            in_features=in_features, out_features=out_features, bias=False
-        )
+        self.w = nn.Linear(in_features=in_features, out_features=out_features, bias=False)
         nn.init.orthogonal(self.w, gain)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
@@ -121,9 +117,7 @@ class HyperEmbedder(nn.Module):
         gain: float = 1.0,
     ) -> None:
         super().__init__()
-        self.w = HyperDense(
-            in_features=in_features, out_features=out_features, gain=gain
-        )
+        self.w = HyperDense(in_features=in_features, out_features=out_features, gain=gain)
         self.scaler = Scaler(dim=out_features, init=scaler_init, scale=scaler_scale)
         self.register_buffer("c_shift", torch.tensor(c_shift, dtype=torch.float))
 
@@ -150,13 +144,9 @@ class HyperMLP(nn.Module):
         eps: float = 1e-8,
     ) -> None:
         super().__init__()
-        self.w1 = HyperDense(
-            in_features=in_features, out_features=hidden_features, gain=gain
-        )
+        self.w1 = HyperDense(in_features=in_features, out_features=hidden_features, gain=gain)
         self.scaler = Scaler(dim=hidden_features, init=scaler_init, scale=scaler_scale)
-        self.w2 = HyperDense(
-            in_features=hidden_features, out_features=out_features, gain=gain
-        )
+        self.w2 = HyperDense(in_features=hidden_features, out_features=out_features, gain=gain)
         self.eps = eps
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
@@ -204,6 +194,52 @@ class HyperLERPBlock(nn.Module):
         return x
 
 
-class SimbaV2ResidualBlock(nn.Module):
-    def __init__(self, *args, **kwargs) -> None:
-        super().__init__(*args, **kwargs)
+# SimbaV2SquashedGaussianActor
+# Corresponds to the final computation blocks in Figure 3 (Linear → Scaler → Linear).
+# The output is a Tanh-squashed multivariate diagonal Gaussian with learned mean and
+# standard deviation.
+class HyperNormalTanhPolicy(nn.Module):
+    def __init__(
+        self,
+        in_features: int,
+        hidden_features: int,
+        action_dim: int,
+        scaler_init: float,
+        scaler_scale: float,
+        log_std_min: float = -10.0,
+        log_std_max: float = 2.0,
+        gain: float = 1.0,
+    ) -> None:
+        super().__init__()
+
+        self.mean_w1 = HyperDense(in_features=in_features, out_features=hidden_features, gain=gain)
+        self.mean_scaler = Scaler(dim=in_features, init=scaler_init, scale=scaler_scale)
+
+        self.mean_w2 = HyperDense(in_features=hidden_features, out_features=action_dim, gain=gain)
+        self.mean_bias = nn.Parameter(data=torch.zeros(size=(action_dim,)), requires_grad=True)
+
+        self.std_w1 = HyperDense(in_features=in_features, out_features=hidden_features, gain=gain)
+        self.std_scaler = Scaler(dim=in_features, init=scaler_init, scale=scaler_scale)
+
+        self.std_w2 = HyperDense(in_features=action_dim, out_features=action_dim, gain=gain)
+        self.std_bias = nn.Parameter(data=torch.zeros(size=(action_dim,)), requires_grad=True)
+
+    def forward(self, x: torch.Tensor, temperature: float = 1.0) -> Distribution:
+        mean = self.mean_w1(x)
+        mean = self.mean_scaler(mean)
+        mean = self.mean_w2(mean) + self.mean_bias
+
+        log_std = self.std_w1(x)
+        log_std = self.std_scaler(log_std)
+        log_std = self.std_w2(log_std) + self.std_bias
+
+        # normalize log-stds for stability
+        log_std = self.log_std_min + (self.log_std_max - self.log_std_min) * 0.5 * (1 + nn.functional.tanh(log_std))
+
+        # this should represent a MultivariateNormalDiag see https://github.com/pytorch/pytorch/pull/11178
+        dist = Independent(Normal(loc=mean, scale=torch.exp(log_std) * temperature), 1)
+        dist = TransformedDistribution(dist, TanhTransform(cache_size=1))
+
+        # TODO: think about only returning the mean & std since SB3 has its own distributions we coulduse
+
+        return dist
