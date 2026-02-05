@@ -130,6 +130,76 @@ class SACSimbaV2Actor(Actor):
         return mean, log_std, {}
 
 
+class SACSimbaV2Critic(ContinuousCritic):
+    def __init__(
+        self,
+        observation_space: spaces.Space,
+        action_space: spaces.Box,
+        net_arch: list[int],
+        features_extractor: BaseFeaturesExtractor,
+        features_dim: int,
+        activation_fn: type[nn.Module] = nn.ReLU,
+        normalize_images: bool = True,
+        n_critics: int = 2,
+        share_features_extractor: bool = True,
+        ### Simba specific args ###
+        # TODO: check which default values the paper uses
+        num_blocks: int = 4,
+        hidden_features: int = 256,
+        scaler_init: float = 1.0,
+        scaler_scale: float = 1.0,
+        alpha_init: float = 0.1,
+        alpha_scale: float = 0.1,
+        c_shift: float = 0.0,
+        num_bins: int = 100,
+        min_v: float = -200.0,
+        max_v: float = 200.0,
+        gain: float = 1.0,
+        **kwargs,
+    ):
+        # call only the super method of the parent class
+        super(ContinuousCritic, self).__init__(
+            observation_space,
+            action_space,
+            features_extractor=features_extractor,
+            normalize_images=normalize_images,
+        )
+
+        action_dim = get_action_dim(self.action_space)
+        self.share_features_extractor = share_features_extractor
+        self.n_critics = n_critics
+        self.num_blocks = num_blocks
+        self.hidden_features = hidden_features
+        self.scaler_init = scaler_init
+        self.scaler_scale = scaler_scale
+        self.alpha_init = alpha_init
+        self.alpha_scale = alpha_scale
+        self.c_shift = c_shift
+        self.num_bins = num_bins
+        self.min_v = min_v
+        self.max_v = max_v
+        self.gain = gain
+
+        self.q_networks: list[nn.Module] = []
+        for idx in range(n_critics):
+            q_net = SimbaV2Critic(
+                num_blocks=num_blocks,
+                in_features=features_dim + action_dim,
+                hidden_features=hidden_features,
+                scaler_init=scaler_init,
+                scaler_scale=scaler_scale,
+                alpha_init=alpha_init,
+                alpha_scale=alpha_scale,
+                c_shift=c_shift,
+                num_bins=num_bins,
+                min_v=min_v,
+                max_v=max_v,
+                gain=gain,
+            )
+            self.add_module(f"qf{idx}", q_net)
+            self.q_networks.append(q_net)
+
+
 class SACSimbaV2Policy(SACPolicy):
     def __init__(
         self,
