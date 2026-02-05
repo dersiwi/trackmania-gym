@@ -35,7 +35,7 @@ class RSNorm(nn.Module):
                 batch_count = x.shape[0]
 
                 if self.momentum is None:
-                    # Method 1: Cumulative Moving Average (Exact historical mean/var)
+                    # Method 1: Cumulative Moving Average 
                     total_count = self.count + batch_count
                     ratio = batch_count / total_count
 
