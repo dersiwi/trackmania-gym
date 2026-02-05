@@ -35,7 +35,7 @@ class RSNorm(nn.Module):
                 batch_count = x.shape[0]
 
                 if self.momentum is None:
-                    # Method 1: Cumulative Moving Average 
+                    # Method 1: Cumulative Moving Average
                     total_count = self.count + batch_count
                     ratio = batch_count / total_count
 
@@ -226,7 +226,7 @@ class HyperNormalTanhPolicy(nn.Module):
         self.std_w2 = HyperDense(in_features=hidden_features, out_features=action_dim, gain=gain)
         self.std_bias = nn.Parameter(data=torch.zeros(size=(action_dim,)), requires_grad=True)
 
-    def forward(self, x: torch.Tensor, temperature: float = 1.0) -> Distribution:
+    def forward(self, x: torch.Tensor, temperature: float = 1.0) -> tuple[torch.Tensor, torch.Tensor]:
         mean = self.mean_w1(x)
         mean = self.mean_scaler(mean)
         mean = self.mean_w2(mean) + self.mean_bias
@@ -238,13 +238,13 @@ class HyperNormalTanhPolicy(nn.Module):
         # normalize log-stds for stability
         log_std = self.log_std_min + (self.log_std_max - self.log_std_min) * 0.5 * (1 + F.tanh(log_std))
 
+        # NOTE: in the original implementation this class returned a pytorch Distribution since this
+        # implementation is tailred for Sb3 we will just return the mean and log_std for sake of ease
         # this should represent a MultivariateNormalDiag see https://github.com/pytorch/pytorch/pull/11178
-        dist = Independent(Normal(loc=mean, scale=torch.exp(log_std) * temperature), 1)
-        dist = TransformedDistribution(dist, TanhTransform(cache_size=1))
+        # dist = Independent(Normal(loc=mean, scale=torch.exp(log_std) * temperature), 1)
+        # dist = TransformedDistribution(dist, TanhTransform(cache_size=1))
 
-        # TODO: think about only returning the mean & std since SB3 has its own distributions we coulduse
-
-        return dist
+        return mean, log_std
 
 
 # HyperCategoricalCritic probably better fitting

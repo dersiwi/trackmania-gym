@@ -52,7 +52,7 @@ class SimbaV2Actor(nn.Module):
     def __init__(
         self,
         num_blocks: int,
-        in_features: int, # TODO: this must be the dimension of the observations
+        in_features: int,  # TODO: this must be the dimension of the observations
         hidden_features: int,
         action_dim: int,
         scaler_init: float,
@@ -87,8 +87,8 @@ class SimbaV2Actor(nn.Module):
     def forward(self, observations: torch.Tensor, temperature: float = 1.0):
         x = self.embedder(observations)
         x = self.encoder(x)
-        dist = self.predictor(x, temperature)
-        return dist
+        mean, log_std = self.predictor(x, temperature)
+        return mean, log_std
 
 
 class SimbaV2Critic(nn.Module):
