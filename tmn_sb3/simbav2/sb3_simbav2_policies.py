@@ -1,13 +1,11 @@
 from typing import Any, Optional, Union
 
-import numpy as np
 import torch as th
 from torch import nn
 from gymnasium import spaces
 
-
-from stable_baselines3.common.distributions import SquashedDiagGaussianDistribution, StateDependentNoiseDistribution
-from stable_baselines3.common.policies import BasePolicy, ContinuousCritic
+from stable_baselines3.common.distributions import SquashedDiagGaussianDistribution
+from stable_baselines3.common.policies import ContinuousCritic
 from stable_baselines3.sac.policies import SACPolicy, Actor
 from stable_baselines3.common.type_aliases import PyTorchObs, Schedule
 from stable_baselines3.common.preprocessing import get_action_dim
@@ -15,9 +13,6 @@ from stable_baselines3.common.torch_layers import (
     BaseFeaturesExtractor,
     CombinedExtractor,
     FlattenExtractor,
-    MlpExtractor,
-    NatureCNN,
-    create_mlp,
 )
 
 from .simbav2_networks import SimbaV2Actor, SimbaV2Critic
@@ -211,7 +206,7 @@ class SACSimbaV2Policy(SACPolicy):
         use_sde: bool = False,
         log_std_init: float = -3,
         use_expln: bool = False,
-        clip_mean: float = 2,
+        clip_mean: float = 2.0,
         features_extractor_class: type[BaseFeaturesExtractor] = FlattenExtractor,
         features_extractor_kwargs: Optional[dict[str, Any]] = None,
         normalize_images: bool = True,
@@ -219,22 +214,69 @@ class SACSimbaV2Policy(SACPolicy):
         optimizer_kwargs: Optional[dict[str, Any]] = None,
         n_critics: int = 2,
         share_features_extractor: bool = False,
+        actor_kwargs: Optional[dict[str, Any]] = None,
+        critic_kwargs: Optional[dict[str, Any]] = None,
+        # Simba Defaults
+        num_blocks: int = 4,
+        hidden_features: int = 256,
+        **simba_defaults,
     ):
-        super().__init__(
+        super(SACPolicy, self).__init__(
             observation_space,
             action_space,
-            lr_schedule,
-            net_arch,
-            activation_fn,
-            use_sde,
-            log_std_init,
-            use_expln,
-            clip_mean,
             features_extractor_class,
             features_extractor_kwargs,
-            normalize_images,
-            optimizer_class,
-            optimizer_kwargs,
-            n_critics,
-            share_features_extractor,
+            optimizer_class=optimizer_class,
+            optimizer_kwargs=optimizer_kwargs,
+            squash_output=True,
+            normalize_images=normalize_images,
         )
+
+        if net_arch is None:
+            net_arch = [256, 256]  # Legacy default
+
+        if isinstance(net_arch, list):
+            actor_arch, critic_arch = net_arch, net_arch
+        else:
+            actor_arch = net_arch.get("pi", [])
+            critic_arch = net_arch.get("qf", [])
+
+        self.actor_kwargs = {
+            "observation_space": self.observation_space,
+            "action_space": self.action_space,
+            "net_arch": actor_arch,
+            "activation_fn": activation_fn,
+            "use_sde": use_sde,
+            "log_std_init": log_std_init,
+            "use_expln": use_expln,
+            "clip_mean": clip_mean,
+            "num_blocks": num_blocks,
+            "hidden_features": hidden_features,
+            **simba_defaults,
+        }
+        if actor_kwargs:
+            self.actor_kwargs.update(actor_kwargs)
+
+        self.critic_kwargs = {
+            "observation_space": self.observation_space,
+            "action_space": self.action_space,
+            "net_arch": critic_arch,
+            "activation_fn": activation_fn,
+            "n_critics": n_critics,
+            "share_features_extractor": share_features_extractor,
+            "num_blocks": num_blocks,
+            "hidden_features": hidden_features,
+            **simba_defaults,
+        }
+        if critic_kwargs:
+            self.critic_kwargs.update(critic_kwargs)
+
+        self._build(lr_schedule)
+
+    def make_actor(self, features_extractor: Optional[BaseFeaturesExtractor] = None) -> SACSimbaV2Actor:
+        kwargs = self._update_features_extractor(self.actor_kwargs, features_extractor)
+        return SACSimbaV2Actor(**kwargs).to(self.device)
+
+    def make_critic(self, features_extractor: Optional[BaseFeaturesExtractor] = None) -> SACSimbaV2Critic:
+        kwargs = self._update_features_extractor(self.critic_kwargs, features_extractor)
+        return SACSimbaV2Critic(**kwargs).to(self.device)
