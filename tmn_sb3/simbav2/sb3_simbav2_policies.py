@@ -216,10 +216,6 @@ class SACSimbaV2Policy(SACPolicy):
         share_features_extractor: bool = False,
         actor_kwargs: Optional[dict[str, Any]] = None,
         critic_kwargs: Optional[dict[str, Any]] = None,
-        # Simba Defaults
-        num_blocks: int = 4,
-        hidden_features: int = 256,
-        **simba_defaults,
     ):
         super(SACPolicy, self).__init__(
             observation_space,
@@ -233,7 +229,7 @@ class SACSimbaV2Policy(SACPolicy):
         )
 
         if net_arch is None:
-            net_arch = [256, 256]  # Legacy default
+            net_arch = [256, 256] 
 
         if isinstance(net_arch, list):
             actor_arch, critic_arch = net_arch, net_arch
@@ -241,35 +237,34 @@ class SACSimbaV2Policy(SACPolicy):
             actor_arch = net_arch.get("pi", [])
             critic_arch = net_arch.get("qf", [])
 
-        self.actor_kwargs = {
-            "observation_space": self.observation_space,
-            "action_space": self.action_space,
-            "net_arch": actor_arch,
-            "activation_fn": activation_fn,
-            "use_sde": use_sde,
-            "log_std_init": log_std_init,
-            "use_expln": use_expln,
-            "clip_mean": clip_mean,
-            "num_blocks": num_blocks,
-            "hidden_features": hidden_features,
-            **simba_defaults,
-        }
-        if actor_kwargs:
-            self.actor_kwargs.update(actor_kwargs)
+        self.actor_kwargs = actor_kwargs if actor_kwargs is not None else {}
+        self.critic_kwargs = critic_kwargs if critic_kwargs is not None else {}
 
-        self.critic_kwargs = {
-            "observation_space": self.observation_space,
-            "action_space": self.action_space,
-            "net_arch": critic_arch,
-            "activation_fn": activation_fn,
-            "n_critics": n_critics,
-            "share_features_extractor": share_features_extractor,
-            "num_blocks": num_blocks,
-            "hidden_features": hidden_features,
-            **simba_defaults,
-        }
-        if critic_kwargs:
-            self.critic_kwargs.update(critic_kwargs)
+        # NOTE: in_features will be set when calling the make_actor/make_critic methods since it need to retrieve that info
+        # from the features_extractor
+        self.actor_kwargs.update(
+            {
+                "observation_space": self.observation_space,
+                "action_space": self.action_space,
+                "net_arch": actor_arch,
+                "activation_fn": activation_fn,
+                "use_sde": use_sde,
+                "log_std_init": log_std_init,
+                "use_expln": use_expln,
+                "clip_mean": clip_mean,
+            }
+        )
+
+        self.critic_kwargs.update(
+            {
+                "observation_space": self.observation_space,
+                "action_space": self.action_space,
+                "net_arch": critic_arch,
+                "activation_fn": activation_fn,
+                "n_critics": n_critics,
+                "share_features_extractor": share_features_extractor,
+            }
+        )
 
         self._build(lr_schedule)
 
@@ -280,3 +275,29 @@ class SACSimbaV2Policy(SACPolicy):
     def make_critic(self, features_extractor: Optional[BaseFeaturesExtractor] = None) -> SACSimbaV2Critic:
         kwargs = self._update_features_extractor(self.critic_kwargs, features_extractor)
         return SACSimbaV2Critic(**kwargs).to(self.device)
+
+    def _get_constructor_parameters(self) -> dict[str, Any]:
+        data = super()._get_constructor_parameters()
+
+        # We only add the parameters that __init__ actually expects
+        data.update(
+            dict(
+                net_arch=self.net_arch,
+                activation_fn=self.activation_fn,
+                use_sde=self.actor_kwargs["use_sde"],
+                log_std_init=self.actor_kwargs["log_std_init"],
+                use_expln=self.actor_kwargs["use_expln"],
+                clip_mean=self.actor_kwargs["clip_mean"],
+                n_critics=self.critic_kwargs["n_critics"],
+                share_features_extractor=self.critic_kwargs["share_features_extractor"],
+                lr_schedule=self._dummy_schedule, 
+                optimizer_class=self.optimizer_class,
+                optimizer_kwargs=self.optimizer_kwargs,
+                features_extractor_class=self.features_extractor_class,
+                features_extractor_kwargs=self.features_extractor_kwargs,
+                # These dicts contain all the SimbaV2-specific blocks, dims, and scalers for the actor and the critic
+                actor_kwargs=self.actor_kwargs,
+                critic_kwargs=self.critic_kwargs,
+            )
+        )
+        return data
