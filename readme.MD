@@ -20,6 +20,13 @@ Trackmania-Gym is a Gymnasium Compatible Reinforcement Learning Framework for Tr
 
 This framework offers a modular design for experimenting with observations, rewards and terminations, allowing you to focus on actually designing your agent, and not getting lost in annoying implementation-details.
 
+## Bro-Branch
+
+Submodule added via `git submodule add https://github.com/naumix/BiggerRegularizedOptimistic.git bro`. To use it call
+```sh
+git submodule update --init --recursive
+```
+
 ## Advancements
 
 This framework offers vectorized training, i.e. Rollout-Collection on multiple environments (tracks) at the same time and continuization of actions over time, allowing RL algorithms like SAC.
