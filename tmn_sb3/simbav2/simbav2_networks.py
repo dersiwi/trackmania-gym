@@ -52,7 +52,7 @@ class SimbaV2Actor(nn.Module):
     def __init__(
         self,
         num_blocks: int,
-        in_features: int,  # TODO: this must be the dimension of the observations
+        in_features: int,
         hidden_features: int,
         action_dim: int,
         scaler_init: float,
@@ -108,10 +108,6 @@ class SimbaV2Critic(nn.Module):
         gain: float = 1.0,
     ) -> None:
         super().__init__()
-
-        # TODO: in_features must be dimension of the action concatenated with the observations at axis 1
-        # this means that the obs can not be dicts
-        # maybe parse them observation spaces in the constructor and then calculated them manually
 
         self.embedder, self.encoder = create_simbav2_base(
             num_blocks=num_blocks,

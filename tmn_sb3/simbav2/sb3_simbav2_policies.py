@@ -1,5 +1,6 @@
 from typing import Any, Optional, Union
 
+import numpy as np
 import torch as th
 from torch import nn
 from gymnasium import spaces
@@ -12,7 +13,6 @@ from stable_baselines3.common.type_aliases import PyTorchObs, Schedule
 from stable_baselines3.common.preprocessing import get_action_dim
 from stable_baselines3.common.torch_layers import (
     BaseFeaturesExtractor,
-    CombinedExtractor,
     FlattenExtractor,
 )
 
@@ -37,14 +37,13 @@ class SACSimbaV2Actor(Actor):
         clip_mean: float = 2,
         normalize_images: bool = True,
         ### SimbaV2 specific args ###
-        # TODO: look for the defautl values in the paper
-        num_blocks: int = 4,
-        hidden_features: int = 256,
-        scaler_init: float = 1.0,
-        scaler_scale: float = 1.0,
-        alpha_init: float = 0.1,
-        alpha_scale: float = 0.1,
-        c_shift: float = 0.0,
+        num_blocks: int = 1,
+        hidden_features: int = 128,
+        scaler_init: float = np.sqrt(2/128), 
+        scaler_scale: float = np.sqrt(2/128),
+        alpha_init: float = 1/2,
+        alpha_scale: float = np.sqrt(1/128),
+        c_shift: float = 3.0,
         gain: float = 1.0,
         **kwargs,
     ):
@@ -140,17 +139,16 @@ class SACSimbaV2Critic(ContinuousCritic):
         n_critics: int = 2,
         share_features_extractor: bool = True,
         ### Simba specific args ###
-        # TODO: check which default values the paper uses
-        num_blocks: int = 4,
-        hidden_features: int = 256,
-        scaler_init: float = 1.0,
-        scaler_scale: float = 1.0,
-        alpha_init: float = 0.1,
-        alpha_scale: float = 0.1,
-        c_shift: float = 0.0,
-        num_bins: int = 100,
-        min_v: float = -200.0,
-        max_v: float = 200.0,
+        num_blocks: int = 2,
+        hidden_features: int = 512,
+        scaler_init: float = np.sqrt(2/512),
+        scaler_scale: float = np.sqrt(2/512),
+        alpha_init: float = 1/3,
+        alpha_scale: float = np.sqrt(2/512),
+        c_shift: float = 3.0,
+        num_bins: int = 101,
+        min_v: float = -5,
+        max_v: float = 5,
         gain: float = 1.0,
         **kwargs,
     ):
@@ -205,21 +203,21 @@ class SACSimbaV2Policy(SACPolicy):
         observation_space: spaces.Space,
         action_space: spaces.Box,
         lr_schedule: Schedule,
-        net_arch: Optional[Union[list[int], dict[str, list[int]]]] = None,
+        net_arch: list[int] | dict[str, list[int]] | None = None,
         activation_fn: type[nn.Module] = nn.ReLU,
         use_sde: bool = False,
         log_std_init: float = -3,
         use_expln: bool = False,
         clip_mean: float = 2.0,
         features_extractor_class: type[BaseFeaturesExtractor] = FlattenExtractor,
-        features_extractor_kwargs: Optional[dict[str, Any]] = None,
+        features_extractor_kwargs: dict[str, Any] | None = None,
         normalize_images: bool = True,
         optimizer_class: type[th.optim.Optimizer] = th.optim.Adam,
-        optimizer_kwargs: Optional[dict[str, Any]] = None,
+        optimizer_kwargs: dict[str, Any] | None = None,
         n_critics: int = 2,
         share_features_extractor: bool = False,
-        actor_kwargs: Optional[dict[str, Any]] = None,
-        critic_kwargs: Optional[dict[str, Any]] = None,
+        actor_kwargs: dict[str, Any] | None = None,
+        critic_kwargs: dict[str, Any] | None = None,
     ):
         super(SACPolicy, self).__init__(
             observation_space,
@@ -272,11 +270,11 @@ class SACSimbaV2Policy(SACPolicy):
 
         self._build(lr_schedule)
 
-    def make_actor(self, features_extractor: Optional[BaseFeaturesExtractor] = None) -> SACSimbaV2Actor:
+    def make_actor(self, features_extractor: BaseFeaturesExtractor | None = None) -> SACSimbaV2Actor:
         kwargs = self._update_features_extractor(self.actor_kwargs, features_extractor)
         return SACSimbaV2Actor(**kwargs).to(self.device)
 
-    def make_critic(self, features_extractor: Optional[BaseFeaturesExtractor] = None) -> SACSimbaV2Critic:
+    def make_critic(self, features_extractor: BaseFeaturesExtractor | None = None) -> SACSimbaV2Critic:
         kwargs = self._update_features_extractor(self.critic_kwargs, features_extractor)
         return SACSimbaV2Critic(**kwargs).to(self.device)
 
@@ -339,7 +337,7 @@ class SACSimbaV2(SAC):
         device: Union[th.device, str] = "auto",
         _init_setup_model: bool = True,
     ):
-        # NOTE: this is only a sanity check for us now so that we do not forget it  
+        # NOTE: this is only a sanity check for us now so that we do not forget it
         assert isinstance(env, SimbaVecNormalize), (
             "SimBa explicitly relies on SimbaVecNormalize for RSNorm-style observation normalization."
         )
