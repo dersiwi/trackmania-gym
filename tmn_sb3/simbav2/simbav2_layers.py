@@ -1,6 +1,6 @@
 # this is a pytorch implementation of the nn architectur from the paper
 # "Hyperspherical Normalization for Scalable Deep Reinforcement Learning" https://arxiv.org/pdf/2502.15280
-
+import math
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -123,15 +123,18 @@ class HyperLERPBlock(nn.Module):
         alpha_scale: float,
         gain: float = 1.0,
         eps: float = 1e-8,
+        expansion: int = 4,
     ) -> None:
         super().__init__()
+
+        sqrt_expansion = math.sqrt(expansion)
 
         self.mlp = HyperMLP(
             in_features=in_features,
             out_features=out_features,
-            hidden_features=hidden_features,
-            scaler_init=scaler_init,
-            scaler_scale=scaler_scale,
+            hidden_features=hidden_features * expansion,
+            scaler_init=scaler_init / sqrt_expansion,
+            scaler_scale=scaler_scale / sqrt_expansion,
             eps=eps,
         )
         self.lerp = LERP(dim=out_features, init=alpha_init, scale=alpha_scale)
