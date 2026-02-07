@@ -4,62 +4,12 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from torch.distributions import Distribution, Independent, Normal, TransformedDistribution
-from torch.distributions.transforms import TanhTransform
 
 
 def l2normalize(x: torch.Tensor, axis: int, eps=1e-8) -> torch.Tensor:
     l2norm = torch.linalg.norm(x, ord=2, dim=axis, keepdim=True)
     x = x / torch.clamp(l2norm, min=eps)
     return x
-
-
-# RSNorm implementation. section 3.2 input embedding
-class RSNorm(nn.Module):
-    def __init__(self, dim: int, eps: float = 1e-5, momentum: float | None = None) -> None:
-        super().__init__()
-        self.dim = dim
-        self.eps = eps
-        self.momentum = momentum
-
-        # Register buffers so they are saved in the state_dict but not trained by optimizer
-        self.register_buffer("mean", torch.zeros(dim))
-        self.register_buffer("var", torch.ones(dim))
-        self.register_buffer("count", torch.tensor(0, dtype=torch.long))
-
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
-        if self.training:
-            with torch.no_grad():
-                batch_mean = x.mean(dim=0, keepdim=False)
-                batch_var = x.var(dim=0, unbiased=False)
-                batch_count = x.shape[0]
-
-                if self.momentum is None:
-                    # Method 1: Cumulative Moving Average
-                    total_count = self.count + batch_count
-                    ratio = batch_count / total_count
-
-                    delta = batch_mean - self.mean
-                    new_mean = self.mean + delta * ratio
-
-                    m_a = self.var * self.count
-                    m_b = batch_var * batch_count
-                    M2 = m_a + m_b + delta**2 * self.count * ratio
-                    new_var = M2 / total_count
-
-                    self.mean.copy_(new_mean)
-                    self.var.copy_(new_var)
-                    self.count.copy_(total_count)
-
-                else:
-                    # Method 2: Exponential Moving Average
-                    self.mean.lerp_(batch_mean, self.momentum)
-                    self.var.lerp_(batch_var, self.momentum)
-
-        return (x - self.mean) / torch.sqrt(self.var + self.eps)
-
-    def __repr__(self):
-        return f"{self.__class__.__name__}(dim={self.dim}, eps={self.eps}, momentum={self.momentum})"
 
 
 # section 4.4 Scaler
@@ -107,7 +57,6 @@ class HyperDense(nn.Module):
 
 
 # the emdding block from figure 3 + 4.1
-# NOTE: we include the RSNorm in this implementation but the original implementation uses gym wrappers see https://github.com/DAVIAN-Robotics/SimbaV2/tree/86899c277cdc697b2b02d827243de1ea93f20a1d/scale_rl/agents/wrappers
 class HyperEmbedder(nn.Module):
     def __init__(
         self,
@@ -239,7 +188,7 @@ class HyperNormalTanhPolicy(nn.Module):
         log_std = self.log_std_min + (self.log_std_max - self.log_std_min) * 0.5 * (1 + F.tanh(log_std))
 
         # NOTE: in the original implementation this class returned a pytorch Distribution since this
-        # implementation is tailred for Sb3 we will just return the mean and log_std for sake of ease
+        # implementation is tailored for Sb3 we will just return the mean and log_std for sake of ease
         # this should represent a MultivariateNormalDiag see https://github.com/pytorch/pytorch/pull/11178
         # dist = Independent(Normal(loc=mean, scale=torch.exp(log_std) * temperature), 1)
         # dist = TransformedDistribution(dist, TanhTransform(cache_size=1))
