@@ -4,6 +4,7 @@ import torch as th
 from torch import nn
 from gymnasium import spaces
 
+from stable_baselines3.sac import SAC
 from stable_baselines3.common.distributions import SquashedDiagGaussianDistribution
 from stable_baselines3.common.policies import ContinuousCritic
 from stable_baselines3.sac.policies import SACPolicy, Actor
@@ -16,6 +17,7 @@ from stable_baselines3.common.torch_layers import (
 )
 
 from .simbav2_networks import SimbaV2Actor, SimbaV2Critic
+from .normalizers import SimbaVecNormalize
 
 
 class SACSimbaV2Actor(Actor):
@@ -176,7 +178,9 @@ class SACSimbaV2Critic(ContinuousCritic):
         self.gain = gain
 
         self.q_networks: list[nn.Module] = []
-        for idx in range(n_critics):
+        for idx in range(n_critics):  # NOTE: By default, clipping is deactivated (set to infinity) to match SimBa,
+            # which does not apply observation clipping. Clipping is only enabled if
+            # non-default values are provided (i.e., something other than np.inf).
             q_net = SimbaV2Critic(
                 num_blocks=num_blocks,
                 in_features=features_dim + action_dim,
@@ -229,7 +233,7 @@ class SACSimbaV2Policy(SACPolicy):
         )
 
         if net_arch is None:
-            net_arch = [256, 256] 
+            net_arch = [256, 256]
 
         if isinstance(net_arch, list):
             actor_arch, critic_arch = net_arch, net_arch
@@ -290,7 +294,7 @@ class SACSimbaV2Policy(SACPolicy):
                 clip_mean=self.actor_kwargs["clip_mean"],
                 n_critics=self.critic_kwargs["n_critics"],
                 share_features_extractor=self.critic_kwargs["share_features_extractor"],
-                lr_schedule=self._dummy_schedule, 
+                lr_schedule=self._dummy_schedule,
                 optimizer_class=self.optimizer_class,
                 optimizer_kwargs=self.optimizer_kwargs,
                 features_extractor_class=self.features_extractor_class,
@@ -301,3 +305,71 @@ class SACSimbaV2Policy(SACPolicy):
             )
         )
         return data
+
+
+class SACSimbaV2(SAC):
+    def __init__(
+        self,
+        policy: Union[str, type[SACPolicy]],
+        env: Union[GymEnv, str],
+        learning_rate: Union[float, Schedule] = 0.0003,
+        buffer_size: int = 1000000,
+        learning_starts: int = 100,
+        batch_size: int = 256,
+        tau: float = 0.005,
+        gamma: float = 0.99,
+        train_freq: Union[int, tuple[int, str]] = 1,
+        gradient_steps: int = 1,
+        action_noise: Optional[ActionNoise] = None,
+        replay_buffer_class: Optional[type[ReplayBuffer]] = None,
+        replay_buffer_kwargs: Optional[dict[str, Any]] = None,
+        optimize_memory_usage: bool = False,
+        n_steps: int = 1,
+        ent_coef: Union[str, float] = "auto",
+        target_update_interval: int = 1,
+        target_entropy: Union[str, float] = "auto",
+        use_sde: bool = False,
+        sde_sample_freq: int = -1,
+        use_sde_at_warmup: bool = False,
+        stats_window_size: int = 100,
+        tensorboard_log: Optional[str] = None,
+        policy_kwargs: Optional[dict[str, Any]] = None,
+        verbose: int = 0,
+        seed: Optional[int] = None,
+        device: Union[th.device, str] = "auto",
+        _init_setup_model: bool = True,
+    ):
+        # NOTE: this is only a sanity check for us now so that we do not forget it  
+        assert isinstance(env, SimbaVecNormalize), (
+            "SimBa explicitly relies on SimbaVecNormalize for RSNorm-style observation normalization."
+        )
+        super().__init__(
+            policy,
+            env,
+            learning_rate,
+            buffer_size,
+            learning_starts,
+            batch_size,
+            tau,
+            gamma,
+            train_freq,
+            gradient_steps,
+            action_noise,
+            replay_buffer_class,
+            replay_buffer_kwargs,
+            optimize_memory_usage,
+            n_steps,
+            ent_coef,
+            target_update_interval,
+            target_entropy,
+            use_sde,
+            sde_sample_freq,
+            use_sde_at_warmup,
+            stats_window_size,
+            tensorboard_log,
+            policy_kwargs,
+            verbose,
+            seed,
+            device,
+            _init_setup_model,
+        )
