@@ -137,6 +137,10 @@ def get_model_from_config(
         )
 
         policy_kwargs.update(policy_cfg.policy_kwargs)
+        optmizer_class =hydra.utils.get_class(
+            policy_cfg.policy_kwargs.optimizer_class.__target__
+        )
+        policy_kwargs["optimizer_class"] = optmizer_class
         policy_type = SACSimbaV2Policy
 
 
