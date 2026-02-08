@@ -15,7 +15,9 @@ class UnitAdam(Adam):
     after each gradient update. This method is used in SimBaV2 (https://arxiv.org/pdf/2502.15280) (Section 1, Hyperspherical
     Weight Normalization)
     """
-    eps = 1e-8 
+
+    eps = 1e-8
+
     def __init__(
         self,
         params: ParamsT,
@@ -46,28 +48,29 @@ class UnitAdam(Adam):
         )
 
     def step(self, closure=None):
-        # update gradients with normal adam 
+        # Standard Adam Update. After this the gradients have been updated
         loss = super().step(closure)
         
-        # now project the weights onto the unit hemisphere
+        # Projection Step
         with torch.no_grad():
             for group in self.param_groups:
                 for p in group["params"]:
-                    if p is None:
+                    if p.grad is None:
                         continue
-
+                    
                     if not getattr(p, "_hyper_dense", False):
                         continue
-
+                    
                     if p.ndim == 2:
-                        axis = 0
+                        dim = 1
                     elif p.ndim == 3:
-                        axis = 1
+                        dim = (1, 2)
+                    elif p.ndim == 4:
+                        dim = (1, 2, 3)
                     else:
                         continue 
 
-                    norm = torch.linalg.norm(p, ord=2, dim=axis, keepdim=True).clamp(min=self.eps)
-
-                    p.div_(norm)
+                    norm = torch.linalg.norm(p, ord=2, dim=dim, keepdim=True)
+                    p.div_(torch.maximum(norm, torch.tensor(1e-8, device=p.device)))
 
         return loss
