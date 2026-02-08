@@ -29,6 +29,7 @@ from neural_networks.lr_schedulers import LR_Scheduler
 from neural_networks.extractors.extractors import ExtractorConfig
 from neural_networks.extractors import make_tmn_extractor,get_extractor_class
 
+from tmn_sb3.simbav2.sb3_simbav2_policies import SACSimbaV2Policy
 
 def print_model_params(model : BaseAlgorithm):
     """"Prints parametrs of the given model"""
@@ -126,6 +127,20 @@ def get_model_from_config(
                 activation_fn = hydra.utils.get_class(policy_cfg.mlp_extractor.activation_fn._target_) if secure_attribute_retrieval(lambda: policy_cfg.mlp_extractor.activation_fn._target_,False) else nn.Tanh,
                 normalize_images = normalized_images,
                 )
+    elif policy_cfg.name == "sac_simbav2":
+        # fill in the information of the feature extractor into the policy_kwargs
+        feature_extrac_kwargs = base_ext_config
+        policy_kwargs = dict(
+            features_extractor_class=get_extractor_class(tm_env.observation_space),
+            features_extractor_kwargs=feature_extrac_kwargs.to_dict(),
+            normalize_images= normalized_images,
+        )
+
+        policy_kwargs.update(policy_cfg.policy_kwargs)
+        policy_type = SACSimbaV2Policy
+
+
+
 
     else: raise ValueError(f"Unknown policy name: {policy_cfg.name!r}") 
 

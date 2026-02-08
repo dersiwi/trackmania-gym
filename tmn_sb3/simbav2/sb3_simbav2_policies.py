@@ -304,6 +304,9 @@ class SACSimbaV2Policy(SACPolicy):
         )
         return data
 
+from stable_baselines3.common.buffers import ReplayBuffer
+from stable_baselines3.common.noise import ActionNoise
+from stable_baselines3.common.type_aliases import GymEnv
 
 class SACSimbaV2(SAC):
     def __init__(

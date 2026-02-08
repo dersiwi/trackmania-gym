@@ -4,7 +4,7 @@ defaults:
   - wandb_callbacks : sb3_callback.yaml
   - models: visionmodelsix.yaml
   - lr_scheduler: dropoff_scheduling.yaml
-  - policy: basic_policy.yaml
+  - policy: sac_simbav2_policy.yaml
 
 platforms_config_path : "configs/platforms.yaml"
 extractors_out_dim: 64 # every extractor will produce an output with this dimension 
@@ -22,7 +22,7 @@ learn_args:
   tb_log_name: "PPO"
 
 vectorized:
-  vectorize : True
+  vectorize : False
   obs_as_dict : True
   step_parallel : True 
   n_envs : 5
