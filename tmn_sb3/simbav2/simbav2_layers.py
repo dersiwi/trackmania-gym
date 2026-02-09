@@ -50,9 +50,9 @@ class HyperDense(nn.Module):
         self.gain = gain
         # NOTE: bias must be set to false see https://github.com/DAVIAN-Robotics/SimbaV2/blob/master/scale_rl/agents/simbaV2/simbaV2_layer.py#L31
         self.w = nn.Linear(in_features=in_features, out_features=out_features, bias=False)
-        nn.init.orthogonal(self.w, gain)
+        nn.init.orthogonal_(self.w.weight, gain)
         # Declare hyperspherical constraint. This is later important fo the optimizer in order to know if he can nomalize this layer
-        self._hyper_dense = True
+        self.w.weight._hyper_dense = True
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         return self.w(x)
