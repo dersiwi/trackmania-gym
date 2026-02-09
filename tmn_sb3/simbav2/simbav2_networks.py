@@ -95,7 +95,7 @@ class SimbaV2Critic(nn.Module):
     def __init__(
         self,
         num_blocks: int,
-        in_features: int,
+        in_features: int, #NOTE: this must be obs_dim + action_dim
         hidden_features: int,
         scaler_init: float,
         scaler_scale: float,
@@ -131,8 +131,9 @@ class SimbaV2Critic(nn.Module):
             scaler_scale=1.0,
         )
 
-    def forward(self, observations: torch.Tensor, actions: torch.Tensor):
-        x = torch.concatenate((observations, actions), dim=-1)  # original code uses dim = 1
+    #NOTE: sb3 already concatenates obs and actions and passes it directly to this forward
+    def forward(self, x: torch.Tensor):
+        # x = torch.concatenate((observations, actions), dim=-1)  # original code uses dim = 1
         x = self.embedder(x)
         x = self.encoder(x)
         log_probs = self.predictor(x)
