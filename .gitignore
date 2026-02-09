@@ -211,5 +211,6 @@ runs/
 test/
 wandb/
 sb3/
+!configs/sb3
 configs/platforms.yaml
 *.sif

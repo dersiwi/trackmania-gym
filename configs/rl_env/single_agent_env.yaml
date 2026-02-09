@@ -13,8 +13,8 @@ env:
   position_buffer_size : 20
   position_moved_threshold : 0.2
 
-  normalize_rewards : True
-  normalize_obs : True
+  normalize_rewards : False
+  normalize_obs : False
 
   game_speed : 70
   countdown_speed : 70
@@ -30,7 +30,7 @@ env:
   waitforstep_timeout_in_s : 1.2 # this HAS to be smaller than the timeout of TMInterface
   use_rewind : True
 
-  continuous_actions : False
+  continuous_actions : True
   actiondim : 3    #only relevant when continuous_actions == True
 
 

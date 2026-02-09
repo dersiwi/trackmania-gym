@@ -141,6 +141,10 @@ def get_model_from_config(
             policy_cfg.policy_kwargs.optimizer_class.__target__
         )
         policy_kwargs["optimizer_class"] = optmizer_class
+        policy_kwargs["actor_kwargs"] = OmegaConf.to_container( policy_kwargs["actor_kwargs"] , resolve=True)
+        policy_kwargs["critic_kwargs"] = OmegaConf.to_container( policy_kwargs["critic_kwargs"] , resolve=True)
+        policy_kwargs["optimizer_kwargs"] = OmegaConf.to_container( policy_kwargs["optimizer_kwargs"] , resolve=True)
+
         policy_type = SACSimbaV2Policy
 
 

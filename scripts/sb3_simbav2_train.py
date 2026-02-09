@@ -51,6 +51,11 @@ def main(cfg : TrainConfig, run_id : Optional[str] = None):
     omegaconf.OmegaConf.register_new_resolver("eval", eval_resolver)
     omegaconf.OmegaConf.resolve(cfg)
 
+    assert not cfg.rl_env.env.normalize_obs, "Turn of the obs normalization of the env simbav2 uses its own"
+    assert not cfg.rl_env.env.normalize_rewards, "Turn of the reward normalization of the env simbav2 uses its own"
+    assert cfg.rl_env.env.continuous_actions, "The current implementation of sac simbav2 works only with continuous actions"
+
+
     introscreen(cfg, askstart=secure_attribute_retrieval(lambda : cfg.ask_start, default=True))
     
     if cfg.vectorized.vectorize:
@@ -65,7 +70,8 @@ def main(cfg : TrainConfig, run_id : Optional[str] = None):
             return env
 
         tm_env = DummyVecEnv([make_env])
-        tm_env = SimbaVecNormalize(tm_env,g_max=cfg.policy.policy_kwargs.normalized_g_max)
+        # the SimbaVecNormalize chnages every dtype to float32
+        tm_env = SimbaVecNormalize(tm_env,g_max=cfg.sb3.algorithm_params.max_v)
     
     try:
         exp_manager = Sb3ExperimentManager(

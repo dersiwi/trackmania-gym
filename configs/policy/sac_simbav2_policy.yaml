@@ -2,7 +2,6 @@ name: "sac_simbav2"
 type: "simbav2"
 
 policy_kwargs:
-  normalized_g_max: 5
 
   actor_kwargs:
     num_blocks: 1
@@ -26,8 +25,8 @@ policy_kwargs:
     alpha_init: ${eval:'1 / (${policy.policy_kwargs.critic_kwargs.num_blocks} + 1)'}
     alpha_scale: ${eval:'1 / math.sqrt(${policy.policy_kwargs.critic_kwargs.hidden_dim})'}
 
-    min_v: ${eval:'-${policy.policy_kwargs.normalized_g_max}'}
-    max_v: ${eval:'${policy.policy_kwargs.normalized_g_max}'}
+    min_v: ${eval:'${sb3.algorithm_params.min_v}'}
+    max_v: ${eval:'${sb3.algorithm_params.max_v}'}
 
     c_shift: 3.0
     num_bins: 101
