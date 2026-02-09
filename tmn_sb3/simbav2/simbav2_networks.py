@@ -135,5 +135,5 @@ class SimbaV2Critic(nn.Module):
         x = torch.concatenate((observations, actions), dim=-1)  # original code uses dim = 1
         x = self.embedder(x)
         x = self.encoder(x)
-        q = self.predictor(x)
-        return q
+        log_probs = self.predictor(x)
+        return log_probs

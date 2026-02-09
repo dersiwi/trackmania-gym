@@ -3,6 +3,7 @@ from typing import Any, Optional, Union
 import numpy as np
 import torch as th
 from torch import nn
+import torch.nn.functional as F
 from gymnasium import spaces
 
 from stable_baselines3.sac import SAC
@@ -15,6 +16,7 @@ from stable_baselines3.common.torch_layers import (
     BaseFeaturesExtractor,
     FlattenExtractor,
 )
+from stable_baselines3.common.utils import polyak_update
 
 from .simbav2_networks import SimbaV2Actor, SimbaV2Critic
 from .normalizers import SimbaVecNormalize
@@ -39,10 +41,10 @@ class SACSimbaV2Actor(Actor):
         ### SimbaV2 specific args ###
         num_blocks: int = 1,
         hidden_features: int = 128,
-        scaler_init: float = np.sqrt(2/128), 
-        scaler_scale: float = np.sqrt(2/128),
-        alpha_init: float = 1/2,
-        alpha_scale: float = np.sqrt(1/128),
+        scaler_init: float = np.sqrt(2 / 128),
+        scaler_scale: float = np.sqrt(2 / 128),
+        alpha_init: float = 1 / 2,
+        alpha_scale: float = np.sqrt(1 / 128),
         c_shift: float = 3.0,
         gain: float = 1.0,
         **kwargs,
@@ -141,10 +143,10 @@ class SACSimbaV2Critic(ContinuousCritic):
         ### Simba specific args ###
         num_blocks: int = 2,
         hidden_features: int = 512,
-        scaler_init: float = np.sqrt(2/512),
-        scaler_scale: float = np.sqrt(2/512),
-        alpha_init: float = 1/3,
-        alpha_scale: float = np.sqrt(2/512),
+        scaler_init: float = np.sqrt(2 / 512),
+        scaler_scale: float = np.sqrt(2 / 512),
+        alpha_init: float = 1 / 3,
+        alpha_scale: float = np.sqrt(2 / 512),
         c_shift: float = 3.0,
         num_bins: int = 101,
         min_v: float = -5,
@@ -304,9 +306,11 @@ class SACSimbaV2Policy(SACPolicy):
         )
         return data
 
+
 from stable_baselines3.common.buffers import ReplayBuffer
 from stable_baselines3.common.noise import ActionNoise
 from stable_baselines3.common.type_aliases import GymEnv
+
 
 class SACSimbaV2(SAC):
     def __init__(
@@ -339,6 +343,10 @@ class SACSimbaV2(SAC):
         seed: Optional[int] = None,
         device: Union[th.device, str] = "auto",
         _init_setup_model: bool = True,
+        ### simba specific ###
+        num_bins: int = 101,
+        min_v: float = -5.0,
+        max_v: float = 5.0,
     ):
         # NOTE: this is only a sanity check for us now so that we do not forget it
         assert isinstance(env, SimbaVecNormalize), (
@@ -374,3 +382,190 @@ class SACSimbaV2(SAC):
             device,
             _init_setup_model,
         )
+        self.num_bins = num_bins
+        self.max_v = max_v
+        self.min_v = min_v
+        self.bin_values = th.linspace(start=self.min_v, end=self.max_v, steps=self.num_bins)
+
+    # NOTE: this might be ugly but i could not think of a better way of chaning the critic loss
+    # other than just copying the whole function and replacing only the critic loss to be a distributional loss
+    def train(self, gradient_steps: int, batch_size: int = 64) -> None:
+        # Switch to train mode (this affects batch norm / dropout)
+        self.policy.set_training_mode(True)
+        # Update optimizers learning rate
+        optimizers = [self.actor.optimizer, self.critic.optimizer]
+        if self.ent_coef_optimizer is not None:
+            optimizers += [self.ent_coef_optimizer]
+
+        # Update learning rate according to lr schedule
+        self._update_learning_rate(optimizers)
+
+        ent_coef_losses, ent_coefs = [], []
+        actor_losses, critic_losses = [], []
+
+        for gradient_step in range(gradient_steps):
+            # Sample replay buffer
+            replay_data = self.replay_buffer.sample(batch_size, env=self._vec_normalize_env)  # type: ignore[union-attr]
+            # For n-step replay, discount factor is gamma**n_steps (when no early termination)
+            discounts = replay_data.discounts if replay_data.discounts is not None else self.gamma
+
+            # We need to sample because `log_std` may have changed between two gradient steps
+            if self.use_sde:
+                self.actor.reset_noise()
+
+            # Action by the current actor for the sampled state
+            actions_pi, log_prob = self.actor.action_log_prob(replay_data.observations)
+            log_prob = log_prob.reshape(-1, 1)
+
+            ent_coef_loss = None
+            if self.ent_coef_optimizer is not None and self.log_ent_coef is not None:
+                # Important: detach the variable from the graph
+                # so we don't change it with other losses
+                # see https://github.com/rail-berkeley/softlearning/issues/60
+                ent_coef = th.exp(self.log_ent_coef.detach())
+                assert isinstance(self.target_entropy, float)
+                ent_coef_loss = -(self.log_ent_coef * (log_prob + self.target_entropy).detach()).mean()
+                ent_coef_losses.append(ent_coef_loss.item())
+            else:
+                ent_coef = self.ent_coef_tensor
+
+            ent_coefs.append(ent_coef.item())
+
+            # Optimize entropy coefficient, also called
+            # entropy temperature or alpha in the paper
+            if ent_coef_loss is not None and self.ent_coef_optimizer is not None:
+                self.ent_coef_optimizer.zero_grad()
+                ent_coef_loss.backward()
+                self.ent_coef_optimizer.step()
+
+            # NOTE: Changed the critic loss the distributional loss from c51
+            with th.no_grad():
+                # Select action according to policy
+                next_actions, next_log_prob = self.actor.action_log_prob(replay_data.next_observations)
+                # tuple of num_critic tensors of shape (B,num_bins)
+                next_q_log_probs = self.critic_target(replay_data.next_observations, next_actions)
+
+                # TODO: remove when tested
+                assert isinstance(next_q_log_probs, tuple)
+                assert len(next_q_log_probs) > 0
+                for q in next_q_log_probs:
+                    assert q.ndim == 2, f"Expected (B, num_bins), got {q.shape}"
+                    assert q.shape[1] == self.num_bins
+
+                current_actor_entropy = -ent_coef * next_log_prob
+                target_q_log_probs = next_q_log_probs
+
+            # Get current Q-values estimates for each critic network
+            # using action from the replay buffer
+            current_q_log_probs = self.critic(replay_data.observations, replay_data.actions)
+
+            # Compute critic loss
+            critic_loss = th.zeros(size=(1,), requires_grad=True)
+            for i in range(len(target_q_log_probs)):
+                critic_loss += self.categorical_td_loss(
+                    pred_log_probs=current_q_log_probs[i],
+                    target_log_probs=target_q_log_probs[i],
+                    reward=replay_data.rewards,
+                    done=replay_data.dones,
+                    actor_entropy=current_actor_entropy,
+                    gamma=discounts,
+                )
+            critic_loss /= len(target_q_log_probs)
+            assert isinstance(critic_loss, th.Tensor)  # for type checker
+            critic_losses.append(critic_loss.item())  # type: ignore[union-attr]
+
+            # Optimize the critic
+            self.critic.optimizer.zero_grad()
+            critic_loss.backward()
+            self.critic.optimizer.step()
+
+            # Compute actor loss
+            # Alternative: actor_loss = th.mean(log_prob - qf1_pi)
+            # Min over all critic networks
+
+            # NOTE: q_log_probs_pi is a tuple of num_critis tensors with shape (batch_size, num_bins)
+            q_log_probs_pi = self.critic(replay_data.observations, actions_pi)
+
+            # TODO: remove the asserts when you tested the func
+            assert isinstance(q_log_probs_pi, tuple)
+            assert len(q_log_probs_pi) > 0
+            for q in q_log_probs_pi:
+                assert q.ndim == 2, f"Expected (B, num_bins), got {q.shape}"
+                assert q.shape[1] == self.num_bins
+
+            q_log_probs_pi = th.stack(q_log_probs_pi, dim=0)  # shape (num_critics,batch_size,num_bins)
+            assert q_log_probs_pi.ndim == 3
+            q_values_pi = th.sum(th.exp(q_log_probs_pi) * self.bin_values, dim=-1)  # (num_critics,batch_size)
+            min_qf_pi, _ = th.min(q_values_pi, dim=0, keepdim=True)  # (1,batch_size)
+            actor_loss = (ent_coef * log_prob - min_qf_pi).mean()
+            actor_losses.append(actor_loss.item())
+
+            # Optimize the actor
+            self.actor.optimizer.zero_grad()
+            actor_loss.backward()
+            self.actor.optimizer.step()
+
+            # Update target networks
+            if gradient_step % self.target_update_interval == 0:
+                polyak_update(self.critic.parameters(), self.critic_target.parameters(), self.tau)
+                # Copy running stats, see GH issue #996
+                polyak_update(self.batch_norm_stats, self.batch_norm_stats_target, 1.0)
+
+        self._n_updates += gradient_steps
+
+        self.logger.record("train/n_updates", self._n_updates, exclude="tensorboard")
+        self.logger.record("train/ent_coef", np.mean(ent_coefs))
+        self.logger.record("train/actor_loss", np.mean(actor_losses))
+        self.logger.record("train/critic_loss", np.mean(critic_losses))
+        if len(ent_coef_losses) > 0:
+            self.logger.record("train/ent_coef_loss", np.mean(ent_coef_losses))
+
+    def categorical_td_loss(
+        self,
+        pred_log_probs: th.Tensor,  # (B, num_bins)
+        target_log_probs: th.Tensor,  # (B, num_bins)
+        reward: th.Tensor,  # (B,)
+        done: th.Tensor,  # (B,)
+        actor_entropy: th.Tensor,  # (B,)
+        gamma: float,
+    ):
+        """
+        Returns: scalar loss
+        """
+        B, num_bins = pred_log_probs.shape
+        assert num_bins == self.num_bins
+
+        reward = reward.view(B, 1)  # (B, 1)
+        done = done.view(B, 1)  # (B, 1)
+        actor_entropy = actor_entropy.view(B, 1)  # (B, 1)
+
+        z = self.bin_values.to(reward.device).view(1, num_bins)  # (1, num_bins)
+        delta_z = (self.max_v - self.min_v) / (num_bins - 1)
+
+        with th.no_grad():
+            target_probs = target_log_probs.exp()  # (B, num_bins)
+
+            # Compute Projected Support (Tz)
+            tz = reward + gamma * (1.0 - done) * (z - actor_entropy)
+            tz = tz.clamp(self.min_v, self.max_v)
+
+            b = (tz - self.min_v) / delta_z
+
+            l = b.floor().clamp(0, num_bins - 1)
+            u = b.ceil().clamp(0, num_bins - 1)
+
+            # Your Snippet: Handle cases where b is exactly an integer
+            # Logic: If l == u, we add 1 so (u - b) becomes (u + 1 - b)
+            # example bj = 1, then the upper ceiling should be uj= 2, and lj= 1
+            d_m_l = (u + (l == u).float() - b) * target_probs
+            d_m_u = (b - l) * target_probs
+
+            target_dist = th.zeros_like(target_probs)
+
+            target_dist.scatter_add_(1, l.long(), d_m_l)  # cast l and u to int664 for array indexing
+            target_dist.scatter_add_(1, u.long(), d_m_u)
+
+        # Cross Entropy Loss
+        loss = -(target_dist * pred_log_probs).sum(dim=1).mean()
+        assert isinstance(loss, th.Tensor)
+        return loss

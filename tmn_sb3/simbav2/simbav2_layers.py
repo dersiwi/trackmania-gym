@@ -232,6 +232,6 @@ class HyperCategoricalValue(nn.Module):
 
         # return log probability of bins
         log_prob = F.log_softmax(value, dim=1)
-        value = torch.sum(torch.exp(log_prob) * self.bin_values, dim=1)
+        # value = torch.sum(torch.exp(log_prob) * self.bin_values, dim=1)
 
-        return value
+        return log_prob
