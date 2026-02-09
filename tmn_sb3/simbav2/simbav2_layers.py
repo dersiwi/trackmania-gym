@@ -70,7 +70,7 @@ class HyperEmbedder(nn.Module):
         gain: float = 1.0,
     ) -> None:
         super().__init__()
-        self.w = HyperDense(in_features=in_features, out_features=out_features, gain=gain)
+        self.w = HyperDense(in_features=in_features+1, out_features=out_features, gain=gain) # in_dim + 1 since we are later shifting into higher dim
         self.scaler = Scaler(dim=out_features, init=scaler_init, scale=scaler_scale)
         self.register_buffer("c_shift", torch.tensor(c_shift, dtype=torch.float))
 
@@ -179,6 +179,9 @@ class HyperNormalTanhPolicy(nn.Module):
 
         self.std_w2 = HyperDense(in_features=hidden_features, out_features=action_dim, gain=gain)
         self.std_bias = nn.Parameter(data=torch.zeros(size=(action_dim,)), requires_grad=True)
+
+        self.log_std_max = log_std_max
+        self.log_std_min = log_std_min
 
     def forward(self, x: torch.Tensor, temperature: float = 1.0) -> tuple[torch.Tensor, torch.Tensor]:
         mean = self.mean_w1(x)
