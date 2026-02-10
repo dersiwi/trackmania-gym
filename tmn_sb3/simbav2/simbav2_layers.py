@@ -75,7 +75,8 @@ class HyperEmbedder(nn.Module):
         self.register_buffer("c_shift", torch.tensor(c_shift, dtype=torch.float))
 
     def forward(self, x: torch.Tensor):
-        new_axis = torch.ones((x.shape[:-1] + (1,))) * self.c_shift
+        shift_shape = x.shape[:-1] + (1,)
+        new_axis = x.new_ones(shift_shape) * self.c_shift
         x = torch.concatenate([x, new_axis], dim=-1)
         x = l2normalize(x, axis=-1)
         x = self.w(x)
