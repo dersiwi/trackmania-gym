@@ -1,4 +1,5 @@
 from __future__ import annotations
+import math
 import torch
 import torch.nn as nn
 import gymnasium as gym
@@ -20,7 +21,7 @@ from configs.config import TrainConfig, PolicyCfg
 from utils.hydra_wandb_utils import secure_attribute_retrieval
 from configs.config import ModelCfg
 
-
+from tmn_sb3.simbav2.simbav2_layers import HyperMLP
 
 @dataclass
 class ExtractorConfig:
@@ -115,6 +116,8 @@ class TMN_Extractor(BaseFeaturesExtractor, ABC):
 
         # Otherwise, handle vector (float) inputs
         input_dim = space.shape[0]
+        hidden_dim = 128
+        return HyperMLP(in_features=input_dim,out_features=self.out_dim,hidden_features=hidden_dim,scaler_init=math.sqrt(2/hidden_dim),scaler_scale=math.sqrt(2/hidden_dim))
         if self.float_model:
             layers = create_mlp(input_dim=input_dim, output_dim=self.out_dim, net_arch=self.float_model, activation_fn=self.activation_fn)
         else:

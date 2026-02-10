@@ -3,6 +3,7 @@ type: "simbav2"
 
 policy_kwargs:
 
+  share_features_extractor: True # whether to share the features extractor between actor and critic when applicable
   actor_kwargs:
     num_blocks: 1
     hidden_dim: 128

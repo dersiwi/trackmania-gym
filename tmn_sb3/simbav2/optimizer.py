@@ -69,8 +69,10 @@ class UnitAdam(Adam):
                         dim = (1, 2, 3)
                     else:
                         continue
-
-                    norm = torch.linalg.norm(p, ord=2, dim=dim, keepdim=True)
+                    if p.ndim == 4:
+                        norm = torch.norm(input=p, p=2, dim=dim, keepdim=True)
+                    else:
+                        norm = torch.linalg.norm(p, ord=2, dim=dim, keepdim=True)
                     p.div_(torch.maximum(norm, torch.tensor(1e-8, device=p.device)))
 
         return loss

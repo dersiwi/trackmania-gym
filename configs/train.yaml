@@ -2,7 +2,7 @@ defaults:
   - rl_env: single_agent_env.yaml
   - sb3: sac_simbav2.yaml
   - wandb_callbacks : sb3_callback.yaml
-  - models: visionmodelsix.yaml
+  - models: simbav2_cnn.yaml
   - lr_scheduler: dropoff_scheduling.yaml
   - policy: sac_simbav2_policy.yaml
 

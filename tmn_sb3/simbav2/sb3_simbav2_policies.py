@@ -533,6 +533,7 @@ class SACSimbaV2(SAC):
     ):
         """
         Returns: scalar loss
+        This implementation of the categorical_td_loss is mostly copied from https://github.com/vwxyzjn/cleanrl/blob/004f8a086a892a2a180f4dd332b90d83a968aa7a/cleanrl/c51.py#L211
         """
         B, num_bins = pred_log_probs.shape
         assert num_bins == self.num_bins
