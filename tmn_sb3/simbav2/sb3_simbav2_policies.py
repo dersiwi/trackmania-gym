@@ -270,6 +270,8 @@ class SACSimbaV2Policy(SACPolicy):
             }
         )
 
+        self.share_features_extractor = share_features_extractor
+
         self._build(lr_schedule)
 
     def make_actor(self, features_extractor: BaseFeaturesExtractor | None = None) -> SACSimbaV2Actor:

@@ -70,7 +70,7 @@ def main(cfg : TrainConfig, run_id : Optional[str] = None):
             return env
 
         tm_env = DummyVecEnv([make_env])
-        # the SimbaVecNormalize chnages every dtype to float32
+        # the SimbaVecNormalize chnages every dtype to float32 -> this leads to the image extractor not checking that the image obs space is an image
         tm_env = SimbaVecNormalize(tm_env,g_max=cfg.sb3.algorithm_params.max_v)
     
     try:
@@ -98,7 +98,8 @@ def main(cfg : TrainConfig, run_id : Optional[str] = None):
         if cfg.vectorized.vectorize:
             tm_env.close()
         else:
-            tm_env.finalize_process(reinit=False)
+            for env in tm_env.venv.envs:
+                env.finalize_process(reinit=False)
         
 
 if __name__ == "__main__": 

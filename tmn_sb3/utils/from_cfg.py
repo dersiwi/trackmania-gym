@@ -74,6 +74,8 @@ def get_model_from_config(
         if store_uint8
         else cfg.rl_env.env.normalize_obs
     )
+    # NOTE: with the simbav2 logic this must be set to true
+    normalized_images = True
 
 
     # extract algo params
@@ -133,7 +135,7 @@ def get_model_from_config(
         policy_kwargs = dict(
             features_extractor_class=get_extractor_class(tm_env.observation_space),
             features_extractor_kwargs=feature_extrac_kwargs.to_dict(),
-            normalize_images= normalized_images,
+            normalize_images= False,# we dont want sb3 its img normalisation and in addition if setting this to false then the exxtractor build produces a MLP for the image obs and not a conv net
         )
 
         policy_kwargs.update(policy_cfg.policy_kwargs)
