@@ -31,7 +31,7 @@ class GameInstanceManager:
 
 
     @staticmethod
-    def get_instance(TMLoader_path : str, path_to_plugin : str, TMLoader_profile_name : str = "default", linux : bool = False, headless : bool = False,tmi_port:int = 8775,lock = None) -> GameInstanceManager:
+    def get_instance(TMLoader_path : str, path_to_plugin : str, TMLoader_profile_name : str = "default", linux : bool = False, headless : bool = False,tmi_port:int = 8775,lock = None, wineprefix : str = None) -> GameInstanceManager:
         """
         The GameInstanceManager launches the game from the operating systems side via a system command (launch_game() and close_game() start and end tmnf processes.)
         To get an instance of the GameInstanceManager use this method and specify the operating system by setting linux accordingly.
@@ -51,7 +51,7 @@ class GameInstanceManager:
 
         if linux:
             # TODO get Lock.
-            return GameInstanceMangerLinux(TMLoader_path, TMLoader_profile_name, path_to_plugin, lock, headless,tmi_port)
+            return GameInstanceMangerLinux(TMLoader_path, TMLoader_profile_name, path_to_plugin, lock, headless,tmi_port, wineprefix=wineprefix)
         else:
             return GameInstanceManagerWindows(TMLoader_path, TMLoader_profile_name, path_to_plugin, headless,tmi_port)
 
@@ -85,6 +85,7 @@ class GameInstanceManager:
                     break
                 except ConnectionRefusedError as e:
                     self.logger.error(e)
+                    time.sleep(0.5)
 
     def is_game_running(self) -> bool:
         return (self.tm_process_id is not None) and (self.tm_process_id in (p.pid for p in psutil.process_iter()))
@@ -235,9 +236,10 @@ class GameInstanceMangerLinux(GameInstanceManager):
         print("Launched xvfb-process.")
 
 
-    def __init__(self, TMLoader_path, TMLoader_profile_name, path_to_plugin, game_spawning_lock : None, headless : bool,tmi_port:int):
+    def __init__(self, TMLoader_path, TMLoader_profile_name, path_to_plugin, game_spawning_lock : None, headless : bool,tmi_port:int, wineprefix : str):
         super().__init__(TMLoader_path, TMLoader_profile_name, path_to_plugin, headless,tmi_port)
         self.game_spawning_lock : str = game_spawning_lock
+        self.wineprefix = wineprefix
 
 
     def _get_tm_window_id(self):
@@ -308,11 +310,15 @@ class GameInstanceMangerLinux(GameInstanceManager):
 
         pid_before = set(self._get_tm_pids())
         launch_cmds = self.__get_launch_cmds()
+        
+        env = os.environ.copy()
+        if not self.wineprefix is None:
+            env["WINEPREFIX"] = self.wineprefix
         if self.headless:
             GameInstanceMangerLinux.launch_xvfb()
             process = subprocess.Popen(launch_cmds, env=GameInstanceMangerLinux.xvfb_launch_dict)
         else:
-            process = subprocess.Popen(launch_cmds)
+            process = subprocess.Popen(launch_cmds, env=env)
 
         _ = psutil.Process(process.pid)
         self.__get_tmnf_process_id(pid_before, timeout)
