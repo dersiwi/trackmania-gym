@@ -387,7 +387,7 @@ class SACSimbaV2(SAC):
         self.num_bins = num_bins
         self.max_v = max_v
         self.min_v = min_v
-        self.bin_values = th.linspace(start=self.min_v, end=self.max_v, steps=self.num_bins)
+        self.bin_values = th.linspace(start=self.min_v, end=self.max_v, steps=self.num_bins,device=device)
 
     # NOTE: this might be ugly but i could not think of a better way of chaning the critic loss
     # other than just copying the whole function and replacing only the critic loss to be a distributional loss

@@ -1,9 +1,11 @@
+import math
+
 import torch.nn as nn
 from torch.nn.modules.conv import Conv2d
 from torch.nn.common_types import _size_2_t
 
 from neural_networks.vision_encoder.conv_NNs import VisionModel
-from tmn_sb3.simbav2.simbav2_layers import HyperDense
+from tmn_sb3.simbav2.simbav2_layers import HyperMLP
 
 
 class UnitConv2D(Conv2d):
@@ -47,7 +49,16 @@ class SimbaV2VisionModel(VisionModel):
         )
 
         def make_feature_projector(in_dim, out_dim):
-            layers = [HyperDense(in_dim,out_dim), nn.ReLU(inplace=True)]
+            hidden_dim = 128
+            return HyperMLP(
+                in_features=in_dim,
+                out_features=out_dim,
+                hidden_features=hidden_dim,
+                scaler_init=math.sqrt(2 / hidden_dim),
+                scaler_scale=math.sqrt(2 / hidden_dim),
+            )
+
+            layers = [HyperMLP()]
             return nn.Sequential(*layers)
 
         super().__init__(
