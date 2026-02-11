@@ -462,9 +462,9 @@ class SACSimbaV2(SAC):
             current_q_log_probs = self.critic(replay_data.observations, replay_data.actions)
 
             # Compute critic loss
-            critic_loss = th.zeros(size=(1,), requires_grad=True)
+            c_losses = []
             for i in range(len(target_q_log_probs)):
-                critic_loss += self.categorical_td_loss(
+                loss = self.categorical_td_loss(
                     pred_log_probs=current_q_log_probs[i],
                     target_log_probs=target_q_log_probs[i],
                     reward=replay_data.rewards,
@@ -472,7 +472,9 @@ class SACSimbaV2(SAC):
                     actor_entropy=current_actor_entropy,
                     gamma=discounts,
                 )
-            critic_loss /= len(target_q_log_probs)
+                c_losses.append(loss)
+
+            critic_loss = th.stack(c_losses).mean()
             assert isinstance(critic_loss, th.Tensor)  # for type checker
             critic_losses.append(critic_loss.item())  # type: ignore[union-attr]
 
