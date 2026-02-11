@@ -29,6 +29,8 @@ import math #this will be used by the omegaconf resolver later
 from tmn_sb3.simbav2.normalizers import SimbaVecNormalize
 from stable_baselines3.common.vec_env import DummyVecEnv
 
+from gymnasium.spaces import Dict
+
 _HYDRA_PARAMS = {
     "version_base": "1.3",
     "config_path": "../configs",
@@ -71,7 +73,10 @@ def main(cfg : TrainConfig, run_id : Optional[str] = None):
 
         tm_env = DummyVecEnv([make_env])
         # the SimbaVecNormalize chnages every dtype to float32 -> this leads to the image extractor not checking that the image obs space is an image
-        tm_env = SimbaVecNormalize(tm_env,g_max=cfg.sb3.algorithm_params.max_v)
+        obs_keys = None
+        if isinstance(tm_env.observation_space,Dict):
+            obs_keys = tm_env.observation_space.spaces.keys()
+        tm_env = SimbaVecNormalize(tm_env,g_max=cfg.sb3.algorithm_params.max_v,norm_obs_keys=obs_keys)
     
     try:
         exp_manager = Sb3ExperimentManager(
