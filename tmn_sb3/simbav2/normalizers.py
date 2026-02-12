@@ -3,7 +3,7 @@ from typing import Optional
 import numpy as np
 
 from stable_baselines3.common.vec_env import VecNormalize
-from stable_baselines3.common.vec_env.base_vec_env import VecEnv
+from stable_baselines3.common.vec_env.base_vec_env import VecEnv, VecEnvStepReturn
 
 
 class SimbaVecNormalize(VecNormalize):
@@ -41,7 +41,7 @@ class SimbaVecNormalize(VecNormalize):
         training: bool = True,
         norm_obs: bool = True,
         norm_reward: bool = True,
-        clip_obs: float = np.inf,         
+        clip_obs: float = np.inf,
         clip_reward: float = np.inf,
         gamma: float = 0.99,
         epsilon: float = 1e-8,
@@ -52,6 +52,40 @@ class SimbaVecNormalize(VecNormalize):
 
         self.g_r_max = 0.0  # Running max of absolute returns
         self.g_max = g_max
+
+    # we dont normalize the obs/rewards and add them to the replay buffer instead we only
+    # update the mean and var when step_wait is called and return unnormalized obs and rewards
+    def step_wait(self) -> VecEnvStepReturn:
+        """
+        Apply sequence of actions to sequence of environments
+        actions -> (observations, rewards, dones)
+
+        where ``dones`` is a boolean vector indicating whether each element is new.
+        """
+        obs, rewards, dones, infos = self.venv.step_wait()
+        assert isinstance(obs, (np.ndarray, dict))  # for mypy
+        self.old_obs = obs
+        self.old_reward = rewards
+
+        if self.training and self.norm_obs:
+            if isinstance(obs, dict) and isinstance(self.obs_rms, dict):
+                for key in self.obs_rms.keys():
+                    self.obs_rms[key].update(obs[key])
+            else:
+                self.obs_rms.update(obs)
+
+        if self.training:
+            self._update_reward(rewards)
+
+        # Normalize the terminal observations
+        for idx, done in enumerate(dones):
+            if not done:
+                continue
+            if "terminal_observation" in infos[idx]:
+                infos[idx]["terminal_observation"] = self.normalize_obs(infos[idx]["terminal_observation"])
+
+        self.returns[dones] = 0
+        return obs, rewards, dones, infos
 
     def _update_reward(self, reward: np.ndarray) -> None:
         super()._update_reward(reward)  # parent class already does G_t = gamma * G_{t-1} + r_t
@@ -67,5 +101,3 @@ class SimbaVecNormalize(VecNormalize):
         # Note: we cast to float32 as it correspond to Python default float type
         # This cast is needed because `RunningMeanStd` keeps stats in float64
         return reward.astype(np.float32)
-
-
