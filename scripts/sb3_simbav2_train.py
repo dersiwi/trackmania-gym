@@ -28,6 +28,7 @@ import math #this will be used by the omegaconf resolver later
 
 from tmn_sb3.simbav2.normalizers import SimbaVecNormalize
 from stable_baselines3.common.vec_env import DummyVecEnv
+from stable_baselines3.common.monitor import Monitor
 
 from gymnasium.spaces import Dict
 
@@ -69,8 +70,9 @@ def main(cfg : TrainConfig, run_id : Optional[str] = None):
         def make_env():
             env = CrashProofEnvironment(cfg)
             env.init_environment()
+            env = Monitor(env)
             return env
-
+        
         tm_env = DummyVecEnv([make_env])
         # the SimbaVecNormalize chnages every dtype to float32 -> this leads to the image extractor not checking that the image obs space is an image
         obs_keys = None
