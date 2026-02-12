@@ -8,4 +8,4 @@ accum_exp_factor: 1.2
 other_termination_punishment: -5
 wall_contact_weight: -0.15                
 steps_without_progress_until_punishment: 512
-use_punishment: True
+use_punishment: False
