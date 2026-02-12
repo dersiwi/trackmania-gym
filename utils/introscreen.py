@@ -108,6 +108,51 @@ Welcome to
 from configs.config import TrainConfig
 from utils.hydra_wandb_utils import secure_attribute_retrieval
 
+
+
+def print_managemerterms(obs, rew, term):
+
+    col1_width = 15
+    col2_width = 40
+    col3_width = 10
+
+    def print_header(title):
+        total_width = col1_width + col2_width + col3_width + 6
+        print("\n" + "=" * total_width)
+        print(title.center(total_width))
+        print("=" * total_width)
+        print(
+            f"{'Manager'.ljust(col1_width)} | "
+            f"{'Term'.ljust(col2_width)} | "
+            f"{'Weight'.ljust(col3_width)}"
+        )
+        print("-" * total_width)
+
+    def print_rows(manager_name, data):
+        for term, weight in data.items():
+            if term == "_target_": continue
+            print(
+                f"{manager_name.ljust(col1_width)} | "
+                f"{term.ljust(col2_width)} | "
+                f"{str(weight).ljust(col3_width)}"
+            )
+
+         
+
+    # Observation block
+    print_header(f"OBSERVATION MANAGER")
+    print_rows("Observation", obs)
+
+    # Reward block
+    print_header(f"REWARD MANAGER")
+    print_rows("Reward", rew)
+
+    # Termination block
+    print_header(f"TERMINATION MANAGER")
+    print_rows("Termination", term)
+
+
+
 def introscreen(cfg : TrainConfig, asciiart = welcome, askstart : bool = False):
     """Displays an ascii art and some core configuration-values
     Args:
@@ -128,6 +173,15 @@ def introscreen(cfg : TrainConfig, asciiart = welcome, askstart : bool = False):
             - continuous-actions    : {cfg.rl_env.env.continuous_actions}, Dimension : {cfg.rl_env.env.actiondim}
           If values are None, the loaded config does not have this attribute.
           """)
-    if askstart and input("[y/Y] to start training.").strip().lower() not in ["y", "yes"]:
-        print("nvm then")
-        exit()
+    
+    if askstart:
+
+        
+        answer = input("[y/Y] to start training. [m/M] to print detailed manager infos.").strip().lower()
+        while not answer in ["y", "yes"]:
+            if answer not in ["y", "yes", "m"]:
+                print("nvm then")
+                exit()
+            if answer in ["m"]:
+                print_managemerterms(cfg.rl_env.obs_manager, cfg.rl_env.reward_manager, cfg.rl_env.termination_manager)
+            answer = input("[y/Y] to start training. [m/M] to print detailed manager infos.").strip().lower()
