@@ -10,12 +10,11 @@ from stable_baselines3.common.torch_layers import BaseFeaturesExtractor
 from stable_baselines3.common.distributions import (
     CategoricalDistribution,
     DiagGaussianDistribution,
-    SquashedDiagGaussianDistribution,
     Distribution,
 )
 from stable_baselines3.common.preprocessing import get_action_dim
 
-from .simbav2_networks import SimbaV2Actor, SimbaV2Critic
+from .simbav2_networks import SimbaV2Actor, SimbaV2Critic, SimbaV2DiscreteActor
 
 
 class PPOSimbaV2Policy(ActorCriticPolicy):
@@ -78,8 +77,12 @@ class PPOSimbaV2Policy(ActorCriticPolicy):
         self.dist_kwargs = dist_kwargs
 
         action_dim = get_action_dim(self.action_space)
-        # Action distribution. TODO: figure out if its ok to use the squashed version or do we need the normal diag gauss
-        self.action_dist = SquashedDiagGaussianDistribution(action_dim)
+        # Action distribution.
+        self.action_dist = (
+            DiagGaussianDistribution(action_dim)
+            if isinstance(self.action_space, spaces.Box)
+            else CategoricalDistribution(action_dim)
+        )
 
         assert self.features_dim is not None, "At this stage the feature extractor dim should be set"
 
@@ -100,12 +103,16 @@ class PPOSimbaV2Policy(ActorCriticPolicy):
         self._build(lr_schedule)
 
     def _build(self, lr_schedule: Schedule) -> None:
-        self.actor = SimbaV2Actor(**self.actor_kwargs)
+        self.actor = (
+            SimbaV2Actor(**self.actor_kwargs)
+            if isinstance(self.action_space, spaces.Box)
+            else SimbaV2DiscreteActor(**self.actor_kwargs)
+        )
+
         self.critic = SimbaV2Critic(**self.critic_kwargs)
 
         # Setup optimizer with initial learning rate
         self.optimizer = self.optimizer_class(self.parameters(), lr=lr_schedule(1), **self.optimizer_kwargs)  # type: ignore[call-arg]
-
 
     def _get_action_dist_from_latent(self, latent_pi: th.Tensor) -> Distribution:
         """
@@ -116,7 +123,7 @@ class PPOSimbaV2Policy(ActorCriticPolicy):
         """
         if isinstance(self.action_dist, DiagGaussianDistribution):
             mean, log_std = self.actor(latent_pi)
-            return self.action_dist.proba_distribution(mean,log_std)
+            return self.action_dist.proba_distribution(mean, log_std)
         elif isinstance(self.action_dist, CategoricalDistribution):
             mean = self.actor(latent_pi)
             # Here mean_actions are the logits before the softmax
@@ -145,8 +152,7 @@ class PPOSimbaV2Policy(ActorCriticPolicy):
         values_log_probs = self.critic(latent_vf)
         value_probs = th.exp(values_log_probs)
         # values are just the expected value (dot product of probs and support)
-        # Shape goes from (batch_size, num_bins) -> (batch_size,)
-        values = th.sum(value_probs * self.support, dim=-1)
+        values = th.sum(value_probs * self.support, dim=-1)  # Shape goes from (batch_size, num_bins) -> (batch_size,)
         distribution = self._get_action_dist_from_latent(latent_pi)
         actions = distribution.get_actions(deterministic=deterministic)
         actions_log_prob = distribution.log_prob(actions)

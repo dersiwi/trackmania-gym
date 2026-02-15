@@ -239,3 +239,29 @@ class HyperCategoricalValue(nn.Module):
         # value = torch.sum(torch.exp(log_prob) * self.bin_values, dim=1)
 
         return log_prob
+
+class HyperCategorialPolicy(nn.Module):
+    def __init__(
+        self,
+        in_features: int,
+        hidden_features: int,
+        action_dim: int,
+        scaler_init: float,
+        scaler_scale: float,
+        gain: float = 1.0,
+        **kwargs
+    ) -> None:
+        super().__init__()
+
+        self.mean_w1 = HyperDense(in_features=in_features, out_features=hidden_features, gain=gain)
+        self.mean_scaler = Scaler(dim=hidden_features, init=scaler_init, scale=scaler_scale)
+
+        self.mean_w2 = HyperDense(in_features=hidden_features, out_features=action_dim, gain=gain)
+        self.mean_bias = nn.Parameter(data=torch.zeros(size=(action_dim,)), requires_grad=True)
+
+    def forward(self, x: torch.Tensor, temperature: float = 1.0) -> tuple[torch.Tensor, torch.Tensor]:
+        mean = self.mean_w1(x)
+        mean = self.mean_scaler(mean)
+        mean = self.mean_w2(mean) + self.mean_bias
+
+        return mean
