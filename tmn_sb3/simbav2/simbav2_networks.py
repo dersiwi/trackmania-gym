@@ -171,3 +171,9 @@ class SimbaV2DiscreteActor(nn.Module):
             scaler_scale=1.0,
             gain=gain,
         )
+
+    def forward(self, observations: torch.Tensor):
+        x = self.embedder(observations)
+        x = self.encoder(x)
+        mean = self.predictor(x)
+        return mean
