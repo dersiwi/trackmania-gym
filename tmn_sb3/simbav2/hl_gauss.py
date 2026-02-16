@@ -35,7 +35,7 @@ class HLGaussLoss(nn.Module):
         cdf_evals = th.special.erf((self.support - target.unsqueeze(-1)) / (th.sqrt(th.tensor(2.0)) * self.sigma))
         z = cdf_evals[..., -1] - cdf_evals[..., 0]
         bin_probs = cdf_evals[..., 1:] - cdf_evals[..., :-1]
-        return bin_probs / z.unsqueeze(-1)
+        return bin_probs / (z.unsqueeze(-1)+1e-8)
 
     def transform_from_probs(self, probs: th.Tensor) -> th.Tensor:
         centers = (self.support[:-1] + self.support[1:]) / 2
