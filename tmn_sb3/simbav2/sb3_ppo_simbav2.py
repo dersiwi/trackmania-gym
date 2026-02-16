@@ -168,7 +168,8 @@ class PPOSimbaV2Policy(ActorCriticPolicy):
         """
         # Preprocess the observation if needed
         features = self.extract_features(obs)
-        pi_features, vf_features = features
+        assert not isinstance(features,tuple)
+        pi_features = vf_features = features
 
         # Evaluate the values for the given observations
         values, _ = self.get_scalar_values_and_logits(vf_features)
@@ -192,7 +193,8 @@ class PPOSimbaV2Policy(ActorCriticPolicy):
         """
         # Preprocess the observation if needed
         features = self.extract_features(obs)
-        pi_features, vf_features = features
+        assert not isinstance(features,tuple)
+        pi_features = vf_features = features
         distribution = self._get_action_dist_from_latent(pi_features)
         log_prob = distribution.log_prob(actions)
         values, values_logits = self.get_scalar_values_and_logits(vf_features)
@@ -207,7 +209,8 @@ class PPOSimbaV2Policy(ActorCriticPolicy):
         :return: the action distribution.
         """
         features = super().extract_features(obs, self.pi_features_extractor)
-        pi_features, _ = features
+        assert not isinstance(features,tuple)
+        pi_features = features
         return self._get_action_dist_from_latent(pi_features)
 
     def predict_values(self, obs: PyTorchObs) -> th.Tensor:
@@ -218,7 +221,8 @@ class PPOSimbaV2Policy(ActorCriticPolicy):
         :return: the estimated values.
         """
         features = super().extract_features(obs, self.vf_features_extractor)
-        _, vf_features = features
+        assert not isinstance(features,tuple)
+        vf_features = features
         values, _ = self.get_scalar_values_and_logits(vf_features)
         return values
 
