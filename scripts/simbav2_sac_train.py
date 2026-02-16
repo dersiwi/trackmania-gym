@@ -106,7 +106,7 @@ def main(cfg : TrainConfig, run_id : Optional[str] = None):
             tm_env.close()
         else:
             for env in tm_env.venv.envs:
-                env.finalize_process(reinit=False)
+                env.env.finalize_process(reinit=False)
         
 
 if __name__ == "__main__": 
