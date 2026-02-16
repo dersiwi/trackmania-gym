@@ -29,3 +29,5 @@ algorithm_params:
   num_bins: 101
   min_v: -5.0
   max_v: 5.0
+  sigma: null
+  sigma_to_bin_ratio: 2

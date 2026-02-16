@@ -168,7 +168,7 @@ class PPOSimbaV2Policy(ActorCriticPolicy):
         """
         # Preprocess the observation if needed
         features = self.extract_features(obs)
-        assert not isinstance(features,tuple)
+        assert not isinstance(features, tuple)
         pi_features = vf_features = features
 
         # Evaluate the values for the given observations
@@ -193,7 +193,7 @@ class PPOSimbaV2Policy(ActorCriticPolicy):
         """
         # Preprocess the observation if needed
         features = self.extract_features(obs)
-        assert not isinstance(features,tuple)
+        assert not isinstance(features, tuple)
         pi_features = vf_features = features
         distribution = self._get_action_dist_from_latent(pi_features)
         log_prob = distribution.log_prob(actions)
@@ -209,7 +209,7 @@ class PPOSimbaV2Policy(ActorCriticPolicy):
         :return: the action distribution.
         """
         features = super().extract_features(obs, self.pi_features_extractor)
-        assert not isinstance(features,tuple)
+        assert not isinstance(features, tuple)
         pi_features = features
         return self._get_action_dist_from_latent(pi_features)
 
@@ -221,7 +221,7 @@ class PPOSimbaV2Policy(ActorCriticPolicy):
         :return: the estimated values.
         """
         features = super().extract_features(obs, self.vf_features_extractor)
-        assert not isinstance(features,tuple)
+        assert not isinstance(features, tuple)
         vf_features = features
         values, _ = self.get_scalar_values_and_logits(vf_features)
         return values
@@ -289,6 +289,8 @@ class SimbaV2PPO(PPO):
         num_bins: int = 101,
         min_v: float = -5.0,
         max_v: float = 5.0,
+        sigma: float | None = None,
+        sigma_to_bin_ratio: float | None = None,
     ):
         super().__init__(
             policy,
@@ -323,8 +325,16 @@ class SimbaV2PPO(PPO):
         self.min_v = min_v
         self.bin_values = th.linspace(start=self.min_v, end=self.max_v, steps=self.num_bins, device=device)
         self.hl_gauss_loss = HLGaussLoss(
-            min_value=self.min_v, max_value=self.max_v, num_bins=self.num_bins, sigma=1.0, device=device
+            min_value=self.min_v,
+            max_value=self.max_v,
+            num_bins=self.num_bins,
+            sigma=sigma,
+            sigma_to_bin_ratio=sigma_to_bin_ratio,
+            device=device,
         )
+        assert self.policy.max_v == self.max_v
+        assert self.policy.min_v == self.min_v
+        assert self.policy.num_bins == self.num_bins
 
     # Just copy pasted the og sb3 ppo code, did not know how to do it cleaner
     def train(self) -> None:

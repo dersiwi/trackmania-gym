@@ -8,13 +8,25 @@ from .simbav2_networks import create_simbav2_base
 
 # ripped from https://arxiv.org/pdf/2403.03950 Appendix A
 class HLGaussLoss(nn.Module):
-    def __init__(self, min_value: float, max_value: float, num_bins: int, sigma: float, device: th.device | str = "auto"):
+    def __init__(
+        self,
+        min_value: float,
+        max_value: float,
+        num_bins: int,
+        sigma: float | None = None,
+        sigma_to_bin_ratio: float | None = 2.0,  # from fig 6 of https://arxiv.org/html/2402.13425v2
+        device: th.device | str = "auto",
+    ):
         super().__init__()
         self.min_value = min_value
         self.max_value = max_value
         self.num_bins = num_bins
-        self.sigma = sigma
         self.support = th.linspace(min_value, max_value, num_bins + 1, dtype=th.float32, device=device)
+        mean_bin_size = (self.support[1:] - self.support[:-1]).mean().item()
+
+        assert not (sigma is None and sigma_to_bin_ratio is None), "either `sigma` or `sigma_to_bin_ratio` is set but not both"
+        self.sigma = sigma if sigma else sigma_to_bin_ratio * mean_bin_size
+        assert self.sigma > 0.0
 
     def forward(self, logits: th.Tensor, target: th.Tensor) -> th.Tensor:
         return F.cross_entropy(logits, self.transform_to_probs(target))
