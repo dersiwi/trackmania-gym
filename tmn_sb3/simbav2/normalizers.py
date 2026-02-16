@@ -101,3 +101,43 @@ class SimbaVecNormalize(VecNormalize):
         # Note: we cast to float32 as it correspond to Python default float type
         # This cast is needed because `RunningMeanStd` keeps stats in float64
         return reward.astype(np.float32)
+
+
+class OnPolicySimbaVecNormalize(VecNormalize):
+    """
+    Is just the normal VecNormalize but with the reward scaling/clipping from simba2
+    """
+
+    def __init__(
+        self,
+        venv: VecEnv,
+        training: bool = True,
+        norm_obs: bool = True,
+        norm_reward: bool = True,
+        clip_obs: float = np.inf,
+        clip_reward: float = np.inf,
+        gamma: float = 0.99,
+        epsilon: float = 1e-8,
+        g_max: Optional[float] = 10.0,
+        norm_obs_keys: Optional[list[str]] = None,
+    ):
+        super().__init__(venv, training, norm_obs, norm_reward, clip_obs, clip_reward, gamma, epsilon, norm_obs_keys)
+
+        self.g_r_max = 0.0  # Running max of absolute returns
+        self.g_max = g_max
+
+
+    def _update_reward(self, reward: np.ndarray) -> None:
+        super()._update_reward(reward)  # parent class already does G_t = gamma * G_{t-1} + r_t
+        self.g_r_max = max(self.g_r_max, np.max(np.abs(self.returns)))  # Eq 18 from simbav2
+
+    def normalize_reward(self, reward: np.ndarray) -> np.ndarray:
+        if self.norm_reward:
+            # Eq 19 from simbav2
+            var_denominator = np.sqrt(self.ret_rms.var + self.epsilon)
+            min_required_denominator = self.g_r_max / self.g_max
+            denominator = max(var_denominator, min_required_denominator)
+            reward = np.clip(reward / denominator, -self.clip_reward, self.clip_reward)
+        # Note: we cast to float32 as it correspond to Python default float type
+        # This cast is needed because `RunningMeanStd` keeps stats in float64
+        return reward.astype(np.float32)

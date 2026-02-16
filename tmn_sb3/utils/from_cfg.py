@@ -1,12 +1,10 @@
-
 from functools import partial
 
 import torch.nn as nn
 import hydra
 
-from omegaconf import DictConfig, OmegaConf,ListConfig
+from omegaconf import DictConfig, OmegaConf, ListConfig
 from itertools import chain
-
 
 
 from sb3_contrib.qrdqn.qrdqn import QRDQN
@@ -27,27 +25,29 @@ from trackmania_env.envs.single_agent_env2 import TMNF_Single_Agent_Env
 from tmn_sb3.policies.async_policy import AsyncActorCriticPolicy
 from neural_networks.lr_schedulers import LR_Scheduler
 from neural_networks.extractors.extractors import ExtractorConfig
-from neural_networks.extractors import make_tmn_extractor,get_extractor_class
+from neural_networks.extractors import make_tmn_extractor, get_extractor_class
 
 from tmn_sb3.simbav2.sb3_simbav2_policies import SACSimbaV2Policy
+from tmn_sb3.simbav2.sb3_ppo_simbav2 import PPOSimbaV2Policy
 
-def print_model_params(model : BaseAlgorithm):
-    """"Prints parametrs of the given model"""
-    print("\nModel Parameters\n" + "-"*40)
+
+def print_model_params(model: BaseAlgorithm):
+    """ "Prints parametrs of the given model"""
+    print("\nModel Parameters\n" + "-" * 40)
     for name, param in model.policy.named_parameters():
         print(f"{name:<75} {str(tuple(param.shape)):<25}  grad={param.requires_grad}")
 
-def get_model_from_config(
-        cfg : TrainConfig,
-        tm_env : TMNF_Single_Agent_Env,
-        print_params : bool = False,
-        run_id:str = "test",
-        load_model_path: str | None = None,
-        load_replay_buffer_path: str | None = None
-        ) -> BaseAlgorithm:
 
+def get_model_from_config(
+    cfg: TrainConfig,
+    tm_env: TMNF_Single_Agent_Env,
+    print_params: bool = False,
+    run_id: str = "test",
+    load_model_path: str | None = None,
+    load_replay_buffer_path: str | None = None,
+) -> BaseAlgorithm:
     """
-    This function builds a policy and creates the corresponding SB3 model (e.g., PPO, DQN, A2C, etc.) 
+    This function builds a policy and creates the corresponding SB3 model (e.g., PPO, DQN, A2C, etc.)
     dynamically based on a configuration object. It supports asynchronous actor-critic models. Also:
 
     - Supports both actor-critic and value-based methods.
@@ -77,110 +77,127 @@ def get_model_from_config(
     # NOTE: with the simbav2 logic this must be set to true
     normalized_images = True
 
-
     # extract algo params
     algorithm_params = OmegaConf.to_container(cfg.sb3.algorithm_params, resolve=True)
 
-    #Create policy related things like extractors 
+    # Create policy related things like extractors
     policy_cfg = cfg.policy
-    policy_type = policy_cfg.type 
+    policy_type = policy_cfg.type
     policy_kwargs = None
 
     # vision model is created in the feature extractor
-    vision_model_kwargs = cfg.models if secure_attribute_retrieval(lambda: cfg.rl_env.obs_manager.obs_have_imgs, False) else None
-    base_ext_config = ExtractorConfig.create(policy_cfg, cfg, vision_model_kwargs = vision_model_kwargs, device = device, normalized_images=normalized_images)
+    vision_model_kwargs = (
+        cfg.models if secure_attribute_retrieval(lambda: cfg.rl_env.obs_manager.obs_have_imgs, False) else None
+    )
+    base_ext_config = ExtractorConfig.create(
+        policy_cfg, cfg, vision_model_kwargs=vision_model_kwargs, device=device, normalized_images=normalized_images
+    )
 
-    if policy_cfg.name in {"basic","dqn"}:
-
+    if policy_cfg.name in {"basic", "dqn"}:
         feature_extrac_kwargs = base_ext_config
         policy_kwargs = dict(
             features_extractor_class=get_extractor_class(tm_env.observation_space),
             features_extractor_kwargs=feature_extrac_kwargs.to_dict(),
-            normalize_images= normalized_images,
+            normalize_images=normalized_images,
         )
         # dqn style algos are not type of actor critic methods so they dont have that field
-        if policy_cfg.name != "dqn": policy_kwargs.update(dict(share_features_extractor=policy_cfg.share_features_extractor))
+        if policy_cfg.name != "dqn":
+            policy_kwargs.update(dict(share_features_extractor=policy_cfg.share_features_extractor))
 
-    elif policy_cfg.name == "async_actor_critic": 
-
+    elif policy_cfg.name == "async_actor_critic":
         actor_config = data_cls_replace(
             base_ext_config,
             float_model=secure_attribute_retrieval(lambda: policy_cfg.actor.float_net, None),
             activation_fn=hydra.utils.get_class(policy_cfg.actor.activation_fn._target_),
             last_activation_fn=hydra.utils.get_class(policy_cfg.actor.last_activation_fn._target_),
-            out_dim = policy_cfg.actor.extractors_out_dim,
+            out_dim=policy_cfg.actor.extractors_out_dim,
         )
-        
+
         value_config = data_cls_replace(
             base_ext_config,
             float_model=secure_attribute_retrieval(lambda: policy_cfg.critic.float_net, None),
             activation_fn=hydra.utils.get_class(policy_cfg.critic.activation_fn._target_),
             last_activation_fn=hydra.utils.get_class(policy_cfg.critic.last_activation_fn._target_),
-            out_dim =  policy_cfg.critic.extractors_out_dim,
+            out_dim=policy_cfg.critic.extractors_out_dim,
         )
-        
+
         policy_type, policy_kwargs = build_async_actor_critic_policy(
-                observation_space= tm_env.observation_space,
-                actor_observations=  OmegaConf.to_object(ListConfig(policy_cfg.actor.observations)),
-                actor_extractor_kwargs= actor_config.to_dict(),
-                critic_observations =  OmegaConf.to_object(ListConfig(policy_cfg.critic.observations)),
-                critic_extractor_kwargs= value_config.to_dict(),
-                net_arch= OmegaConf.to_object(DictConfig(policy_cfg.mlp_extractor.net_arch)) if secure_attribute_retrieval(lambda: policy_cfg.mlp_extractor.net_arch,False) else None,
-                activation_fn = hydra.utils.get_class(policy_cfg.mlp_extractor.activation_fn._target_) if secure_attribute_retrieval(lambda: policy_cfg.mlp_extractor.activation_fn._target_,False) else nn.Tanh,
-                normalize_images = normalized_images,
-                )
+            observation_space=tm_env.observation_space,
+            actor_observations=OmegaConf.to_object(ListConfig(policy_cfg.actor.observations)),
+            actor_extractor_kwargs=actor_config.to_dict(),
+            critic_observations=OmegaConf.to_object(ListConfig(policy_cfg.critic.observations)),
+            critic_extractor_kwargs=value_config.to_dict(),
+            net_arch=OmegaConf.to_object(DictConfig(policy_cfg.mlp_extractor.net_arch))
+            if secure_attribute_retrieval(lambda: policy_cfg.mlp_extractor.net_arch, False)
+            else None,
+            activation_fn=hydra.utils.get_class(policy_cfg.mlp_extractor.activation_fn._target_)
+            if secure_attribute_retrieval(lambda: policy_cfg.mlp_extractor.activation_fn._target_, False)
+            else nn.Tanh,
+            normalize_images=normalized_images,
+        )
     elif policy_cfg.name == "sac_simbav2":
         # fill in the information of the feature extractor into the policy_kwargs
         feature_extrac_kwargs = base_ext_config
         policy_kwargs = dict(
             features_extractor_class=get_extractor_class(tm_env.observation_space),
             features_extractor_kwargs=feature_extrac_kwargs.to_dict(),
-            normalize_images= False,# we dont want sb3 its img normalisation and in addition if setting this to false then the exxtractor build produces a MLP for the image obs and not a conv net
+            normalize_images=False,  # we dont want sb3 its img normalisation and in addition if setting this to false then the exxtractor build produces a MLP for the image obs and not a conv net
         )
 
         policy_kwargs.update(policy_cfg.policy_kwargs)
-        optmizer_class =hydra.utils.get_class(
-            policy_cfg.policy_kwargs.optimizer_class.__target__
-        )
+        optmizer_class = hydra.utils.get_class(policy_cfg.policy_kwargs.optimizer_class.__target__)
         policy_kwargs["optimizer_class"] = optmizer_class
-        policy_kwargs["actor_kwargs"] = OmegaConf.to_container( policy_kwargs["actor_kwargs"] , resolve=True)
-        policy_kwargs["critic_kwargs"] = OmegaConf.to_container( policy_kwargs["critic_kwargs"] , resolve=True)
-        policy_kwargs["optimizer_kwargs"] = OmegaConf.to_container( policy_kwargs["optimizer_kwargs"] , resolve=True)
+        policy_kwargs["actor_kwargs"] = OmegaConf.to_container(policy_kwargs["actor_kwargs"], resolve=True)
+        policy_kwargs["critic_kwargs"] = OmegaConf.to_container(policy_kwargs["critic_kwargs"], resolve=True)
+        policy_kwargs["optimizer_kwargs"] = OmegaConf.to_container(policy_kwargs["optimizer_kwargs"], resolve=True)
 
         policy_type = SACSimbaV2Policy
+    
+    # NOTE: this is ugly since the sac_simbav2 does the same but we just want to be on the dafe side 
+    # and dont want to mess anything up regarding the results 
+    elif policy_cfg.name == "ppo_simbav2":
+        # fill in the information of the feature extractor into the policy_kwargs
+        feature_extrac_kwargs = base_ext_config
+        policy_kwargs = dict(
+            features_extractor_class=get_extractor_class(tm_env.observation_space),
+            features_extractor_kwargs=feature_extrac_kwargs.to_dict(),
+            normalize_images=False,  # we dont want sb3 its img normalisation and in addition if setting this to false then the exxtractor build produces a MLP for the image obs and not a conv net
+        )
 
+        policy_kwargs.update(policy_cfg.policy_kwargs)
+        optmizer_class = hydra.utils.get_class(policy_cfg.policy_kwargs.optimizer_class.__target__)
+        policy_kwargs["optimizer_class"] = optmizer_class
+        policy_kwargs["actor_kwargs"] = OmegaConf.to_container(policy_kwargs["actor_kwargs"], resolve=True)
+        policy_kwargs["critic_kwargs"] = OmegaConf.to_container(policy_kwargs["critic_kwargs"], resolve=True)
+        policy_kwargs["optimizer_kwargs"] = OmegaConf.to_container(policy_kwargs["optimizer_kwargs"], resolve=True)
 
+        policy_type = PPOSimbaV2Policy
 
+    else:
+        raise ValueError(f"Unknown policy name: {policy_cfg.name!r}")
 
-    else: raise ValueError(f"Unknown policy name: {policy_cfg.name!r}") 
+    model_args = dict(policy=policy_type, env=tm_env, tensorboard_log=run_id, device=device, **algorithm_params)
+    # Only include policy_kwargs if they exist
+    if policy_kwargs:
+        model_args["policy_kwargs"] = policy_kwargs
 
-    model_args = dict(
-    policy = policy_type,
-    env = tm_env,
-    tensorboard_log = run_id,
-    device = device,
-    **algorithm_params
-    )
-     # Only include policy_kwargs if they exist
-    if policy_kwargs: model_args["policy_kwargs"] = policy_kwargs
-
-    lr : LR_Scheduler = hydra.utils.instantiate(cfg.lr_scheduler)
+    lr: LR_Scheduler = hydra.utils.instantiate(cfg.lr_scheduler)
     model_args["learning_rate"] = lr.get_scheduler()
 
     model_constructor = hydra.utils.instantiate(cfg.sb3.constructor)
-    model : BaseAlgorithm = model_constructor(**model_args)
-    
+    model: BaseAlgorithm = model_constructor(**model_args)
+
     if print_params:
         print_model_params(model)
 
-    if load_model_path: 
-        # set_parameters() operates in in-place. If we would use model.load() we would 
+    if load_model_path:
+        # set_parameters() operates in in-place. If we would use model.load() we would
         # need to reassign it to the model variable since the method doesn't work in-place
         model.set_parameters(load_model_path)
         print(f"Loading model from {load_model_path}...")
 
-        if isinstance(model,OffPolicyAlgorithm) and load_replay_buffer_path:
+        if isinstance(model, OffPolicyAlgorithm) and load_replay_buffer_path:
             model.load_replay_buffer(load_replay_buffer_path)
             print(f"Loading replay buffer from {load_replay_buffer_path}...")
-    
+
     return model

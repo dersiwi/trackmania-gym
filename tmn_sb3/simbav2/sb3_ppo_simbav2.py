@@ -28,7 +28,7 @@ from .simbav2_networks import (
     SimbaV2Actor,
     SimbaV2DiscreteActor,
 )
-from hl_gauss import HLGaussLoss, HLGaussCritic
+from .hl_gauss import HLGaussLoss, HLGaussCritic
 
 
 class PPOSimbaV2Policy(ActorCriticPolicy):

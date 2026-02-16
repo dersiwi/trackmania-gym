@@ -1,0 +1,45 @@
+
+name: "ppo_simbav2"
+type: "simbav2"
+
+policy_kwargs:
+
+  share_features_extractor: True # whether to share the features extractor between actor and critic when applicable
+  actor_kwargs:
+    num_blocks: 1
+    hidden_dim: 128
+
+    scaler_init: ${eval:'math.sqrt(2 / ${policy.policy_kwargs.actor_kwargs.hidden_dim})'}
+    scaler_scale: ${eval:'math.sqrt(2 / ${policy.policy_kwargs.actor_kwargs.hidden_dim})'}
+
+    alpha_init: ${eval:'1 / (${policy.policy_kwargs.actor_kwargs.num_blocks} + 1)'}
+    alpha_scale: ${eval:'1 / math.sqrt(${policy.policy_kwargs.actor_kwargs.hidden_dim})'}
+
+    c_shift: 3.0
+
+  critic_kwargs:
+    num_blocks: 2
+    hidden_dim: 512
+
+    scaler_init: ${eval:'math.sqrt(2 / ${policy.policy_kwargs.critic_kwargs.hidden_dim})'}
+    scaler_scale: ${eval:'math.sqrt(2 / ${policy.policy_kwargs.critic_kwargs.hidden_dim})'}
+
+    alpha_init: ${eval:'1 / (${policy.policy_kwargs.critic_kwargs.num_blocks} + 1)'}
+    alpha_scale: ${eval:'1 / math.sqrt(${policy.policy_kwargs.critic_kwargs.hidden_dim})'}
+
+    min_v: ${eval:'${sb3.algorithm_params.min_v}'}
+    max_v: ${eval:'${sb3.algorithm_params.max_v}'}
+
+    c_shift: 3.0
+    num_bins: 101
+
+  optimizer_class:
+    __target__ : tmn_sb3.simbav2.optimizer.UnitAdam
+
+  optimizer_kwargs:
+    weight_decay: 0.0
+
+  min_v: ${policy.policy_kwargs.critic_kwargs.min_v}
+  max_v: ${policy.policy_kwargs.critic_kwargs.max_v}
+  num_bins: ${policy.policy_kwargs.critic_kwargs.num_bins} 
+
