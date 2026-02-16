@@ -105,7 +105,7 @@ class PPOSimbaV2Policy(ActorCriticPolicy):
         self.actor_kwargs = actor_kwargs
         self.critic_kwargs = critic_kwargs
 
-        self.actor_kwargs["in_features"] = self.features_dim
+        self.actor_kwargs.update({"in_features": self.features_dim, "action_dim": action_dim})
         self.critic_kwargs["in_features"] = self.features_dim
 
         # HL-Gauss Support Setup
@@ -372,10 +372,10 @@ class SimbaV2PPO(PPO):
                 pg_losses.append(policy_loss.item())
                 clip_fraction = th.mean((th.abs(ratio - 1) > clip_range).float()).item()
                 clip_fractions.append(clip_fraction)
-                
-                # Values loss 
-                # the returns should be already clipped by the env wrapper 
-                value_loss = self.hl_gauss_loss(values_logits,rollout_data.returns)
+
+                # Values loss
+                # the returns should be already clipped by the env wrapper
+                value_loss = self.hl_gauss_loss(values_logits, rollout_data.returns)
                 value_losses.append(value_loss.item())
 
                 # Entropy loss favor exploration
