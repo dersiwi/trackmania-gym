@@ -27,6 +27,7 @@ class PlatformConfig:
     map_dir : str
     device: str
     wineprefix : Optional[str]
+    set_window_focus : Optional[bool] 
 
 @dataclass
 class ModelCfg:
