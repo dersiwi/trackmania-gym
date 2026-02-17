@@ -1,3 +1,6 @@
 [submodule "bro"]
 	path = bro
 	url = https://github.com/naumix/BiggerRegularizedOptimistic.git
+[submodule "bro_torch"]
+	path = bro_torch
+	url = git@github.com:naumix/BiggerRegularizedOtimistic_Torch.git
