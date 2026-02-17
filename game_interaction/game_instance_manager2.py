@@ -31,7 +31,9 @@ class GameInstanceManager:
 
 
     @staticmethod
-    def get_instance(TMLoader_path : str, path_to_plugin : str, TMLoader_profile_name : str = "default", linux : bool = False, headless : bool = False,tmi_port:int = 8775,lock = None, wineprefix : str = None) -> GameInstanceManager:
+    def get_instance(TMLoader_path : str, path_to_plugin : str, TMLoader_profile_name : str = "default", linux : bool = False, 
+                     headless : bool = False,tmi_port:int = 8775,lock = None, wineprefix : str = None,
+                     set_window_focus : bool = True) -> GameInstanceManager:
         """
         The GameInstanceManager launches the game from the operating systems side via a system command (launch_game() and close_game() start and end tmnf processes.)
         To get an instance of the GameInstanceManager use this method and specify the operating system by setting linux accordingly.
@@ -39,19 +41,21 @@ class GameInstanceManager:
         The GameInstanceManager also sets instanciates a TMInterface, which can be accessed directly or via get_tminterface().
 
 
-        params
-        ------
-
-        - TMLoader_path : path to the TMLoader executable
-        - TMLoader_profile_name : name of the profile inside the TMLoader to be used; if none is specifeid the "default"-profile is used
-        - path_to_plugin : path to the plugin aka. Python_Link.as that should be placed inside the trackmania-plugin folder
-        - linux : set to true if on a linux operating system, set to false if on a windows operating system
-        - headless : if True, starts the game headless (i.e. with virtual monitor) - as of now this is highly experimental and only has an effect on linux.
+        Args:
+            TMLoader_path (str)         : path to the TMLoader executable
+            TMLoader_profile_name (str): name of the profile inside the TMLoader to be used; if none is specifeid the "default"-profile is used
+            path_to_plugin (str)    : path to the plugin aka. Python_Link.as that should be placed inside the trackmania-plugin folder
+            linux (bool)            : set to true if on a linux operating system, set to false if on a windows operating system
+            headless (bool)         : if True, starts the game headless (i.e. with virtual monitor) - as of now this is highly experimental and only has an effect on linux.
+            tmi_port (int)          : Port used to instaniceate TMInterface; default 8775
+            lock                    : Needed for linux
+            wineprefix (str)        : Possible to pass when you created a dedicated wineprefix on your linux-system. Defaults to None.
+            set_window_focus (bool) : Focusses the TMNF-window after start. Can be disabled, as on some system XDO does not work properly. Default : True. Only relevant for linux.
         """
 
         if linux:
             # TODO get Lock.
-            return GameInstanceMangerLinux(TMLoader_path, TMLoader_profile_name, path_to_plugin, lock, headless,tmi_port, wineprefix=wineprefix)
+            return GameInstanceMangerLinux(TMLoader_path, TMLoader_profile_name, path_to_plugin, lock, headless,tmi_port, wineprefix=wineprefix, set_window_focus = set_window_focus)
         else:
             return GameInstanceManagerWindows(TMLoader_path, TMLoader_profile_name, path_to_plugin, headless,tmi_port)
 
@@ -236,10 +240,11 @@ class GameInstanceMangerLinux(GameInstanceManager):
         print("Launched xvfb-process.")
 
 
-    def __init__(self, TMLoader_path, TMLoader_profile_name, path_to_plugin, game_spawning_lock : None, headless : bool,tmi_port:int, wineprefix : str):
+    def __init__(self, TMLoader_path, TMLoader_profile_name, path_to_plugin, game_spawning_lock : None, headless : bool,tmi_port:int, wineprefix : str, set_window_focus : bool):
         super().__init__(TMLoader_path, TMLoader_profile_name, path_to_plugin, headless,tmi_port)
         self.game_spawning_lock : str = game_spawning_lock
         self.wineprefix = wineprefix
+        self.set_window_focus = set_window_focus
 
 
     def _get_tm_window_id(self):
@@ -322,7 +327,10 @@ class GameInstanceMangerLinux(GameInstanceManager):
 
         _ = psutil.Process(process.pid)
         self.__get_tmnf_process_id(pid_before, timeout)
-        self._get_tm_window_id()
+
+        if self.set_window_focus:
+            self._get_tm_window_id()
+
         if self.game_spawning_lock: self.game_spawning_lock.release()
         return self.tm_process_id
 

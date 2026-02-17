@@ -10,7 +10,7 @@ from configs.config import TrainConfig, EnvConfig
 
 from utils.hydra_wandb_utils import secure_attribute_retrieval
 
-def run_wrapper(gmi, launch_game : bool, cmd_q : Queue, res_q : Queue, track : str, img_w : int, img_h : int, camera_id:int ,env_cfg : EnvConfig, debug: bool): # apparently its better to run process like this to avoid pickel issues or smth?
+def run_wrapper(gmi, launch_game : bool, cmd_q : Queue, res_q : Queue, track : str, img_w : int, img_h : int, camera_id:int ,env_cfg : EnvConfig, debug: bool, set_window_focus: True): # apparently its better to run process like this to avoid pickel issues or smth?
     """
     Method to run in the process-Wrapper. For arguments @see TMIProcessWrapper-constructor.
     """
@@ -22,7 +22,7 @@ def run_wrapper(gmi, launch_game : bool, cmd_q : Queue, res_q : Queue, track : s
                                 actions_per_second=  env_cfg.actions_per_second, 
                                 use_rewind= env_cfg.use_rewind,
                                 disable_waitforstep_after_n_consecutive_timeouts=  env_cfg.disable_waitforstep_after_n_consecutive_timeouts,
-                                debug= debug,
+                                debug= debug, set_window_focus = set_window_focus
                             )
     wrapper.start_running()
 
@@ -44,8 +44,9 @@ class ProcessManagement:
             tmi_port= port,
             lock=lock,
             wineprefix = secure_attribute_retrieval(lambda: train_config.platforms.wineprefix, None),
+            set_window_focus= secure_attribute_retrieval(lambda : train_config.platforms.set_window_focus, True)
             )
-
+        self.set_window_focus = secure_attribute_retrieval(lambda : train_config.platforms.set_window_focus, True)
         self.train_config = train_config
         self.image_width = image_width
         self.image_height = image_height
@@ -97,7 +98,8 @@ class ProcessManagement:
                         self.image_height,
                         self.train_config.rl_env.obs_manager.camera_id,
                         self.train_config.rl_env.env,
-                        self.train_config.debug,))
+                        self.train_config.debug,
+                        self.set_window_focus,))
         self.tmi_process = p
         p.start()
         self.sender = IPCommandSender(self.control_queue, self.response_queue, timeout=timeout, mcs = mcs, wfr = wfr)
