@@ -13,7 +13,6 @@ from trackmania_env.utils.orientationless_random_respawn_manager import Orientat
 from game_interaction.ipc_command_sender import IPCommandSender
 from configs.config import TrainConfig
 
-from trackmania_env.utils.jaxadapter import JaxVecEnv
 
 def _get_env_constructor_args(cfg : TrainConfig, ipcommandsender, obs_manager, reward_calculator, termination_manager) -> dict:
     """Creates constructor args that can be passed to the environment
@@ -73,6 +72,7 @@ def get_environment(cfg : TrainConfig, ipcommandsender : IPCommandSender, test :
         tm_env = TestEnvironment.get_testenv(tm_env, platform=cfg.platforms.os, continuous_actions=cfg.rl_env.env.continuous_actions)
     
     if wrap_jax:
+        from trackmania_env.utils.jaxadapter import JaxVecEnv
         tm_env = JaxVecEnv(tm_env)
     
     tm_env.orientationless_respawn_manager = OrientationlessRespawnManager(respawn_coordinates=OrientationlessRespawnManager.get_respawns_for_very_long_checkpoints())
