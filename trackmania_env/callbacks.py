@@ -59,11 +59,26 @@ class ReturnCallback(BaseCallback):
     """This callback listens to the environment wirting its episode-return into the infos and then logs this return per episode"""
     def __init__(self, verbose=0):
         super().__init__(verbose)
-    
+
     def _on_step(self):
         infos : list[dict] = self.locals["infos"][0]
         if ReturnTracker.LOG_NAME in infos:
             wandb.log({"episode_return" : infos[ReturnTracker.LOG_NAME]})
+        return True # always return true.
+    
+class FurtherStatisticsCallback(BaseCallback):
+    def __init__(self, verbose=0):
+        super().__init__(verbose)
+    
+    def _on_step(self):
+        logdict = {}
+        infos : list[dict] = self.locals["infos"][0]
+        if ("terminated" in infos and infos["terminated"]) and infos["race_finished"]:
+            logdict["steps_until_race_finished"] = infos["episode_length"]
+
+        if len(logdict) > 0:
+            wandb.log(logdict)
+
         return True # always return true.
     
 

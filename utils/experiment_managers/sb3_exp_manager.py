@@ -72,6 +72,7 @@ class Sb3ExperimentManager(ExperimentManager):
             save_vecnormalize=False,
         )
         self.callbacks.append(checkpoint_callback)
+        self.callbacks.append(FurtherStatisticsCallback())
         if self.use_wandb:
             self.callbacks.append(AccumRewardLogCallback(n_envs=self.n_envs))
             self.callbacks.append(ReturnCallback())
