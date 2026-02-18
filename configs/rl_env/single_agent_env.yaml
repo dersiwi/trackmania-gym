@@ -33,6 +33,12 @@ env:
   continuous_actions : True
   actiondim : 3    #only relevant when continuous_actions == True
 
+  use_filmnet: True
+  filmnet_kwargs:
+    num_blocks: 4
+    simba_mode: False #if set to True then every Linear and Conv2d will be replaced by simbav2 equivalents which always have weight norm 1
+    
+
 
 wrappers:
   monitor: 

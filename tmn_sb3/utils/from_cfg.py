@@ -30,6 +30,7 @@ from neural_networks.extractors import make_tmn_extractor, get_extractor_class
 from tmn_sb3.simbav2.sb3_simbav2_policies import SACSimbaV2Policy
 from tmn_sb3.simbav2.sb3_ppo_simbav2 import PPOSimbaV2Policy
 
+from neural_networks.extractors.extractors import TMN_FiLM_Dict_Extractor
 
 def print_model_params(model: BaseAlgorithm):
     """ "Prints parametrs of the given model"""
@@ -157,10 +158,13 @@ def get_model_from_config(
     # and dont want to mess anything up regarding the results 
     elif policy_cfg.name == "ppo_simbav2":
         # fill in the information of the feature extractor into the policy_kwargs
-        feature_extrac_kwargs = base_ext_config
+        extactor_class = TMN_FiLM_Dict_Extractor if cfg.rl_env.env.use_filmnet else get_extractor_class(tm_env.observation_space)
+        feature_extrac_kwargs = base_ext_config.to_dict()
+        if cfg.rl_env.env.use_filmnet: feature_extrac_kwargs.update(OmegaConf.to_container(cfg.rl_env.env.filmnet_kwargs, resolve=True)
+)
         policy_kwargs = dict(
-            features_extractor_class=get_extractor_class(tm_env.observation_space),
-            features_extractor_kwargs=feature_extrac_kwargs.to_dict(),
+            features_extractor_class= extactor_class,
+            features_extractor_kwargs=feature_extrac_kwargs,
             normalize_images=False,  # we dont want sb3 its img normalisation and in addition if setting this to false then the exxtractor build produces a MLP for the image obs and not a conv net
         )
 

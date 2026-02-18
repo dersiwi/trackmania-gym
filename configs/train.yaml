@@ -1,13 +1,13 @@
 defaults:
   - rl_env: single_agent_env.yaml
-  - sb3: sac_simbav2.yaml
+  - sb3: ppo_simbav2.yaml
   - wandb_callbacks : sb3_callback.yaml
   - models: simbav2_cnn.yaml
   - lr_scheduler: dropoff_scheduling.yaml
-  - policy: sac_simbav2_policy.yaml
+  - policy: ppo_simbav2_policy.yaml
 
 platforms_config_path : "configs/platforms.yaml"
-extractors_out_dim: 64 # every extractor will produce an output with this dimension 
+extractors_out_dim: 128 # every extractor will produce an output with this dimension 
 #share_features_extractor: True # whether to share the features extractor between actor and critic when applicable
 debug: False
 img_dump_freq: 1e6 # this is only relevant if debug=True

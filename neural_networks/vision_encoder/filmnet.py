@@ -49,7 +49,7 @@ class FiLMedResBlock(nn.Module):
 
         self.conv1x1 = conv_class(actual_in, out_channels, kernel_size=1)
 
-        self.conv3x3 = conv_class(out_channels, out_channels, kernel_size=3, padding=1)
+        self.conv3x3 = conv_class(out_channels, out_channels, kernel_size=3, padding=1) # padding is important in order to not loose imh shape size
 
         # for Batch Norm affine is False because FiLM provides the scale/shift
         self.bn = nn.Identity() if issubclass(conv_class, UnitConv2D) else nn.BatchNorm2d(out_channels, affine=False)
@@ -63,13 +63,13 @@ class FiLMedResBlock(nn.Module):
 
     def forward(self, x, gamma, beta):
         x_with_coords = add_coords(x)
-        identity = self.shortcut(x_with_coords)
-
         out = self.conv1x1(x_with_coords)
         out = F.relu(out)
+        identity = out
 
         out = self.conv3x3(out)
         out = self.bn(out)
+        assert gamma.shape[-1] == beta.shape[-1] == out.shape[1]
         out = self.film(out, gamma, beta)
         out = F.relu(out)
 
@@ -132,6 +132,11 @@ class FiLMedVisionModel(VisionModel):
             encoder=encoder, feature_projector=lambda in_dim: make_feature_projector(in_dim, out_dim), img_shape=img_shape
         )
 
+    def forward(self, x, gammas=None, betas=None):
+        x = self.encoder(x, gammas, betas)
+        x = self.feature_projector(x)
+        return x
+
 
 class SimpleFiLMGen(nn.Module):
     def __init__(self, in_dim, num_blocks, feature_dim, linear_class=nn.Linear, hidden_dim=512):
@@ -142,9 +147,7 @@ class SimpleFiLMGen(nn.Module):
         # In the paper code: cond_feat_size = 2 * feature_dim (one gamma, one beta)
         self.total_output_size = num_blocks * (2 * feature_dim)
 
-        self.mlp = nn.Sequential(
-            linear_class(in_dim, hidden_dim), nn.ReLU(), linear_class(hidden_dim, self.total_output_size)
-        )
+        self.mlp = nn.Sequential(linear_class(in_dim, hidden_dim), nn.ReLU(), linear_class(hidden_dim, self.total_output_size))
 
     def forward(self, x):
         # Shape: (Batch, num_blocks * 2 * feature_dim)
@@ -159,7 +162,7 @@ class SimpleFiLMGen(nn.Module):
             # see https://github.com/ethanjperez/film/blob/master/vr/models/film_gen.py#L160
             # The paper code does: out + gamma_baseline (usually 1.0)
             # This ensures that if the MLP outputs 0, gamma becomes 1 (no change to features)
-            #TODO: is this correct 
+            # TODO: is this correct
             g = output[:, i, 0, :] + 1.0
             b = output[:, i, 1, :]
 
