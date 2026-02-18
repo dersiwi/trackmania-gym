@@ -1,4 +1,4 @@
-
+import os
 
 ascii_art = r""".......................::.......................................................................................................
 ...........-##*%+%@@=@@*#@@:....................................................................................................
@@ -153,12 +153,13 @@ def print_managemerterms(obs, rew, term):
 
 
 
-def introscreen(cfg : TrainConfig, asciiart = welcome, askstart : bool = False):
+def introscreen(cfg : TrainConfig, asciiart = welcome, askstart : bool = False, run_checks : bool = True):
     """Displays an ascii art and some core configuration-values
     Args:
         cfg (TrainConfig)   : Confgiguration from which values are displayed
         asciiart (str)      : AsciiArt (welcomestring) that is printed
         askstart (bool)     : Asks the user if he wants to start the training. User has to type in [y/Y] to configrm.
+        run_checks (bool)   : If true, runs some sanity checks on the given config, like checking existance of paths.
     """
     print(asciiart)
     print(f"""\n============================= General =============================
@@ -185,3 +186,15 @@ def introscreen(cfg : TrainConfig, asciiart = welcome, askstart : bool = False):
             if answer in ["m"]:
                 print_managemerterms(cfg.rl_env.obs_manager, cfg.rl_env.reward_manager, cfg.rl_env.termination_manager)
             answer = input("[y/Y] to start training. [m/M] to print detailed manager infos.").strip().lower()
+    if askstart and input("[y/Y] to start training.").strip().lower() not in ["y", "yes"]:
+        print("nvm then")
+        exit()
+
+    if run_checks:
+        print("Running checks...")
+        # check if all tracks exist in the right directory
+        if cfg.vectorized.vectorize:
+            for track in cfg.vectorized.tracks:
+                assert os.path.exists(os.path.join(cfg.platforms.map_dir, track)), f"Track {track} does not exist in expected challenge-folder '{cfg.platforms.map_dir}'. Maybe you forgot to copy the .Gbx file here?"
+        else:
+            assert os.path.exists(os.path.join(cfg.platforms.map_dir, cfg.gmi.track)), f"Track {cfg.gmi.track} does not exist in expected challenge-folder '{cfg.platforms.map_dir}'. Maybe you forgot to copy the .Gbx file here?"
