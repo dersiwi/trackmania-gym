@@ -119,20 +119,51 @@ class FiLMedSimbaEncoder(nn.Module):
         x = self.pool(x)
         return self.flatten(x)
 
-class  FiLMedVisionModel(VisionModel):
+
+class FiLMedVisionModel(VisionModel):
     def __init__(self, out_dim: int, img_shape, conv_class=nn.Conv2d):
         encoder = FiLMedSimbaEncoder(img_shape[0], conv_class=conv_class)
-        
+
         def make_feature_projector(in_dim, out_dim):
-            # Two-layer MLP with 1024 hidden units per paper section 2.2 
-            return nn.Sequential(
-                nn.Linear(in_dim, 1024),
-                nn.ReLU(),
-                nn.Linear(1024, out_dim)
-            )
+            # Two-layer MLP with 1024 hidden units per paper section 2.2
+            return nn.Sequential(nn.Linear(in_dim, 1024), nn.ReLU(), nn.Linear(1024, out_dim))
 
         super().__init__(
-            encoder=encoder, 
-            feature_projector=lambda in_dim: make_feature_projector(in_dim, out_dim), 
-            img_shape=img_shape
+            encoder=encoder, feature_projector=lambda in_dim: make_feature_projector(in_dim, out_dim), img_shape=img_shape
         )
+
+
+class SimpleFiLMGen(nn.Module):
+    def __init__(self, in_dim, num_blocks, feature_dim, linear_class=nn.Linear, hidden_dim=512):
+        super().__init__()
+        self.num_blocks = num_blocks
+        self.feature_dim = feature_dim
+
+        # In the paper code: cond_feat_size = 2 * feature_dim (one gamma, one beta)
+        self.total_output_size = num_blocks * (2 * feature_dim)
+
+        self.mlp = nn.Sequential(
+            linear_class(in_dim, hidden_dim), nn.ReLU(), linear_class(hidden_dim, self.total_output_size)
+        )
+
+    def forward(self, x):
+        # Shape: (Batch, num_blocks * 2 * feature_dim)
+        output = self.mlp(x)
+        # Reshape to (Batch, num_blocks, 2, feature_dim)
+        output = output.view(-1, self.num_blocks, 2, self.feature_dim)
+
+        gammas = []
+        betas = []
+
+        for i in range(self.num_blocks):
+            # see https://github.com/ethanjperez/film/blob/master/vr/models/film_gen.py#L160
+            # The paper code does: out + gamma_baseline (usually 1.0)
+            # This ensures that if the MLP outputs 0, gamma becomes 1 (no change to features)
+            #TODO: is this correct 
+            g = output[:, i, 0, :] + 1.0
+            b = output[:, i, 1, :]
+
+            gammas.append(g)
+            betas.append(b)
+
+        return gammas, betas
