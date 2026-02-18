@@ -7,7 +7,7 @@ class VecReplayBuffer(ReplayBuffer):
         super().__init__(buffer_size, observation_size, action_size, device)
         self.num_envs = n_envs
 
-    def add(self, observations: np.ndarray, next_observations: np.ndarray, actions: np.ndarray, rewards: np.ndarray, dones: np.ndarray):
+    def add(self, observations: np.ndarray, next_observations: np.ndarray, actions: np.ndarray, rewards: np.ndarray, dones: np.ndarray, infos):
         """
         observations: (num_envs, observation_size)
         actions: (num_envs, action_size)
