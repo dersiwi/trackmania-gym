@@ -153,7 +153,7 @@ class PPOSimbaV2Policy(ActorCriticPolicy):
     def get_scalar_values_and_logits(self, vf_features: th.Tensor):
         values_logits = self.critic(vf_features)
         value_probs = F.softmax(values_logits, dim=-1)
-        assert th.allclose(value_probs.sum(dim=-1), th.ones(value_probs.size(0)), atol=1e-6)
+        assert th.allclose(value_probs.sum(dim=-1), th.ones(value_probs.size(0),device=value_probs.device), atol=1e-6)
         # values are just the expected value (dot product of probs and support)
         values = self.transform_from_probs(value_probs)  # Shape goes from (batch_size, num_bins) -> (batch_size,)
         return values, values_logits
