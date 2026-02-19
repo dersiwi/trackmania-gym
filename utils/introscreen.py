@@ -186,9 +186,6 @@ def introscreen(cfg : TrainConfig, asciiart = welcome, askstart : bool = False, 
             if answer in ["m"]:
                 print_managemerterms(cfg.rl_env.obs_manager, cfg.rl_env.reward_manager, cfg.rl_env.termination_manager)
             answer = input("[y/Y] to start training. [m/M] to print detailed manager infos.").strip().lower()
-    if askstart and input("[y/Y] to start training.").strip().lower() not in ["y", "yes"]:
-        print("nvm then")
-        exit()
 
     if run_checks:
         print("Running checks...")

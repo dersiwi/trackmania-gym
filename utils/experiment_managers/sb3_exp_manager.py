@@ -72,10 +72,11 @@ class Sb3ExperimentManager(ExperimentManager):
             save_vecnormalize=False,
         )
         self.callbacks.append(checkpoint_callback)
-        self.callbacks.append(FurtherStatisticsCallback())
+        
         if self.use_wandb:
             self.callbacks.append(AccumRewardLogCallback(n_envs=self.n_envs))
             self.callbacks.append(ReturnCallback())
+            self.callbacks.append(FurtherStatisticsCallback())
             
             if self.cfg.rl_env.env.continuous_actions:
                 self.callbacks.append(ContinuousActionLogCallback(log_minmax=self.cfg.wandb.logminmax_continuous))

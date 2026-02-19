@@ -247,7 +247,7 @@ class TMNF_Single_Agent_Env(gym.Env):
         processed_obs, obs_info = self.obs_manager.get_observation(raw_obs)
         reward, reward_info = self.rew_calculator.calculate_reward(raw_obs, processed_obs, race_finished, terminated_info)
 
-        self.rt.add_reward(reward)
+        self.rt.add_reward(reward_info["total"])
         
 
         info.update(obs_info)

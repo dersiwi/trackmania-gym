@@ -73,8 +73,8 @@ class FurtherStatisticsCallback(BaseCallback):
     def _on_step(self):
         logdict = {}
         infos : list[dict] = self.locals["infos"][0]
-        if ("terminated" in infos and infos["terminated"]) and infos["race_finished"]:
-            logdict["steps_until_race_finished"] = infos["episode_length"]
+        if ("terminated" in infos and infos["terminated"]):
+            logdict["steps_until_race_finished"] = infos["episode_length"] if infos["race_finished"] else 0
 
         if len(logdict) > 0:
             wandb.log(logdict)
