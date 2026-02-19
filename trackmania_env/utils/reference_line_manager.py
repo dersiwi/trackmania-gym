@@ -9,7 +9,7 @@ class ReferenceLineManager:
 
     @staticmethod
     def load_dynamically(trackname : str, lookahead_size : int = 120, 
-                 search_recursively : bool = True, recursive_lookahead_increase_factor : int = 3, max_recursion_depth : int = 0) -> ReferenceLineManager:
+                 search_recursively : bool = True, recursive_lookahead_increase_factor : int = 3, max_recursion_depth : int = 1) -> ReferenceLineManager:
         """This method dynamically creates the filepath of the reference-line-file according to the track-name. It expects the current working directory
         to be at base-level (i.e. trackmania-gym)
         Args:

@@ -48,22 +48,28 @@ class AccumulatedDistanceReward(RewardTerm):
         if self.enhanced_by_amount_travelled:
             accum_dist_reward = accum_dist_reward * n_passed ** self.exponential_factor
 
-        accum_dist_reward = self._check_against_lag(accum_dist_reward, observations)
+        accum_dist_reward = self._check_against_lag(accum_dist_reward, observations, n_passed)
         return accum_dist_reward
     
-    def _check_against_lag(self, accum_dist_reward : float, observations : dict[str, any]) -> float:
+    def _check_against_lag(self, accum_dist_reward : float, observations : dict[str, any], n_passed : int) -> float:
         """
         This method checks for lag and if there was some, sets the calcualted accum_distance reward to 0. When training a policy, it is policy that the policy-update 
         takes longer than the process-wrapper can possible wait on another action; in this case the pw sends no-action command to the plugin, which reults in the car
         doing nothing anymore; but this (if the car was driving forward, pushes the car forward.) -> this would trigger a reward over many more refline points within
         one env-step. 
-        This method prevents it
+        This method prevents it.
         """
-        #TODO : REMOVE PRINTS
+
         currpos = np.array(observations[IPCFields.SIMSTATE].position)
-        if not self.last_pos is None: print(currpos, self.last_pos, np.linalg.norm(currpos - self.last_pos), accum_dist_reward)
-        if not self.last_pos is None and np.linalg.norm(currpos - self.last_pos) > 5: #5 is an estimated value, but seems to work quite well; even if the car is going 400 5 seems to be the max.
-            print("Setting to zero")
+        #if not self.last_pos is None: print(currpos, self.last_pos, np.linalg.norm(currpos - self.last_pos), accum_dist_reward, n_passed)
+        if not self.last_pos is None and np.linalg.norm(currpos - self.last_pos) > 5 or n_passed > 20:
+            """
+            - np.linalg.norm(currpos - self.last_pos) > 5 : is an estimated threshold of how fast the agent can go within one ENV-Step 
+            - n > 20 : Basically the same as above, but interms of reference line points (this is, if the lookahead size of reflinepoint manager is too small, then this condition
+                still catches the lag.)
+                
+             TODO : This IS dependent on the actions-per-second, however should only fail (it at all) if the APS decrease"""
+            #print("Setting to zero")
             accum_dist_reward = 0
         self.last_pos = currpos
         return accum_dist_reward
