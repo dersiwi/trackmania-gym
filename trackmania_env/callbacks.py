@@ -37,13 +37,14 @@ class AccumRewardLogCallback(BaseCallback):
     def _on_step(self) -> bool:
         # have to call self.locals["infos"][0], because sb3 has an info-dict for each environment, since currently we only train with one environment, this index is always 0
         #infos : list[dict] = self.locals["infos"][0]
+
         for env_idx in range(len(self.locals["infos"])):
             env_infos = self.locals["infos"][env_idx]
 
             if "rewards" in env_infos and not len(env_infos["rewards"]) == 0:
 
                 for rewterm in env_infos["rewards"]:
-                    if rewterm in self.rewardterms_to_log[env_idx]:
+                    if rewterm + str(env_idx) in self.rewardterms_to_log[env_idx]:
                         self.rewardterms_to_log[env_idx][rewterm + str(env_idx)] += env_infos["rewards"][rewterm]
                     else:
                         self.rewardterms_to_log[env_idx][rewterm + str(env_idx)] = env_infos["rewards"][rewterm]
