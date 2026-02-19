@@ -35,7 +35,10 @@ env:
 
   use_filmnet: True
   filmnet_kwargs:
-    num_blocks: 4
+    feature_dim_per_block: [128,64,32,16]
+    film_net_out_dim_before_linear: 333
+    final_linear_hidden_dim: 222
+    film_gen_hidden_dim: 434
     simba_mode: False #if set to True then every Linear and Conv2d will be replaced by simbav2 equivalents which always have weight norm 1
     
 

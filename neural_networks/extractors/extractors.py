@@ -168,18 +168,48 @@ class TMN_Dict_Extractor(TMN_Extractor):
         encoded = [extractor(observations[key]) for key, extractor in self.extractors.items()]
         return torch.cat(encoded, dim=1)
 
-from ..vision_encoder.filmnet import FiLMedVisionModel, SimpleFiLMGen
+from ..vision_encoder.filmnet import FiLMedVisionModel, FiLMGenerator
 from tmn_sb3.simbav2.simbav2_layers import HyperDense
 from neural_networks.vision_encoder.simbav2_cnn import UnitConv2D
 
 class TMN_FiLM_Dict_Extractor(TMN_Extractor):
     """Combined feature extractor for dictionary observations (images + vectors)."""
 
-    def __init__(self, observation_space : gym.spaces.Dict, vision_model_kwargs = None, out_dim = 64, device = "cpu", normalized_image = False, float_model = None, activation_fn = nn.ReLU, last_activation_fn = nn.Tanh, check_channels = True,simba_mode = False,num_blocks:int = 4,):
-        assert isinstance(observation_space,gym.spaces.Dict), f"This extractor only works with Dict observation spaces but got {observation_space}"
-        assert len(observation_space.spaces) == 2, f"Expected Dict space with exactly 2 keys, got {len(observation_space.spaces)}"
+    def __init__(
+        self,
+        observation_space: gym.spaces.Dict,
+        out_dim: int,
+        device,
+        normalized_image: bool,
+        check_channels: bool,
+        feature_dim_per_block: list[int],
+        film_net_out_dim_before_linear: int,
+        final_linear_hidden_dim: int,
+        film_gen_hidden_dim: int,
+        vision_model_kwargs=None,
+        float_model=None,
+        activation_fn: type[nn.Module] = nn.ReLU,
+        last_activation_fn: type[nn.Module] = nn.Tanh,
+        simba_mode: bool = False,
+    ):
+        assert isinstance(observation_space, gym.spaces.Dict), (
+            f"This extractor only works with Dict observation spaces but got {observation_space}"
+        )
+        assert len(observation_space.spaces) == 2, (
+            f"Expected Dict space with exactly 2 keys, got {len(observation_space.spaces)}"
+        )
 
-        super().__init__(observation_space, vision_model_kwargs, out_dim, device, normalized_image, float_model, activation_fn, last_activation_fn, check_channels)
+        super().__init__(
+            observation_space,
+            vision_model_kwargs,
+            out_dim,
+            device,
+            normalized_image,
+            float_model,
+            activation_fn,
+            last_activation_fn,
+            check_channels,
+        )
 
         if not simba_mode:
             linear = nn.Linear
@@ -187,13 +217,27 @@ class TMN_FiLM_Dict_Extractor(TMN_Extractor):
         else:
             linear = HyperDense
             conv = UnitConv2D
-        
-        #NOTE: this is ugly but got no time
-        self.film_net = FiLMedVisionModel(out_dim=out_dim,img_shape=observation_space.spaces["image"].shape,conv_class=conv)
-        self.film_gen = SimpleFiLMGen(in_dim=observation_space.spaces["flaots"].shape[0],num_blocks=num_blocks,linear_class=linear,feature_dim=out_dim)
+
+        # NOTE: this is ugly but got no time
+
+        self.film_net = FiLMedVisionModel(
+            img_shape=observation_space.spaces["image"].shape,
+            out_dim=out_dim,
+            feature_dim_per_block=feature_dim_per_block,
+            final_linear_hidden_dim=final_linear_hidden_dim,
+            film_net_out_dim_before_linear=film_net_out_dim_before_linear,
+            conv_class=conv,
+        )
+        self.film_gen = FiLMGenerator(
+            in_dim=observation_space.spaces["flaots"].shape[0],
+            feature_dim_per_block=feature_dim_per_block,
+            hidden_dim=film_gen_hidden_dim,
+            linear_class=linear,
+        )
         self._features_dim = out_dim
 
     def forward(self, observations: Dict[str, torch.Tensor]) -> torch.Tensor:
-        gammas,betas = self.film_gen(observations["flaots"])
-        x = self.film_net(observations["image"],gammas,betas)
+        # NOTE: this is ugly but got no time
+        gammas, betas = self.film_gen(observations["flaots"])
+        x = self.film_net(observations["image"], gammas, betas)
         return x
