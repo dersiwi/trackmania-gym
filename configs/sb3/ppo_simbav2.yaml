@@ -14,7 +14,7 @@ algorithm_params:
   clip_range: 0.2                # Clipping range for policy loss (PPO-specific)
   clip_range_vf: null            # Clipping range for value function (useful to stabilize critic updates); null means no clipping
   normalize_advantage: true      # Whether to normalize advantages before updating
-  ent_coef: 0.01                  # Entropy coefficient (exploration bonus)
+  ent_coef: 1e-4                  # Entropy coefficient (exploration bonus)
   vf_coef: 1                  # Value function loss coefficient
   max_grad_norm: 0.5             # Maximum gradient norm (gradient clipping)
   use_sde: false                 # Whether to use State-Dependent Exploration (for continuous actions)
