@@ -80,6 +80,21 @@ class FurtherStatisticsCallback(BaseCallback):
             wandb.log(logdict)
 
         return True # always return true.
+
+class BinaryRaceFinished(BaseCallback):
+    def __init__(self, verbose=0):
+        super().__init__(verbose)
+    
+    def _on_step(self):
+        logdict = {}
+        infos : list[dict] = self.locals["infos"][0]
+        if ("terminated" in infos and infos["terminated"]):
+            logdict["binary_race_finished"] = int(infos["race_finished"])
+
+        if len(logdict) > 0:
+            wandb.log(logdict)
+
+        return True # always return true.
     
 
 class ContinuousActionLogCallback(BaseCallback):
