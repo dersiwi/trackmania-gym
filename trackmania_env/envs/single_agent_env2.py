@@ -243,11 +243,11 @@ class TMNF_Single_Agent_Env(gym.Env):
             self.__log_reset_reason(terminated_info)
 
         info = self._get_info(ssD=ssD) 
-
+        info["race_finished"] = race_finished
         processed_obs, obs_info = self.obs_manager.get_observation(raw_obs)
         reward, reward_info = self.rew_calculator.calculate_reward(raw_obs, processed_obs, race_finished, terminated_info)
 
-        self.rt.add_reward(reward)
+        self.rt.add_reward(reward_info["total"])
         
 
         info.update(obs_info)
@@ -255,8 +255,10 @@ class TMNF_Single_Agent_Env(gym.Env):
         info["terminated"] = terminated
         info["truncated"] = truncated
         info["action"] = action
+        
         if terminated or truncated:
             info[ReturnTracker.LOG_NAME] = self.rt.get_return()
+            info["episode_length"] = self.n_steps
 
         self.n_steps += 1
         self.total_steps += 1
