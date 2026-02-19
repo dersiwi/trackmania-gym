@@ -3,7 +3,7 @@ _target_: trackmania_env.rewards.implementations.simple_rewards.RaceFinishedRewa
 race_finished_reward_weight: 300
 scaled_by_steps_taken: True            
 accum_distance_weight: 100
-accum_enhanced_by_amount_travelled: True 
+accum_enhanced_by_amount_travelled: False 
 accum_exp_factor: 1.2                   
 other_termination_punishment: -5 # <- off policy; use -5 or -20 when using PPO
 wall_contact_weight: -0.15                

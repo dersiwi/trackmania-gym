@@ -59,6 +59,13 @@ class TestEnvironment():
         self.keyboard = KeyboardWrapper.get_keyboardmodule(platform)
         self.env = environment
 
+    def __getattr__(self, name):
+        """
+        Delegate attribute access to the wrapped environment
+        if not found on this wrapper.
+        """
+        return getattr(self.env, name)
+
     def _action_modifier_drive_forward(self, action : int) -> int:
         """Action-modifier which is valid option to set for self.action_modifier."""
         return 0
