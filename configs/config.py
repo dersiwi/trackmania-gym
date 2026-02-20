@@ -201,6 +201,8 @@ class Vectorized:
     tracks : list[str]
     obs_as_dict : bool
     step_parallel : bool 
+    normalize_per_batch : bool
+    training : bool
 
 @dataclass
 class PolicyCfg:

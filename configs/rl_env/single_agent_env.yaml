@@ -33,7 +33,7 @@ env:
   continuous_actions : True
   actiondim : 3    #only relevant when continuous_actions == True
 
-  use_filmnet: True
+  use_filmnet: False
   filmnet_kwargs:
     feature_dim_per_block: [128,64,32,16]
     film_net_out_dim_before_linear: 512

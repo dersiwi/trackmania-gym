@@ -66,13 +66,14 @@ class VectorizedTMEnvironment(gym.Env):
         self.envs : list[CrashProofEnvironment] = [CrashProofEnvironment(train_cfg=self.cfg, port = port+i, return_obs_as_dict = obs_as_dict, 
                                                                          lock = lock, skip = self.n_envs, suffix=f":idx={i}", 
                                                                          track = self.tracks[self.curr_track_id[i]]) for i in range(self.n_envs)]
-
+        
         # using a threadpool here is much much faster than initializing sequentially, as innit_environment also starts the game
         with ThreadPoolExecutor(max_workers=self.n_envs) as executor:
             _ = executor.map(lambda env : env.init_environment(), self.envs)
 
         for i in range(self.n_envs):
             self.envs[i].env.request_map(self.tracks[self.curr_track_id[i]])
+
 
         #self.observation_space = self._build_observation_space()
         self.observation_space = self.envs[0].observation_space
@@ -86,6 +87,10 @@ class VectorizedTMEnvironment(gym.Env):
         self.average_step_time = 0
 
         self.logger = logging.getLogger(self.__class__.__name__)
+
+    def init_environment(self):
+        pass
+
 
 
     def _build_observation_space(self) -> gym.spaces.Space:
@@ -214,6 +219,14 @@ class SB3Vectorized(VecEnv):
                                               assign_rangom_track_at_init, assign_random_track_at_alternation,lock= lock)
         super().__init__(n_envs, self.vecenv.envs[0].observation_space, self.vecenv.envs[0].action_space)
         self.actions = None
+
+    def __getattr__(self, name):
+        """
+        Delegate attribute access to the wrapped environment
+        if not found on this wrapper.
+        """
+        return getattr(self.vecenv, name)
+    
     def reset(self):
         obs, infos = self.vecenv.reset()
         return obs

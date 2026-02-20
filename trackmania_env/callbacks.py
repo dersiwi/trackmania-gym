@@ -62,10 +62,11 @@ class ReturnCallback(BaseCallback):
         super().__init__(verbose)
 
     def _on_step(self):
-        infos : list[dict] = self.locals["infos"][0]
-        if ReturnTracker.LOG_NAME in infos:
-            wandb.log({"episode_return" : infos[ReturnTracker.LOG_NAME]})
-        return True # always return true.
+        for env_idx in range(len(self.locals["infos"])):
+            env_info = self.locals["infos"][env_idx]
+            if ReturnTracker.LOG_NAME in env_info:
+                wandb.log({f"episode_return_{env_idx}" : env_info[ReturnTracker.LOG_NAME]})
+            return True # always return true.
     
 class FurtherStatisticsCallback(BaseCallback):
     def __init__(self, verbose=0):
@@ -73,12 +74,11 @@ class FurtherStatisticsCallback(BaseCallback):
     
     def _on_step(self):
         logdict = {}
-        infos : list[dict] = self.locals["infos"][0]
-        if ("terminated" in infos and infos["terminated"]):
-            logdict["steps_until_race_finished"] = infos["episode_length"] if infos["race_finished"] else 0
-
-        if len(logdict) > 0:
-            wandb.log(logdict)
+        for env_idx in range(len(self.locals["infos"])):
+            env_infos = self.locals["infos"][env_idx]
+            if ("terminated" in env_infos and env_infos["terminated"]):
+                logdict[f"steps_until_race_finished_{env_idx}"] = env_infos["episode_length"] if env_infos["race_finished"] else 0
+                wandb.log(logdict)            
 
         return True # always return true.
 
@@ -87,13 +87,13 @@ class BinaryRaceFinished(BaseCallback):
         super().__init__(verbose)
     
     def _on_step(self):
-        logdict = {}
-        infos : list[dict] = self.locals["infos"][0]
-        if ("terminated" in infos and infos["terminated"]):
-            logdict["binary_race_finished"] = int(infos["race_finished"])
 
-        if len(logdict) > 0:
-            wandb.log(logdict)
+        logdict = {}
+        for env_idx in range(len(self.locals["infos"])):
+            env_infos = self.locals["infos"][env_idx]
+            if ("terminated" in env_infos and env_infos["terminated"]):
+                logdict[f"binary_race_finished{env_idx}"] = int(env_infos["race_finished"])
+                wandb.log(logdict)            
 
         return True # always return true.
     

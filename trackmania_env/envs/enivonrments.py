@@ -1,8 +1,8 @@
-from multiprocessing import Queue
 import gymnasium as gym
 
 
 from trackmania_env.envs.single_agent_env2 import TMNF_Single_Agent_Env, ContinuousTMNF_Single_Agent_Env
+
 from trackmania_env.envs.testenv_single_agent import TestEnvironment
 
 from trackmania_env.observations.observations import get_observation_manager_from_cfg
@@ -12,6 +12,7 @@ from trackmania_env.terminations.get_termination_manager import get_termination_
 from trackmania_env.utils.orientationless_random_respawn_manager import OrientationlessRespawnManager
 from game_interaction.ipc_command_sender import IPCommandSender
 from configs.config import TrainConfig
+
 
 
 
@@ -47,7 +48,10 @@ def _get_env_constructor_args(cfg : TrainConfig, ipcommandsender, obs_manager, r
     )
     return constructor_kwargs
 
-def get_environment(cfg : TrainConfig, ipcommandsender : IPCommandSender, test : bool = False) -> gym.Env:
+
+
+
+def get_single_environment(cfg : TrainConfig, ipcommandsender : IPCommandSender, test : bool = False) -> gym.Env:
     """Initializes environment according to given configuration file and applies wrappers, if specified in conifg.
     Args:
         cfg (TrainConfig)       : Configuration used to initialize environment

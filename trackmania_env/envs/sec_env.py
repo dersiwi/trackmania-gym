@@ -16,7 +16,7 @@ from trackmania_env.envs.single_agent_env2 import TMNF_Single_Agent_Env
 from game_interaction.ipc_command_sender import TMICommunicationFaildException, IPCommandSender
 
 from game_interaction.process_management import ProcessManagement
-from trackmania_env.envs.enivonrments import get_environment
+from trackmania_env.envs.enivonrments import get_single_environment
 
 class CrashProofEnvironment(gym.Env):
     """
@@ -92,7 +92,7 @@ class CrashProofEnvironment(gym.Env):
     def init_environment(self) -> None:
         """Initializes the environment according to the config file given at initializaiton:
             1) start_process_and_wait_for_startsignal(...)
-            2) get_environment(...)
+            2) get_single_environment(...)
         This enviornment is then used for further interaction"""
         
         self.env_initalizations += 1
@@ -102,7 +102,7 @@ class CrashProofEnvironment(gym.Env):
         
         self.ipcsender = self.pm.start_process_and_wait_for_startsignal(track = self.track)
 
-        self.env = get_environment(self.cfg, self.ipcsender)
+        self.env = get_single_environment(self.cfg, self.ipcsender)
         self.env.obs_manager.return_as_dict = self.return_obs_as_dict
         self._set_env_variables()
 
