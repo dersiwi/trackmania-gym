@@ -1,10 +1,10 @@
 defaults:
   - rl_env: single_agent_env.yaml
-  - sb3: ppo_simbav2.yaml
+  - sb3: ppo_continuous_actions.yaml
   - wandb_callbacks : sb3_callback.yaml
-  - models: simbav2_cnn.yaml
+  - models: visionmodelsix.yaml
   - lr_scheduler: dropoff_scheduling.yaml
-  - policy: ppo_simbav2_policy.yaml
+  - policy: basic_policy.yaml
 
 platforms_config_path : "configs/platforms.yaml"
 extractors_out_dim: 128 # every extractor will produce an output with this dimension 
@@ -22,11 +22,14 @@ learn_args:
   tb_log_name: "PPO"
 
 vectorized:
-  vectorize : False
+  vectorize : True
   obs_as_dict : True
   step_parallel : True 
   n_envs : 5
   tracks : ["another1.Challenge.Gbx", "another2.Challenge.Gbx", "another3.Challenge.Gbx", "simple1_validated.Challenge.Gbx", "curvy.Challenge.Gbx"]
+  normalize_per_batch : True  #uses sb3 vecnormalize wrapper on environment.
+  training : True             # whether to update the moving average (True if traiing, false if evaluation)
+
 
 gmi:
   launch: True
@@ -36,7 +39,7 @@ gmi:
   track : simple1_validated.Challenge.Gbx
 
 wandb:
-  use: False
+  use: True
   entity : tmnf-practical-ss25
   project : tmnf_ppo
   checkpoint_freq : 100000 # after how many steps should the model be saved automatically
