@@ -1,0 +1,11 @@
+_target_: trackmania_env.rewards.implementations.basic_rewards.RaceFinishedRewards
+
+race_finished_reward_weight: 1
+scaled_by_steps_taken: True            
+accum_distance_weight: 0.1
+accum_enhanced_by_amount_travelled: True 
+accum_exp_factor: 1.2                   
+other_termination_punishment: 0 # <- off policy; use -5 or -20 when using PPO
+wall_contact_weight: 0                
+steps_without_progress_until_punishment: 512
+use_punishment: False
