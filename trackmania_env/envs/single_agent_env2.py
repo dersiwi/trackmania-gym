@@ -154,6 +154,9 @@ class TMNF_Single_Agent_Env(gym.Env):
         self.rew_calculator.set_env(self)
         self.termination_manager.set_env(self)
 
+        self.current_img: np.ndarray | None = None #NOTE: we only need this for the render func  
+        self.img_shape = (128,128,3) #NOTE:this is ugly but got no time
+
     def set_respawn_manager(self, respawn_manager : OrientationlessRespawnManager):
         self.orientationless_respawn_manager = respawn_manager
 
@@ -262,6 +265,9 @@ class TMNF_Single_Agent_Env(gym.Env):
 
         self.n_steps += 1
         self.total_steps += 1
+
+        self.current_img = raw_obs[IPCFields.IMG]
+
         return processed_obs, reward, terminated, truncated, info
     
     def reset(self, seed = None, options = None)-> Tuple[gym.spaces.Dict,Dict[str,Any]]:
@@ -327,6 +333,8 @@ class TMNF_Single_Agent_Env(gym.Env):
             self.start_position = np.array(raw_obs[IPCFields.SIMSTATE].position)
             self.start_position_set = True
             
+        
+        self.current_img = raw_obs[IPCFields.IMG]
 
         return observation, info
     
@@ -373,11 +381,14 @@ class TMNF_Single_Agent_Env(gym.Env):
         This defines the render method. It supports:            
             - mode="rgb_array": Return a single frame representing the current state
             of the environment. A frame is a np.ndarray with shape (x, y, 3) .
+         NOTE: Rendering is independent of agent observations; we always return the human-view frame.
         """
-        if mode == "rgb_array":
-            # TODO retun the actual frame
-            return np.zeros(shape = self.img_shape)
-        
+        if self.current_img is None:  # This should never happen
+            return np.zeros((*self.img_shape[:2], 3), dtype=np.uint8)
+
+        # Convert BGRA → RGB (drop alpha, flip BGR to RGB)
+        rgb = self.current_img[:, :, :3][:, :, ::-1].copy()  # (H, W, 3)
+        return rgb.astype(np.uint8)
 
     def store_actions(self, filename : str):
         with open(filename, "w") as file:
