@@ -78,7 +78,7 @@ class FurtherStatisticsCallback(BaseCallback):
             # Log steps only if the race was finished.
             # Using 0 for unfinished races would falsely suggest very fast completion.
             if infos["race_finished"]:
-                logdict["steps_until_race_finished"] = infos["episode_length"]
+                logdict["race_finished_steps_taken"] = infos["episode_length"]
 
         if len(logdict) > 0:
             wandb.log(logdict)
