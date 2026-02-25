@@ -1,17 +1,35 @@
+import math
 import warnings
 from collections.abc import Callable
+from multiprocessing import Lock
 from typing import Any
+
+import omegaconf
+from omegaconf import OmegaConf
 
 import gymnasium as gym
 import numpy as np
 
 from stable_baselines3.common import type_aliases
-from stable_baselines3.common.vec_env import DummyVecEnv, VecEnv, VecMonitor, is_vecenv_wrapped
+from stable_baselines3.common.vec_env import (
+    DummyVecEnv,
+    VecEnv,
+    VecMonitor,
+    is_vecenv_wrapped,
+)
+
+from configs.config import TrainConfig
+from tmn_sb3.utils.from_cfg import get_model_from_config
+from trackmania_env.envs.sec_env import CrashProofEnvironment
+from trackmania_env.envs.vectorized import SB3Vectorized
+from utils.hydra_wandb_utils import (
+    load_and_merge_platform,
+    secure_attribute_retrieval,
+)
 
 
 def tmnf_evaluate_policy(
-    model: "type_aliases.PolicyPredictor",
-    env: gym.Env | VecEnv,
+    cfg: TrainConfig,
     n_eval_episodes: int = 10,
     deterministic: bool = True,
     render: bool = False,
@@ -19,6 +37,7 @@ def tmnf_evaluate_policy(
     image_save_path: str | None = None,
     return_episode_rewards: bool = False,
     warn: bool = True,
+    model: type_aliases.PolicyPredictor | None = None,
 ) -> dict[str, np.ndarray | str | list[int] | float]:
     """
     Runs the policy for ``n_eval_episodes`` episodes and outputs the average return
@@ -62,6 +81,29 @@ def tmnf_evaluate_policy(
     # Avoid circular import
     from stable_baselines3.common.monitor import Monitor
 
+    cfg = load_and_merge_platform(cfg)
+
+    try:
+        OmegaConf.register_new_resolver("eval", lambda s: eval(s))
+    except ValueError:
+        pass
+    omegaconf.OmegaConf.resolve(cfg)
+
+    if cfg.vectorized.vectorize:
+        env = SB3Vectorized(
+            n_envs=cfg.vectorized.n_envs,
+            tracks=cfg.vectorized.tracks,
+            cfg=cfg,
+            obs_as_dict=True,
+            step_parallel=True,
+            lock=Lock(),
+        )
+    else:
+        env = CrashProofEnvironment(cfg)
+        env.init_environment()
+
+    env = Monitor(env)
+
     if not isinstance(env, VecEnv):
         env = DummyVecEnv([lambda: env])  # type: ignore[list-item, return-value]
 
@@ -74,6 +116,9 @@ def tmnf_evaluate_policy(
             "Consider wrapping environment first with ``Monitor`` wrapper.",
             UserWarning,
         )
+
+    if model is None:
+        model = get_model_from_config(cfg=cfg, tm_env=env, print_params=True, run_id=" ")
 
     n_envs = env.num_envs
     episode_rewards = []  # This is the reward that the algos get to see (the modified one e.g. normed)
