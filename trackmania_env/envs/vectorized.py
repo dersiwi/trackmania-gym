@@ -13,6 +13,9 @@ from trackmania_env.utils.actionmap import ACTION_MAP
 
 from configs.config import TrainConfig
 
+import math 
+import cv2
+
 class TrackAssignmentManager:
     # TODO - for the future 
     def __init__(self):
@@ -196,6 +199,45 @@ class VectorizedTMEnvironment(gym.Env):
             observations.append(observation)
             infos.append(info)
         return self._stack_observations(observations), infos
+    
+
+    def render(self, mode="rgb_array") -> Optional[np.ndarray]:
+        frames = [env.render() for env in self.envs]
+
+        if len(frames) == 0:
+            return None
+
+        h, w, c = frames[0].shape
+        n = self.n_envs
+
+        # Determine grid size (square grid)
+        grid_size = math.ceil(math.sqrt(n))
+        
+        # Downscale factor so final image keeps original size
+        small_h = h // grid_size
+        small_w = w // grid_size
+
+        resized = [
+            cv2.resize(f, (small_w, small_h), interpolation=cv2.INTER_AREA)
+            for f in frames
+        ]
+
+        # Fill missing cells with black images if n is not perfect square
+        while len(resized) < grid_size * grid_size:
+            resized.append(np.zeros((small_h, small_w, c), dtype=np.uint8))
+
+        # Tile images
+        rows = []
+        for i in range(grid_size):
+            row = np.hstack(resized[i * grid_size:(i + 1) * grid_size])
+            rows.append(row)
+
+        tiled = np.vstack(rows)
+
+        return tiled.astype(np.uint8)
+
+
+
 
 
 
@@ -302,3 +344,6 @@ class SB3Vectorized(VecEnv):
                 wrapped = True
             results.append(wrapped)
         return results
+
+    def render(self, mode: Optional[str] = None) -> Optional[np.ndarray]:
+        return self.vecenv.render(mode=mode)
