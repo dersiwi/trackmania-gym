@@ -8,6 +8,8 @@ import traceback
 from typing import Optional
 from multiprocessing import Process, Queue
 
+from sympy import false
+
 
 from configs.config import TrainConfig
 
@@ -162,10 +164,13 @@ class CrashProofEnvironment(gym.Env):
             return self.reset(seed = seed, options = options)
 
 
-    def render(self, mode: str = "human") -> Optional[np.array]:
+    def render(self, mode: str = "rgb_array") -> Optional[np.array]:
         try:
             return self.env.render(mode=mode)
         except TMICommunicationFaildException as rte: # queue-empty error
             traceback.print_exc()
             self.finalize_process()
             return self.render(mode=mode)
+
+    def close(self):
+        self.finalize_process(reinit=False)
