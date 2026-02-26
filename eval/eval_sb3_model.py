@@ -199,7 +199,7 @@ def tmnf_evaluate_policy(
             "std_normal_reward": np.std(episode_rewards),
             "mean_total_reward": np.mean(episode_total_rewards),
             "std_total_reward": np.std(episode_total_rewards),
-            "success_rate": np.mean(race_finished_list),
+            "success_rate": np.mean(race_finished_binary),
             "media_path": saved_media_path,
             "lengths": episode_lengths,
         }
