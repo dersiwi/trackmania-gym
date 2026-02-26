@@ -1,3 +1,5 @@
+import os
+from datetime import datetime
 import math
 import warnings
 from collections.abc import Callable
@@ -8,7 +10,6 @@ import hydra
 import omegaconf
 from omegaconf import OmegaConf
 
-import gymnasium as gym
 import numpy as np
 
 from stable_baselines3.common import type_aliases
@@ -23,33 +24,22 @@ from configs.config import TrainConfig
 from tmn_sb3.utils.from_cfg import get_model_from_config
 from trackmania_env.envs.sec_env import CrashProofEnvironment
 from trackmania_env.envs.vectorized import SB3Vectorized
-from utils.hydra_wandb_utils import (
-    load_and_merge_platform,
-    secure_attribute_retrieval,
-)
+from utils.hydra_wandb_utils import load_and_merge_platform
 
 
 def print_results_box(results):
-    # Determine the longest key for alignment
     max_key_len = max(len(str(k)) for k in results.keys())
 
-    # Build formatted lines
     lines = []
     for key, value in results.items():
         lines.append(f"{key:<{max_key_len}} : {value}")
 
-    # Determine box width
     content_width = max(len(line) for line in lines)
     box_width = content_width + 4  # padding
 
-    # Print top border
     print("┌" + "─" * box_width + "┐")
-
-    # Print content
     for line in lines:
         print("│ " + line.ljust(content_width) + " │")
-
-    # Print bottom border
     print("└" + "─" * box_width + "┘")
 
 
@@ -60,10 +50,12 @@ def tmnf_evaluate_policy(
     render: bool = False,
     callback: Callable[[dict[str, Any], dict[str, Any]], None] | None = None,
     image_save_path: str | None = None,
+    max_video_len: int = 800,
     return_episode_rewards: bool = False,
     warn: bool = True,
     model: type_aliases.PolicyPredictor | None = None,
     model_path: str | None = None,
+    vec_normalize_path: str | None = None,
 ) -> dict[str, np.ndarray | str | list[int] | float]:
     """
     Runs the policy for ``n_eval_episodes`` episodes and outputs the average return
@@ -111,6 +103,7 @@ def tmnf_evaluate_policy(
     # Avoid circular import
     from stable_baselines3.common.monitor import Monitor
 
+    # create environment
     if cfg.vectorized.vectorize:
         env = SB3Vectorized(
             n_envs=cfg.vectorized.n_envs,
@@ -123,9 +116,9 @@ def tmnf_evaluate_policy(
     else:
         env = CrashProofEnvironment(cfg)
         env.init_environment()
-
     env = Monitor(env)
 
+    # sb3 needs these wrappers TODO: we need to apply here the different vecnormalizers
     if not isinstance(env, VecEnv):
         env = DummyVecEnv([lambda: env])  # type: ignore[list-item, return-value]
 
@@ -149,11 +142,17 @@ def tmnf_evaluate_policy(
         )
 
     n_envs = env.num_envs
+
     episode_rewards = []  # This is the reward that the algos get to see (the modified one e.g. normed)
     episode_total_rewards = []  # Unmodified ground truth
     episode_lengths = []
     race_finished_binary = []
     steps_taken_finish = []
+
+    # Video related things
+    best_total_reward = -float("inf")  # we only want to save the video of the best run
+    best_run_frames: list[np.ndarray] = []
+    current_frames: list[np.ndarray] = []
 
     episode_counts = np.zeros(n_envs, dtype="int")
     # Divides episodes among different sub environments in the vector as evenly as possible
@@ -165,6 +164,7 @@ def tmnf_evaluate_policy(
     observations = env.reset()
     states = None
     episode_starts = np.ones((env.num_envs,), dtype=bool)
+
     while (episode_counts < episode_count_targets).any():
         actions, states = model.predict(
             observations,  # type: ignore[arg-type]
@@ -173,6 +173,11 @@ def tmnf_evaluate_policy(
             deterministic=deterministic,
         )
         new_observations, rewards, dones, infos = env.step(actions)
+
+        if render:
+            frame: np.ndarray = env.render()
+            assert frame is not None
+            current_frames.append(frame)
 
         current_rewards += rewards
         for i in range(n_envs):
@@ -206,6 +211,16 @@ def tmnf_evaluate_policy(
                         episode_lengths.append(current_lengths[i])
                         episode_counts[i] += 1
 
+                    # we only want to save the video of the best run
+                    if current_total_rewards[i] > best_total_reward:
+                        best_total_reward = current_total_rewards[i]
+                        ep_len = current_lengths[i]
+                        best_run_frames = list(current_frames[-ep_len:])
+                        print(f"New Best! Reward: {best_total_reward:.2f} (Length: {ep_len})")
+                    # enforce a limit such that our memory does not blow up
+                    if len(current_frames) > max_video_len * 2:
+                        current_frames = current_frames[-max_video_len:]
+
                     episode_total_rewards.append(current_total_rewards[i])
                     was_finished = infos[i].get("race_finished", False)
                     race_finished_binary.append(int(was_finished))
@@ -219,8 +234,23 @@ def tmnf_evaluate_policy(
 
         observations = new_observations
 
-        if render:
-            env.render()
+    if image_save_path and len(best_run_frames) > 0:
+        from moviepy.video.io.ImageSequenceClip import ImageSequenceClip
+
+        # Ensure directory exists
+        os.makedirs(os.path.dirname(image_save_path), exist_ok=True)
+
+        print(f"Saving best run video ({len(best_run_frames)} frames)...")
+        # Use a standard 30 FPS or pull from cfg if available
+        clip = ImageSequenceClip(best_run_frames, fps=30)
+        clip.write_videofile(image_save_path)
+
+        del clip
+        del best_run_frames
+        del current_frames
+
+    elif image_save_path:
+        print("Ignored saving a video as there were zero frames to save.")
 
     results = {
         "mean_normal_reward": np.mean(episode_rewards),
@@ -228,7 +258,7 @@ def tmnf_evaluate_policy(
         "mean_total_reward": np.mean(episode_total_rewards),
         "std_total_reward": np.std(episode_total_rewards),
         "success_rate": np.mean(race_finished_binary),
-        "media_path": saved_media_path,
+        "media_path": image_save_path,
         "lengths": episode_lengths,
     }
 
@@ -243,6 +273,8 @@ def tmnf_evaluate_policy(
 
 run_path_hydra = None
 model_path = None
+# when VecNormalize wrappers got used during traing you want the statistics to be also applied during inference
+vec_normalize_path = None
 
 _HYDRA_PARAMS = {
     "version_base": "1.3",
@@ -261,14 +293,17 @@ def main(cfg: TrainConfig):
         pass
     omegaconf.OmegaConf.resolve(cfg)
 
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    log_dir = os.path.join("eval_logs", timestamp)
+    image_save_path = os.path.join(log_dir, "best_run.mp4")
+
     n_eval_episodes = 10
     deterministic = True
     render = False
     callback = None
-    image_save_path = None
+    max_video_len = 800
     return_episode_rewards = False
     warn = True
-    model = None  # If None, get_model_from_config will load it from model_path
 
     print(f"DEBUG: Starting evaluation | Episodes: {n_eval_episodes} | Deterministic: {deterministic}")
 
@@ -279,9 +314,10 @@ def main(cfg: TrainConfig):
         render=render,
         callback=callback,
         image_save_path=image_save_path,
+        max_video_len=max_video_len,
         return_episode_rewards=return_episode_rewards,
         warn=warn,
-        model=model,
+        model_path=model_path,
     )
 
 
