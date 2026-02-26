@@ -66,42 +66,24 @@ def tmnf_evaluate_policy(
     use_vec_normalize: bool = False,
 ) -> dict[str, np.ndarray | str | list[int] | float]:
     """
-    Runs the policy for ``n_eval_episodes`` episodes and outputs the average return
-    per episode (sum of undiscounted rewards).
-    If a vector env is passed in, this divides the episodes to evaluate onto the
-    different elements of the vector env. This static division of work is done to
-    remove bias. See https://github.com/DLR-RM/stable-baselines3/issues/402 for more
-    details and discussion.
+    Evaluates the policy and optionally records the best episode video.
+    Refer to ``stable_baselines3.common.evaluation.evaluate_policy`` for detailed logic.
 
-    .. note::
-        If environment has not been wrapped with ``Monitor`` wrapper, reward and
-        episode lengths are counted as it appears with ``env.step`` calls. If
-        the environment contains wrappers that modify rewards or episode lengths
-        (e.g. reward scaling, early episode reset), these will affect the evaluation
-        results as well. You can avoid this by wrapping environment with ``Monitor``
-        wrapper before anything else.
-
-    :param model: The RL agent you want to evaluate. This can be any object
-        that implements a ``predict`` method, such as an RL algorithm (``BaseAlgorithm``)
-        or policy (``BasePolicy``).
-    :param env: The gym environment or ``VecEnv`` environment.
-    :param n_eval_episodes: Number of episode to evaluate the agent
-    :param deterministic: Whether to use deterministic or stochastic actions
-    :param render: Whether to render the environment or not
-    :param callback: callback function to perform additional checks,
-        called ``n_envs`` times after each step.
-        Gets locals() and globals() passed as parameters.
-        See https://github.com/DLR-RM/stable-baselines3/issues/1912 for more details.
-    :param reward_threshold: Minimum expected reward per episode,
-        this will raise an error if the performance is not met
-    :param return_episode_rewards: If True, a list of rewards and episode lengths
-        per episode will be returned instead of the mean.
-    :param warn: If True (default), warns user about lack of a Monitor wrapper in the
-        evaluation environment.
-    :return: Mean return per episode (sum of rewards), std of reward per episode.
-        Returns (list[float], list[int]) when ``return_episode_rewards`` is True, first
-        list containing per-episode return and second containing per-episode lengths
-        (in number of steps).
+    :param cfg: Configuration object for environment and model setup.
+    :param n_eval_episodes: Number of episodes to run for evaluation.
+    :param deterministic: Whether to use deterministic actions.
+    :param render: If True, captures frames for video recording.
+    :param callback: Function called at every step.
+    :param image_save_path: Filename to save the video of the highest-reward episode.
+    :param max_video_len: Maximum frames to hold in memory to prevent overflow.
+    :param return_episode_rewards: If True, returns full reward lists in the result dict.
+    :param warn: Whether to warn if the environment lacks a Monitor wrapper.
+    :param model: Pre-instantiated SB3-compatible model/policy.
+    :param model_path: Path to a .zip model if 'model' is not provided.
+    :param vec_normalize_path: Path to load VecNormalize statistics.
+    :param train_env: Environment to sync normalization from if no vec_normalize_path is provided.
+    :param use_vec_normalize: Whether to apply observation/reward normalization.
+    :return: Dictionary containing mean/std rewards, success rate, and metadata.
     """
     assert not (model_path is None and model is None), (
         "You have to either provide the path to a model (e.g. a .zip) or parse an already build model"
