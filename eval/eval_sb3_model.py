@@ -10,6 +10,7 @@ import hydra
 import omegaconf
 from omegaconf import OmegaConf
 
+import gymnasium as gym
 import numpy as np
 
 from stable_baselines3.common import type_aliases
@@ -17,7 +18,9 @@ from stable_baselines3.common.vec_env import (
     DummyVecEnv,
     VecEnv,
     VecMonitor,
+    VecNormalize,
     is_vecenv_wrapped,
+    sync_envs_normalization,
 )
 
 from configs.config import TrainConfig
@@ -25,6 +28,9 @@ from tmn_sb3.utils.from_cfg import get_model_from_config
 from trackmania_env.envs.sec_env import CrashProofEnvironment
 from trackmania_env.envs.vectorized import SB3Vectorized
 from utils.hydra_wandb_utils import load_and_merge_platform
+from tmn_sb3.simbav2.normalizers import OnPolicySimbaVecNormalize, SimbaVecNormalize
+
+NORMALIZERS = {"sac_simbav2": SimbaVecNormalize, "ppo_simbav2": OnPolicySimbaVecNormalize}
 
 
 def print_results_box(results):
@@ -56,6 +62,8 @@ def tmnf_evaluate_policy(
     model: type_aliases.PolicyPredictor | None = None,
     model_path: str | None = None,
     vec_normalize_path: str | None = None,
+    train_env: gym.Env | None = None,
+    use_vec_normalize: bool = False,
 ) -> dict[str, np.ndarray | str | list[int] | float]:
     """
     Runs the policy for ``n_eval_episodes`` episodes and outputs the average return
@@ -121,6 +129,17 @@ def tmnf_evaluate_policy(
     # sb3 needs these wrappers TODO: we need to apply here the different vecnormalizers
     if not isinstance(env, VecEnv):
         env = DummyVecEnv([lambda: env])  # type: ignore[list-item, return-value]
+
+    if use_vec_normalize:
+        normalizer_class: VecNormalize = NORMALIZERS.get(cfg.policy.name, VecNormalize)
+        if vec_normalize_path:
+            env = normalizer_class.load(load_path=vec_normalize_path, venv=env)
+        else:
+            assert train_env is not None
+            env = normalizer_class(env)
+            sync_envs_normalization(env=train_env, eval_env=env)
+
+        assert isinstance(env, VecNormalize)
 
     is_monitor_wrapped = is_vecenv_wrapped(env, VecMonitor) or env.env_is_wrapped(Monitor)[0]
 
@@ -268,6 +287,7 @@ def tmnf_evaluate_policy(
 
     print_results_box(results)
 
+    env.close()
     return results
 
 
