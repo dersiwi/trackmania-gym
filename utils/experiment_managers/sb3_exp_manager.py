@@ -42,6 +42,8 @@ class Sb3ExperimentManager(ExperimentManager):
        
         self.append_callbacks(env)
         self.add_artifacts()
+
+        self.save_vecnormalize = cfg.policy.type == "simbav2" #NOTE: hard coded but got no time
         
 
     def get_callbacks(self) -> CallbackList:
@@ -69,7 +71,7 @@ class Sb3ExperimentManager(ExperimentManager):
             save_path=self.checkpoint_path,
             name_prefix="checkpoint",
             save_replay_buffer=False,
-            save_vecnormalize=False,
+            save_vecnormalize=self.save_vecnormalize,
         )
         self.callbacks.append(checkpoint_callback)
         if self.use_wandb:
