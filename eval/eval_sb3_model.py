@@ -4,6 +4,7 @@ from collections.abc import Callable
 from multiprocessing import Lock
 from typing import Any
 
+import hydra
 import omegaconf
 from omegaconf import OmegaConf
 
@@ -28,6 +29,30 @@ from utils.hydra_wandb_utils import (
 )
 
 
+def print_results_box(results):
+    # Determine the longest key for alignment
+    max_key_len = max(len(str(k)) for k in results.keys())
+
+    # Build formatted lines
+    lines = []
+    for key, value in results.items():
+        lines.append(f"{key:<{max_key_len}} : {value}")
+
+    # Determine box width
+    content_width = max(len(line) for line in lines)
+    box_width = content_width + 4  # padding
+
+    # Print top border
+    print("┌" + "─" * box_width + "┐")
+
+    # Print content
+    for line in lines:
+        print("│ " + line.ljust(content_width) + " │")
+
+    # Print bottom border
+    print("└" + "─" * box_width + "┘")
+
+
 def tmnf_evaluate_policy(
     cfg: TrainConfig,
     n_eval_episodes: int = 10,
@@ -38,6 +63,7 @@ def tmnf_evaluate_policy(
     return_episode_rewards: bool = False,
     warn: bool = True,
     model: type_aliases.PolicyPredictor | None = None,
+    model_path: str | None = None,
 ) -> dict[str, np.ndarray | str | list[int] | float]:
     """
     Runs the policy for ``n_eval_episodes`` episodes and outputs the average return
@@ -77,17 +103,13 @@ def tmnf_evaluate_policy(
         list containing per-episode return and second containing per-episode lengths
         (in number of steps).
     """
+    assert not (model_path is None and model is None), (
+        "You have to either provide the path to a model (e.g. a .zip) or parse an already build model"
+    )
+
     is_monitor_wrapped = False
     # Avoid circular import
     from stable_baselines3.common.monitor import Monitor
-
-    cfg = load_and_merge_platform(cfg)
-
-    try:
-        OmegaConf.register_new_resolver("eval", lambda s: eval(s))
-    except ValueError:
-        pass
-    omegaconf.OmegaConf.resolve(cfg)
 
     if cfg.vectorized.vectorize:
         env = SB3Vectorized(
@@ -118,7 +140,13 @@ def tmnf_evaluate_policy(
         )
 
     if model is None:
-        model = get_model_from_config(cfg=cfg, tm_env=env, print_params=True, run_id=" ")
+        model = get_model_from_config(
+            cfg=cfg,
+            tm_env=env,
+            print_params=True,
+            run_id=" ",
+            load_model_path=model_path,
+        )
 
     n_envs = env.num_envs
     episode_rewards = []  # This is the reward that the algos get to see (the modified one e.g. normed)
@@ -194,18 +222,68 @@ def tmnf_evaluate_policy(
         if render:
             env.render()
 
-        results = {
-            "mean_normal_reward": np.mean(episode_rewards),
-            "std_normal_reward": np.std(episode_rewards),
-            "mean_total_reward": np.mean(episode_total_rewards),
-            "std_total_reward": np.std(episode_total_rewards),
-            "success_rate": np.mean(race_finished_binary),
-            "media_path": saved_media_path,
-            "lengths": episode_lengths,
-        }
+    results = {
+        "mean_normal_reward": np.mean(episode_rewards),
+        "std_normal_reward": np.std(episode_rewards),
+        "mean_total_reward": np.mean(episode_total_rewards),
+        "std_total_reward": np.std(episode_total_rewards),
+        "success_rate": np.mean(race_finished_binary),
+        "media_path": saved_media_path,
+        "lengths": episode_lengths,
+    }
 
-        if return_episode_rewards:
-            results["all_normal_rewards"] = episode_rewards
-            results["all_total_rewards"] = episode_total_rewards
+    if return_episode_rewards:
+        results["all_normal_rewards"] = episode_rewards
+        results["all_total_rewards"] = episode_total_rewards
 
-        return results
+    print_results_box(results)
+
+    return results
+
+
+run_path_hydra = None
+model_path = None
+
+_HYDRA_PARAMS = {
+    "version_base": "1.3",
+    "config_path": run_path_hydra,
+    "config_name": "config.yaml",
+}
+
+
+@hydra.main(**_HYDRA_PARAMS)
+def main(cfg: TrainConfig):
+    cfg = load_and_merge_platform(cfg)
+
+    try:
+        OmegaConf.register_new_resolver("eval", lambda s: eval(s))
+    except ValueError:
+        pass
+    omegaconf.OmegaConf.resolve(cfg)
+
+    n_eval_episodes = 10
+    deterministic = True
+    render = False
+    callback = None
+    image_save_path = None
+    return_episode_rewards = False
+    warn = True
+    model = None  # If None, get_model_from_config will load it from model_path
+
+    print(f"DEBUG: Starting evaluation | Episodes: {n_eval_episodes} | Deterministic: {deterministic}")
+
+    tmnf_evaluate_policy(
+        cfg=cfg,
+        n_eval_episodes=n_eval_episodes,
+        deterministic=deterministic,
+        render=render,
+        callback=callback,
+        image_save_path=image_save_path,
+        return_episode_rewards=return_episode_rewards,
+        warn=warn,
+        model=model,
+    )
+
+
+if __name__ == "__main__":
+    main()
