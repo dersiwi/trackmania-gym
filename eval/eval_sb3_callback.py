@@ -56,6 +56,7 @@ class TMNFEvalCallback(EventCallback):
         render: bool = False,
         verbose: int = 1,
         warn: bool = True,
+        save_vecnormalize: bool = True,
     ):
         super().__init__(callback_after_eval, verbose=verbose)
 
@@ -64,6 +65,7 @@ class TMNFEvalCallback(EventCallback):
             # Give access to the parent
             self.callback_on_new_best.parent = self
 
+        self.cfg = cfg
         self.n_eval_episodes = n_eval_episodes
         self.eval_freq = eval_freq
         self.best_mean_reward = -np.inf
@@ -71,20 +73,23 @@ class TMNFEvalCallback(EventCallback):
         self.deterministic = deterministic
         self.render = render
         self.warn = warn
+        self.save_vecnormalize = save_vecnormalize
 
         self.best_model_save_path = best_model_save_path
         # Logs will be written in ``evaluations.npz``
         if log_path is not None:
-            log_path = os.path.join(log_path, "evaluations")
+            log_path = os.path.join(log_path, "tmnf_evaluations")
         self.log_path = log_path
-        self.evaluations_results: list[list[float]] = []
+
+        self.evaluations_results: list[list[float]] = []  # modified rewards e.g. by wrappers
         self.evaluations_timesteps: list[int] = []
         self.evaluations_length: list[list[int]] = []
         # For computing success rate
         self._is_success_buffer: list[bool] = []
         self.evaluations_successes: list[list[bool]] = []
 
-        self.cfg = cfg
+        self.evaluations_total_results = []  # Ground truth rewards
+        self.evaluations_steps_to_finish = []
 
     def _init_callback(self) -> None:
         # Create folders if needed
@@ -131,74 +136,63 @@ class TMNFEvalCallback(EventCallback):
             # Reset success rate buffer
             self._is_success_buffer = []
 
-            (mean_normal_reward, std_normal_reward, mean_total_reward, std_total_reward, success_rate, media_path, lengths) = (
-                tmnf_evaluate_policy(
-                    cfg = self.cfg,
-                    model=self.model,
-                    n_eval_episodes=self.n_eval_episodes,
-                    render=self.render,
-                    deterministic=self.deterministic,
-                    return_episode_rewards=True,
-                    warn=self.warn,
-                    image_save_path= "nonw"
-                )
+            video_path = None
+            if self.render and self.best_model_save_path:
+                video_path = os.path.join(self.best_model_save_path, f"best_eval_{self.num_timesteps}.mp4")
+
+            results = tmnf_evaluate_policy(
+                cfg=self.cfg,
+                train_env=self.training_env,
+                model=self.model,
+                n_eval_episodes=self.n_eval_episodes,
+                render=self.render,
+                deterministic=self.deterministic,
+                return_episode_rewards=True,
+                warn=self.warn,
+                image_save_path=video_path,
+            )
+            self.logger.record("tmnf_eval/mean_reward", float(results["mean_normal_reward"]))
+            self.logger.record("tmnf_eval/std_reward", float(results["std_normal_reward"]))
+            self.logger.record("tmnf_eval/mean_total_reward", float(results["mean_total_reward"]))
+            self.logger.record("tmnf_eval/std_total_reward", float(results["std_total_reward"]))
+            self.logger.record("tmnf_eval/success_rate", float(results["success_rate"]))
+
+            # Use .get() for steps_taken_finish in case no episodes finished
+            if float(results["success_rate"]) == 1:
+                steps_finish = results["steps_taken_finish"]
+                self.logger.record(
+                "tmnf_eval/steps_taken_finish", float(np.mean(steps_finish) if np.iterable(steps_finish) else steps_finish)
             )
 
+            self.logger.record("tmnf_eval/mean_ep_length", np.mean(results["lengths"]))
+
+            self.evaluations_timesteps.append(self.num_timesteps)
+            self.evaluations_results.append(results.get("all_normal_rewards", []))
+            self.evaluations_total_results.append(results.get("all_total_rewards", []))
+            self.evaluations_length.append(results["lengths"])
+            self.evaluations_successes.append(results["success_rate"])
+
             if self.log_path is not None:
-                assert isinstance(episode_rewards, list)
-                assert isinstance(episode_lengths, list)
-                self.evaluations_timesteps.append(self.num_timesteps)
-                self.evaluations_results.append(episode_rewards)
-                self.evaluations_length.append(episode_lengths)
-
-                kwargs = {}
-                # Save success log if present
-                if len(self._is_success_buffer) > 0:
-                    self.evaluations_successes.append(self._is_success_buffer)
-                    kwargs = dict(successes=self.evaluations_successes)
-
                 np.savez(
                     self.log_path,
                     timesteps=self.evaluations_timesteps,
                     results=self.evaluations_results,
+                    total_results=self.evaluations_total_results,
                     ep_lengths=self.evaluations_length,
-                    **kwargs,  # type: ignore[arg-type]
+                    success_rate=self.evaluations_successes,
                 )
 
-            mean_reward, std_reward = np.mean(episode_rewards), np.std(episode_rewards)
-            mean_ep_length, std_ep_length = np.mean(episode_lengths), np.std(episode_lengths)
-            self.last_mean_reward = float(mean_reward)
-
-            if self.verbose >= 1:
-                print(f"Eval num_timesteps={self.num_timesteps}, episode_reward={mean_reward:.2f} +/- {std_reward:.2f}")
-                print(f"Episode length: {mean_ep_length:.2f} +/- {std_ep_length:.2f}")
-            # Add to current Logger
-            self.logger.record("eval/mean_reward", float(mean_reward))
-            self.logger.record("eval/mean_ep_length", mean_ep_length)
-
-            if len(self._is_success_buffer) > 0:
-                success_rate = np.mean(self._is_success_buffer)
+            # Best Model Logic
+            if results["mean_total_reward"] > self.best_mean_reward:
                 if self.verbose >= 1:
-                    print(f"Success rate: {100 * success_rate:.2f}%")
-                self.logger.record("eval/success_rate", success_rate)
-
-            # Dump log so the evaluation results are printed with the correct timestep
-            self.logger.record("time/total_timesteps", self.num_timesteps, exclude="tensorboard")
-            self.logger.dump(self.num_timesteps)
-
-            if mean_reward > self.best_mean_reward:
-                if self.verbose >= 1:
-                    print("New best mean reward!")
+                    print(f"New best reward: {results['mean_total_reward']:.2f}")
                 if self.best_model_save_path is not None:
                     self.model.save(os.path.join(self.best_model_save_path, "best_model"))
-                self.best_mean_reward = float(mean_reward)
-                # Trigger callback on new best model, if needed
-                if self.callback_on_new_best is not None:
-                    continue_training = self.callback_on_new_best.on_step()
+                self.best_mean_reward = float(results["mean_total_reward"])
 
-            # Trigger callback after every evaluation, if needed
-            if self.callback is not None:
-                continue_training = continue_training and self._on_event()
+            self.logger.dump(self.num_timesteps)
+            if self.callback:
+                self._on_event()
 
         return continue_training
 
