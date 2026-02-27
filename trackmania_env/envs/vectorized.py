@@ -26,13 +26,17 @@ class TrackAssignmentManager:
 
 class VectorizedTMEnvironment(gym.Env):
 
+
+    metadata = {"render_modes": ["rgb_array","human"], "render_fps": 30}
+
     def __init__(self, n_envs : int, tracks : list[str], cfg : TrainConfig, obs_as_dict : bool = False,
                 step_parallel : bool = False,
                 alternation_between_tracks : bool = False, 
                 n_steps_per_track : int = 2048,
                 assign_rangom_track_at_init : bool = False,
                 assign_random_track_at_alternation : bool = False,
-                lock = None):
+                lock = None,
+                render_mode:str|None = None):
         """
         This instanciates a Vectorized TMNF-Environment. 
 
@@ -67,10 +71,14 @@ class VectorizedTMEnvironment(gym.Env):
         self.n_steps_per_track = n_steps_per_track
         self.assign_random_track_at_alternation = assign_random_track_at_alternation
 
+        assert render_mode is None or render_mode in self.metadata["render_modes"]
+        self.render_mode = render_mode
+
         port = self.cfg.gmi.port
         self.envs : list[CrashProofEnvironment] = [CrashProofEnvironment(train_cfg=self.cfg, port = port+i, return_obs_as_dict = obs_as_dict, 
                                                                          lock = lock, skip = self.n_envs, suffix=f":idx={i}", 
-                                                                         track = self.tracks[self.curr_track_id[i]]) for i in range(self.n_envs)]
+                                                                         track = self.tracks[self.curr_track_id[i]],
+                                                                         render_mode= self.render_mode) for i in range(self.n_envs)]
 
         # using a threadpool here is much much faster than initializing sequentially, as innit_environment also starts the game
         with ThreadPoolExecutor(max_workers=self.n_envs) as executor:
@@ -246,13 +254,18 @@ class VectorizedTMEnvironment(gym.Env):
 from stable_baselines3.common.vec_env import VecEnv
 
 class SB3Vectorized(VecEnv):
+    metadata = {"render_modes": ["rgb_array","human"], "render_fps": 30}
 
     def __init__(self, n_envs : int, tracks : list[str], cfg : TrainConfig, obs_as_dict : bool = False, step_parallel : bool = False,
                 alternation_between_tracks : bool = False, 
                 n_steps_per_track : int = 2048,
                 assign_rangom_track_at_init : bool = False,
                 assign_random_track_at_alternation : bool = False,
-                 lock = None):
+                lock = None,
+                render_mode:str|None = None):
+
+        assert render_mode is None or render_mode in self.metadata["render_modes"]
+        self.render_mode = render_mode
 
         self.vecenv = VectorizedTMEnvironment(n_envs, tracks, cfg, obs_as_dict, step_parallel, alternation_between_tracks, n_steps_per_track, 
                                               assign_rangom_track_at_init, assign_random_track_at_alternation,lock= lock)

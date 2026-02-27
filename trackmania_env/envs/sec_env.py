@@ -33,8 +33,10 @@ class CrashProofEnvironment(gym.Env):
     once more; however truncated is set to True. The learner process can then call reset, in order to keep disruption to trajectory collection mininmal.   
     """
 
+    metadata = {"render_modes": ["rgb_array","human"], "render_fps": 30}
+
     def __init__(self, train_cfg : TrainConfig, port : int = 8775, return_obs_as_dict : bool = True, 
-                 lock = None, skip : int = 0, suffix : str = "", track : str = None):
+                 lock = None, skip : int = 0, suffix : str = "", track : str = None, render_mode:str|None = None):
         """
         Args:
             train_cfg (TrainConfig) : Configuration file used for initialization of enviroment
@@ -74,6 +76,9 @@ class CrashProofEnvironment(gym.Env):
         self.ipcsender : IPCommandSender = None
 
         self.reinit_recursion_depth = 0
+
+        assert render_mode is None or render_mode in self.metadata["render_modes"]
+        self.render_mode = render_mode
         
         
     def _set_env_variables(self):
@@ -107,6 +112,8 @@ class CrashProofEnvironment(gym.Env):
         self.env = get_environment(self.cfg, self.ipcsender)
         self.env.obs_manager.return_as_dict = self.return_obs_as_dict
         self._set_env_variables()
+
+        self.env.render_mode = self.render_mode
 
     def finalize_process(self, reinit : bool = True):
         """

@@ -46,7 +46,7 @@ class TMICommunicationFaildException(Exception):
 class TMNF_Single_Agent_Env(gym.Env):
     """The reinforcement learning environment for Trackmania Nations Forever"""
 
-    metadata = {"render.modes": ["human", "rgb_array"], "video.frames_per_second": 30}
+    metadata = {"render_modes": ["rgb_array","human"], "render_fps": 30}
 
     # init, step and reset have to be implemented for the class to be gym compatible
     def __init__(
@@ -67,6 +67,7 @@ class TMNF_Single_Agent_Env(gym.Env):
             startposition_accuracy_threshold:float,
             gamma:float,
             is_discrete:bool = True,
+            render_mode:str | None = None,
             **kwargs):
         
         """
@@ -156,6 +157,9 @@ class TMNF_Single_Agent_Env(gym.Env):
 
         self.current_img: np.ndarray | None = None #NOTE: we only need this for the render func  
         self.img_shape = (128,128,3) #NOTE:this is ugly but got no time
+
+        assert render_mode is None or render_mode in self.metadata["render_modes"]
+        self.render_mode = render_mode
 
     def set_respawn_manager(self, respawn_manager : OrientationlessRespawnManager):
         self.orientationless_respawn_manager = respawn_manager
@@ -407,12 +411,12 @@ class ContinuousTMNF_Single_Agent_Env(TMNF_Single_Agent_Env):
     def __init__(self, ipcommandsender, obs_manager, reward_calculator, termination_manger, 
                  track, reset_mode, n_previous_actions, position_buffer_size, position_moved_threshold, 
                  ignore_stuck_for_n_steps_after_reset, game_speed, countdown_speed, waitforstep_timeout_in_s, 
-                 startposition_accuracy_threshold, gamma, actiondim : int, **kwargs):
+                 startposition_accuracy_threshold, gamma, actiondim : int, render_mode:str|None, **kwargs):
         
         super().__init__(ipcommandsender, obs_manager, reward_calculator, termination_manger, 
                          track, reset_mode, n_previous_actions, position_buffer_size, position_moved_threshold,
                           ignore_stuck_for_n_steps_after_reset, game_speed, countdown_speed, waitforstep_timeout_in_s, 
-                          startposition_accuracy_threshold, gamma, is_discrete=False, **kwargs)
+                          startposition_accuracy_threshold, gamma, is_discrete=False, render_mode= render_mode, **kwargs)
         
         self.action_space = gym.spaces.Box(low=-1, high = 1, shape = (actiondim,), dtype=np.float32)
         self.actionmode = ActionMode.get_mode(continuous=True, dim = actiondim)
