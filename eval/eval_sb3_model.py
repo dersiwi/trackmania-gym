@@ -1,6 +1,7 @@
 import os
-import sys 
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))) 
+import sys
+
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 from datetime import datetime
 import math
@@ -67,6 +68,7 @@ def tmnf_evaluate_policy(
     vec_normalize_path: str | None = None,
     train_env: gym.Env | None = None,
     use_vec_normalize: bool = False,
+    render_mode: str | None = "rgb_array",
 ) -> dict[str, np.ndarray | str | list[int] | float]:
     """
     Evaluates the policy and optionally records the best episode video.
@@ -105,9 +107,10 @@ def tmnf_evaluate_policy(
             obs_as_dict=True,
             step_parallel=True,
             lock=Lock(),
+            render_mode=render_mode,
         )
     else:
-        env = CrashProofEnvironment(cfg)
+        env = CrashProofEnvironment(cfg, render_mode=render_mode)
         env.init_environment()
     env = Monitor(env)
 
@@ -125,6 +128,8 @@ def tmnf_evaluate_policy(
             sync_envs_normalization(env=train_env, eval_env=env)
 
         assert isinstance(env, VecNormalize)
+
+    assert env.render_mode == render_mode
 
     is_monitor_wrapped = is_vecenv_wrapped(env, VecMonitor) or env.env_is_wrapped(Monitor)[0]
 

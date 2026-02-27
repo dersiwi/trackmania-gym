@@ -9,7 +9,7 @@ from stable_baselines3.common.logger import Logger
 
 from stable_baselines3.common.evaluation import evaluate_policy
 from stable_baselines3.common.vec_env import DummyVecEnv, VecEnv, sync_envs_normalization
-from stable_baselines3.common.callbacks import EventCallback
+from stable_baselines3.common.callbacks import EventCallback, BaseCallback
 
 from .eval_sb3_model import tmnf_evaluate_policy
 
@@ -54,6 +54,7 @@ class TMNFEvalCallback(EventCallback):
         best_model_save_path: str | None = None,
         deterministic: bool = True,
         render: bool = False,
+        render_mode: str | None = "rgb_array",
         verbose: int = 1,
         warn: bool = True,
         save_vecnormalize: bool = True,
@@ -72,6 +73,7 @@ class TMNFEvalCallback(EventCallback):
         self.last_mean_reward = -np.inf
         self.deterministic = deterministic
         self.render = render
+        self.render_mode = render_mode
         self.warn = warn
         self.save_vecnormalize = save_vecnormalize
 
@@ -146,6 +148,7 @@ class TMNFEvalCallback(EventCallback):
                 model=self.model,
                 n_eval_episodes=self.n_eval_episodes,
                 render=self.render,
+                render_mode= self.render_mode,
                 deterministic=self.deterministic,
                 return_episode_rewards=True,
                 warn=self.warn,
@@ -161,8 +164,8 @@ class TMNFEvalCallback(EventCallback):
             if float(results["success_rate"]) == 1:
                 steps_finish = results["steps_taken_finish"]
                 self.logger.record(
-                "tmnf_eval/steps_taken_finish", float(np.mean(steps_finish) if np.iterable(steps_finish) else steps_finish)
-            )
+                    "tmnf_eval/steps_taken_finish", float(np.mean(steps_finish) if np.iterable(steps_finish) else steps_finish)
+                )
 
             self.logger.record("tmnf_eval/mean_ep_length", np.mean(results["lengths"]))
 
