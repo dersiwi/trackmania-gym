@@ -47,7 +47,7 @@ def _get_env_constructor_args(cfg : TrainConfig, ipcommandsender, obs_manager, r
     )
     return constructor_kwargs
 
-def get_environment(cfg : TrainConfig, ipcommandsender : IPCommandSender, test : bool = False) -> gym.Env:
+def get_environment(cfg : TrainConfig, ipcommandsender : IPCommandSender, test : bool = False, render_mode:str|None = None) -> gym.Env:
     """Initializes environment according to given configuration file and applies wrappers, if specified in conifg.
     Args:
         cfg (TrainConfig)       : Configuration used to initialize environment
@@ -63,6 +63,7 @@ def get_environment(cfg : TrainConfig, ipcommandsender : IPCommandSender, test :
     termination_manager = get_termination_manager(termination_cfg= cfg.rl_env.termination_manager)
 
     constructor_kwargs = _get_env_constructor_args(cfg, ipcommandsender, obs_manager, reward_calculator, termination_manager)
+    constructor_kwargs["render_mode"] = render_mode
     
     if not cfg.rl_env.env.continuous_actions:
         tm_env = TMNF_Single_Agent_Env(**constructor_kwargs)

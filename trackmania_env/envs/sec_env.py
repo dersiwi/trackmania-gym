@@ -109,7 +109,7 @@ class CrashProofEnvironment(gym.Env):
         
         self.ipcsender = self.pm.start_process_and_wait_for_startsignal(track = self.track)
 
-        self.env = get_environment(self.cfg, self.ipcsender)
+        self.env = get_environment(self.cfg, self.ipcsender,render_mode=self.render_mode)
         self.env.obs_manager.return_as_dict = self.return_obs_as_dict
         self._set_env_variables()
 

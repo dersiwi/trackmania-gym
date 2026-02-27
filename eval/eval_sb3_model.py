@@ -1,6 +1,8 @@
 import os
 import sys
 
+from gymnasium.spaces import box
+
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 from datetime import datetime
@@ -49,7 +51,7 @@ def print_results_box(results):
 
     print("┌" + "─" * box_width + "┐")
     for line in lines:
-        print("│ " + line.ljust(content_width) + " │")
+        print("│ " + line.ljust(box_width-2) + " │")
     print("└" + "─" * box_width + "┘")
 
 
@@ -308,9 +310,10 @@ def main(cfg: TrainConfig):
     log_dir = os.path.join("eval_logs", timestamp)
     image_save_path = os.path.join(log_dir, "best_run.mp4")
 
-    n_eval_episodes = 10
+    n_eval_episodes = 5
     deterministic = True
-    render = False
+    render = True
+    render_mode = "rgb_array"
     callback = None
     max_video_len = 800
     return_episode_rewards = False
@@ -323,6 +326,7 @@ def main(cfg: TrainConfig):
         n_eval_episodes=n_eval_episodes,
         deterministic=deterministic,
         render=render,
+        render_mode= render_mode,
         callback=callback,
         image_save_path=image_save_path,
         max_video_len=max_video_len,
