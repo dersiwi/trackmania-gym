@@ -4,6 +4,7 @@ from typing import Any
 
 import gymnasium as gym
 import numpy as np
+import wandb
 
 from stable_baselines3.common.logger import Logger
 
@@ -137,7 +138,7 @@ class TMNFEvalCallback(EventCallback):
                 model=self.model,
                 n_eval_episodes=self.n_eval_episodes,
                 render=self.render,
-                render_mode= self.render_mode,
+                render_mode=self.render_mode,
                 deterministic=self.deterministic,
                 return_episode_rewards=True,
                 warn=self.warn,
@@ -174,6 +175,16 @@ class TMNFEvalCallback(EventCallback):
                     success_rate=self.evaluations_successes,
                 )
 
+            # if there are any videos log them directly during training and do not wait till training has finished
+            if video_path and os.path.exists(video_path):
+                video_file = os.path.basename(video_path)
+                print(f"Pushing live video to W&B: {video_file}")
+
+                wandb.log(
+                    {"tmnf_eval/video": wandb.Video(video_path, caption=f"Best Model Eval @ {self.num_timesteps} steps")},
+                    step=self.num_timesteps,
+                )
+
             # Best Model Logic
             if results["mean_total_reward"] > self.best_mean_reward:
                 if self.verbose >= 1:
@@ -182,7 +193,7 @@ class TMNFEvalCallback(EventCallback):
                     self.model.save(os.path.join(self.best_model_save_path, "best_model"))
                     if self.save_vecnormalize and self.model.get_vec_normalize_env() is not None:
                         # Save the VecNormalize statistics
-                        vec_normalize_path = os.path.join(self.best_model_save_path,"best_vecnormalize.pkl")
+                        vec_normalize_path = os.path.join(self.best_model_save_path, "best_vecnormalize.pkl")
                         self.model.get_vec_normalize_env().save(vec_normalize_path)  # type: ignore[union-attr]
                         if self.verbose >= 1:
                             print(f"Saving model VecNormalize to {vec_normalize_path}")
