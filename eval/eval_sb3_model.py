@@ -112,7 +112,7 @@ def tmnf_evaluate_policy(
             render_mode=render_mode,
         )
     else:
-        env = CrashProofEnvironment(cfg, render_mode=render_mode)
+        env = CrashProofEnvironment(cfg, render_mode=render_mode,port=cfg.gmi.port)
         env.init_environment()
     env = Monitor(env)
 

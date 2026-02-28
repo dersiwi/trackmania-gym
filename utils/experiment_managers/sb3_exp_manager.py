@@ -45,11 +45,12 @@ class Sb3ExperimentManager(ExperimentManager):
         self.checkpoint_freq = checkpoint_freq
         self.n_envs = n_envs
 
+        self.cfg = cfg
+        self.cfg.gmi.port = self.cfg.gmi.port + 20  # to prevent port clashes
+
         self.append_callbacks(env)
         self.add_artifacts()
 
-        self.cfg = cfg
-        self.cfg.gmi.port = self.cfg.gmi.port + 20  # to prevent port clashes
 
     def get_callbacks(self) -> CallbackList:
         """
@@ -66,11 +67,11 @@ class Sb3ExperimentManager(ExperimentManager):
             eval_freq=self.cfg.eval.eval_freq,
             best_model_save_path=self.best_model_path,
             log_path=os.path.join(self.hydra_run_dir, "eval_logs"),
-            deterministic=self.cfg.deterministic,
+            deterministic=self.cfg.eval.deterministic,
             render= self.cfg.eval.render,
             render_mode= self.cfg.eval.render_mode,
-            verbose= self.cfg.verbose,
-            warn=self.eval.warn,
+            verbose= self.cfg.eval.verbose,
+            warn=self.cfg.eval.warn,
             save_vecnormalize= self.cfg.eval.save_vecnormalize,
         )
         # eval_callback = EvalCallback(

@@ -143,6 +143,7 @@ class TMNFEvalCallback(EventCallback):
                 return_episode_rewards=True,
                 warn=self.warn,
                 image_save_path=video_path,
+                use_vec_normalize=self.save_vecnormalize,
             )
             self.logger.record("tmnf_eval/mean_reward", float(results["mean_normal_reward"]))
             self.logger.record("tmnf_eval/std_reward", float(results["std_normal_reward"]))
