@@ -7,7 +7,7 @@ from gymnasium import Env
 from utils.experiment_managers.core import ExperimentManager
 from configs.config import TrainConfig
 from trackmania_env.callbacks import *
-from eval.eval_sb3_callback import TMNFEvalCallback
+from eval.eval_sb3_callback import TMNFEvalCallback, TMNFCheckpointCallback
 
 from omegaconf import OmegaConf
 
@@ -85,7 +85,7 @@ class Sb3ExperimentManager(ExperimentManager):
         self.callbacks.append(eval_callback)
 
         # Checkpoint Callback save model every N steps
-        checkpoint_callback = CheckpointCallback(
+        checkpoint_callback = TMNFCheckpointCallback(
             save_freq=self.checkpoint_freq,
             save_path=self.checkpoint_path,
             name_prefix="checkpoint",

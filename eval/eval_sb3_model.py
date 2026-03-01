@@ -179,6 +179,8 @@ def tmnf_evaluate_policy(
 
         assert isinstance(env, VecNormalize)
 
+    env.training = False
+
     assert env.render_mode == render_mode
 
     is_monitor_wrapped = is_vecenv_wrapped(env, VecMonitor) or env.env_is_wrapped(Monitor)[0]
