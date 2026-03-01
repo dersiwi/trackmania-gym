@@ -39,6 +39,30 @@ from tmn_sb3.simbav2.normalizers import OnPolicySimbaVecNormalize, SimbaVecNorma
 NORMALIZERS = {"sac_simbav2": SimbaVecNormalize, "ppo_simbav2": OnPolicySimbaVecNormalize}
 
 
+def print_normalization_stats(env, label: str):
+    print(f"\n{'=' * 15} {label} {'=' * 15}")
+
+    if hasattr(env, "obs_rms"):
+        if isinstance(env.obs_rms, dict):
+            print("obs_rms (Dict-based):")
+            for key, rms in env.obs_rms.items():
+                # rms is a RunningMeanStd object for each specific key
+                print(f"  - Key [{key}] mean: {rms.mean}")
+        else:
+            print(f"obs_rms mean: {env.obs_rms.mean}")
+
+    if hasattr(env, "ret_rms"):
+        print(f"ret_rms var:  {env.ret_rms.var}")
+    
+    # only relevant for simba
+    if hasattr(env, "g_max"):
+        print(f"g_max:        {env.g_max}")
+    if hasattr(env, "g_r_max"):
+        print(f"g_r_max:      {env.g_r_max}")
+
+    print(f"{'=' * 40}\n")
+
+
 def print_results_box(results):
     max_key_len = max(len(str(k)) for k in results.keys())
 
@@ -51,7 +75,7 @@ def print_results_box(results):
 
     print("┌" + "─" * box_width + "┐")
     for line in lines:
-        print("│ " + line.ljust(box_width-2) + " │")
+        print("│ " + line.ljust(box_width - 2) + " │")
     print("└" + "─" * box_width + "┘")
 
 
@@ -112,7 +136,7 @@ def tmnf_evaluate_policy(
             render_mode=render_mode,
         )
     else:
-        env = CrashProofEnvironment(cfg, render_mode=render_mode,port=cfg.gmi.port)
+        env = CrashProofEnvironment(cfg, render_mode=render_mode, port=cfg.gmi.port)
         env.init_environment()
     env = Monitor(env)
 
@@ -127,7 +151,9 @@ def tmnf_evaluate_policy(
         else:
             assert train_env is not None
             env = normalizer_class(env)
+            print_normalization_stats(env, "BEFORE SYNC")
             sync_envs_normalization(env=train_env, eval_env=env)
+            print_normalization_stats(env, "AFTER SYNC")
 
         assert isinstance(env, VecNormalize)
 
@@ -326,7 +352,7 @@ def main(cfg: TrainConfig):
         n_eval_episodes=n_eval_episodes,
         deterministic=deterministic,
         render=render,
-        render_mode= render_mode,
+        render_mode=render_mode,
         callback=callback,
         image_save_path=image_save_path,
         max_video_len=max_video_len,
