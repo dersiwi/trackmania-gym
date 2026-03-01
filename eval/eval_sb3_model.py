@@ -53,7 +53,7 @@ def print_normalization_stats(env, label: str):
 
     if hasattr(env, "ret_rms"):
         print(f"ret_rms var:  {env.ret_rms.var}")
-    
+
     # only relevant for simba
     if hasattr(env, "g_max"):
         print(f"g_max:        {env.g_max}")
@@ -77,6 +77,22 @@ def print_results_box(results):
     for line in lines:
         print("│ " + line.ljust(box_width - 2) + " │")
     print("└" + "─" * box_width + "┘")
+
+
+def simba_sync_envs_normalization(env: VecEnv, eval_env: VecEnv) -> None:
+    """
+    Synchronize the normalization statistics of an eval environment and train environment
+    when they are both wrapped in a `VecNormalize` wrapper.
+
+    :param env: Training env
+    :param eval\_env: Environment used for evaluation.
+    """
+    sync_envs_normalization(env=env, eval_env=eval_env)
+    # again only relevant for simba
+    if hasattr(env, "g_max"):
+        eval_env.g_max = env.g_max
+    if hasattr(env, "g_r_max"):
+        eval_env.g_r_max = env.g_r_max
 
 
 def tmnf_evaluate_policy(
@@ -145,14 +161,20 @@ def tmnf_evaluate_policy(
         env = DummyVecEnv([lambda: env])  # type: ignore[list-item, return-value]
 
     if use_vec_normalize:
+        # NOTE: This goes only well if we always want to normalise every obs key
+        # but for now its ok since we indead normalise every obs
+        obs_keys = None
+        if isinstance(env.observation_space, gym.spaces.Dict):
+            obs_keys = env.observation_space.spaces.keys()
+
         normalizer_class: VecNormalize = NORMALIZERS.get(cfg.policy.name, VecNormalize)
         if vec_normalize_path:
             env = normalizer_class.load(load_path=vec_normalize_path, venv=env)
         else:
             assert train_env is not None
-            env = normalizer_class(env)
+            env = normalizer_class(env, norm_obs_keys=obs_keys)
             print_normalization_stats(env, "BEFORE SYNC")
-            sync_envs_normalization(env=train_env, eval_env=env)
+            simba_sync_envs_normalization(env=train_env, eval_env=env)
             print_normalization_stats(env, "AFTER SYNC")
 
         assert isinstance(env, VecNormalize)
