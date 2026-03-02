@@ -46,7 +46,7 @@ class Sb3ExperimentManager(ExperimentManager):
         self.n_envs = n_envs
 
         self.cfg = cfg
-        self.cfg.gmi.port = self.cfg.gmi.port + 20  # to prevent port clashes
+        self.cfg.gmi.port *= 2 # to prevent port clashes
 
         self.append_callbacks(env)
         self.add_artifacts()

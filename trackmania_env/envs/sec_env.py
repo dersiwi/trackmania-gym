@@ -36,7 +36,7 @@ class CrashProofEnvironment(gym.Env):
     metadata = {"render_modes": ["rgb_array","human"], "render_fps": 30}
 
     def __init__(self, train_cfg : TrainConfig, port : int = 8775, return_obs_as_dict : bool = True, 
-                 lock = None, skip : int = 0, suffix : str = "", track : str = None, render_mode:str|None = None):
+                 lock = None, skip : int = 0, suffix : str = "", track : str = None, render_mode:str|None = None, init_max_retries:int = 5 ):
         """
         Args:
             train_cfg (TrainConfig) : Configuration file used for initialization of enviroment
@@ -77,6 +77,8 @@ class CrashProofEnvironment(gym.Env):
 
         self.reinit_recursion_depth = 0
 
+        self.init_max_retries = init_max_retries
+
         assert render_mode is None or render_mode in self.metadata["render_modes"]
         self.render_mode = render_mode
         
@@ -104,10 +106,28 @@ class CrashProofEnvironment(gym.Env):
         
         self.env_initalizations += 1
         self.logger.info(f"Initializing environment for the {self.env_initalizations}-th time.")
-        
-        self.pm = ProcessManagement(train_config=self.cfg, image_width=self.cfg.rl_env.obs_manager.img_width, image_height=self.cfg.rl_env.obs_manager.img_height, port=self.port, lock = self.lock)
-        
-        self.ipcsender = self.pm.start_process_and_wait_for_startsignal(track = self.track)
+        for attempt in range(self.init_max_retries):
+            try:
+                self.pm = ProcessManagement(
+                    train_config=self.cfg, 
+                    image_width=self.cfg.rl_env.obs_manager.img_width, 
+                    image_height=self.cfg.rl_env.obs_manager.img_height, 
+                    port=self.port, 
+                    lock=self.lock
+                )
+                
+                self.ipcsender = self.pm.start_process_and_wait_for_startsignal(track=self.track)
+                
+                print(f"Successfully initialized ProcessManagement on attempt {attempt + 1}")
+                break 
+
+            except Exception as e:
+                print(f"Attempt {attempt + 1}/{self.init_max_retries} failed: {e}")
+                
+                if attempt == self.init_max_retries - 1:
+                    print("Reached maximum retries. Process management failed to start.")
+                    raise e
+                self.port += 1 #avoid port clash with previous failed attempt
 
         self.env = get_environment(self.cfg, self.ipcsender,render_mode=self.render_mode)
         self.env.obs_manager.return_as_dict = self.return_obs_as_dict

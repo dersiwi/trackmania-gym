@@ -206,6 +206,9 @@ class TMNFEvalCallback(EventCallback):
             if self.callback:
                 self._on_event()
 
+            self.cfg.port = results["port"]
+
+
         return continue_training
 
     def update_child_locals(self, locals_: dict[str, Any]) -> None:

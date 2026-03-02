@@ -139,7 +139,8 @@ def tmnf_evaluate_policy(
     is_monitor_wrapped = False
     # Avoid circular import
     from stable_baselines3.common.monitor import Monitor
-
+    
+    port = cfg.gmi.port
     # create environment
     if cfg.vectorized.vectorize:
         env = SB3Vectorized(
@@ -154,6 +155,7 @@ def tmnf_evaluate_policy(
     else:
         env = CrashProofEnvironment(cfg, render_mode=render_mode, port=cfg.gmi.port)
         env.init_environment()
+        port = env.port
     env = Monitor(env)
 
     # sb3 needs these wrappers TODO: we need to apply here the different vecnormalizers
@@ -322,6 +324,7 @@ def tmnf_evaluate_policy(
         "steps_taken_finish": np.mean(steps_taken_finish),
         "media_path": image_save_path,
         "lengths": episode_lengths,
+        "port": port, # we return the port under which the connection has run to avoid using the initial which may have faulted
     }
 
     if return_episode_rewards:
