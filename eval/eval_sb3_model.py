@@ -316,10 +316,10 @@ def tmnf_evaluate_policy(
         print("Ignored saving a video as there were zero frames to save.")
 
     results = {
-        "mean_normal_reward": np.mean(episode_rewards),
-        "std_normal_reward": np.std(episode_rewards),
-        "mean_total_reward": np.mean(episode_total_rewards),
-        "std_total_reward": np.std(episode_total_rewards),
+        "mean_undis_mod_return": np.mean(episode_rewards),
+        "std_undis_mod_return": np.std(episode_rewards),
+        "mean_undis_raw_return": np.mean(episode_total_rewards),
+        "std_undis_raw_return": np.std(episode_total_rewards),
         "success_rate": np.mean(race_finished_binary),
         "steps_taken_finish": np.mean(steps_taken_finish),
         "media_path": image_save_path,

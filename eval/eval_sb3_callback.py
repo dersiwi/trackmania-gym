@@ -146,14 +146,15 @@ class TMNFEvalCallback(EventCallback):
                 image_save_path=video_path,
                 use_vec_normalize=self.save_vecnormalize,
             )
-            self.logger.record("tmnf_eval/mean_reward", float(results["mean_normal_reward"]))
-            self.logger.record("tmnf_eval/std_reward", float(results["std_normal_reward"]))
-            self.logger.record("tmnf_eval/mean_total_reward", float(results["mean_total_reward"]))
-            self.logger.record("tmnf_eval/std_total_reward", float(results["std_total_reward"]))
+            self.logger.record("tmnf_eval/mean_undis_mod_return", float(results["mean_undis_mod_return"]))
+            self.logger.record("tmnf_eval/std_undis_mod_return", float(results["std_undis_mod_return"]))
+            self.logger.record("tmnf_eval/mean_undis_raw_return", float(results["mean_undis_raw_return"]))
+            self.logger.record("tmnf_eval/std_undis_raw_return", float(results["std_undis_raw_return"]))
             self.logger.record("tmnf_eval/success_rate", float(results["success_rate"]))
 
-            # Use .get() for steps_taken_finish in case no episodes finished
-            if float(results["success_rate"]) == 1:
+            if float(results["success_rate"]) > 0:
+                # NOTE: when doing more episodes per eval one would want to check succes_rate > 0 since we could 
+                # have anything in [0,1] as succesrate then
                 steps_finish = results["steps_taken_finish"]
                 self.logger.record(
                     "tmnf_eval/steps_taken_finish", float(np.mean(steps_finish) if np.iterable(steps_finish) else steps_finish)
@@ -197,7 +198,7 @@ class TMNFEvalCallback(EventCallback):
                         # Save the VecNormalize statistics
                         vec_normalize_path = os.path.join(self.best_model_save_path, "best_vecnormalize.pkl")
                         vec_normalizer = self.model.get_vec_normalize_env()
-                        save_rms_stats(vec_normalizer,vec_normalize_path)
+                        save_rms_stats(vec_normalizer, vec_normalize_path)
                         if self.verbose >= 1:
                             print(f"Saving VecNormalize stats to {vec_normalize_path}")
                 self.best_mean_reward = float(results["mean_total_reward"])
@@ -207,7 +208,6 @@ class TMNFEvalCallback(EventCallback):
                 self._on_event()
 
             self.cfg.port = results["port"]
-
 
         return continue_training
 
@@ -219,6 +219,7 @@ class TMNFEvalCallback(EventCallback):
         """
         if self.callback:
             self.callback.update_locals(locals_)
+
 
 class TMNFCheckpointCallback(BaseCallback):
     """
@@ -293,7 +294,7 @@ class TMNFCheckpointCallback(BaseCallback):
                 # Save the VecNormalize statistics
                 vec_normalize_path = self._checkpoint_path("vecnormalize_", extension="pkl")
                 vec_normalizer = self.model.get_vec_normalize_env()
-                save_rms_stats(vec_normalizer,vec_normalize_path)
+                save_rms_stats(vec_normalizer, vec_normalize_path)
                 if self.verbose >= 2:
                     print(f"Saving model VecNormalize to {vec_normalize_path}")
 
