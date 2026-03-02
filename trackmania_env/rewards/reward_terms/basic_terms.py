@@ -28,10 +28,11 @@ class AccumulatedDistanceReward(RewardTerm):
             enhanced_by_amount_travelled (bool) : If true, multiplies the reward by the amount of refline-points passed (to give more incentive to pass more at a single environment step)
             exponential_factor (float)          : Number of steps travelled in this step is raised to this power. Default 1.
         """
-        super().__init__(weight, AccumulatedDistanceReward.NAME, clip_min=0, clip_max=10)
+        super().__init__(weight, AccumulatedDistanceReward.NAME, clip_min=0, clip_max=1.0)
         self.current_refline_idx = 0
         self.enhanced_by_amount_travelled = enhanced_by_amount_travelled
         self.exponential_factor = exponential_factor
+        self.last_pos = None
 
     def _get_term(self, observations : dict[str, any], processed_obs : dict[str, any], race_finished : bool, other_terminations : dict[str, bool]):
         next_refline_index, _, _ = self.env.reference_line.get_distance_to_next_point()
@@ -42,13 +43,41 @@ class AccumulatedDistanceReward(RewardTerm):
             for i in range(n_passed):
                 accum_dist_reward += self.env.reference_line.get_discrete_distance(self.current_refline_idx + i)
                 
-            self.current_refline_idx = next_refline_index
+            self.current_refline_idx = next_refline_index    
+        
         if self.enhanced_by_amount_travelled:
             accum_dist_reward = accum_dist_reward * n_passed ** self.exponential_factor
+
+        accum_dist_reward = self._check_against_lag(accum_dist_reward, observations, n_passed)
         return accum_dist_reward
+    
+    def _check_against_lag(self, accum_dist_reward : float, observations : dict[str, any], n_passed : int) -> float:
+        """
+        This method checks for lag and if there was some, sets the calcualted accum_distance reward to 0. When training a policy, it is policy that the policy-update 
+        takes longer than the process-wrapper can possible wait on another action; in this case the pw sends no-action command to the plugin, which reults in the car
+        doing nothing anymore; but this (if the car was driving forward, pushes the car forward.) -> this would trigger a reward over many more refline points within
+        one env-step. 
+        This method prevents it.
+        """
+
+        currpos = np.array(observations[IPCFields.SIMSTATE].position)
+        #if not self.last_pos is None: print(currpos, self.last_pos, np.linalg.norm(currpos - self.last_pos), accum_dist_reward, n_passed)
+        if not self.last_pos is None and np.linalg.norm(currpos - self.last_pos) > 5 or n_passed > 20:
+            """
+            - np.linalg.norm(currpos - self.last_pos) > 5 : is an estimated threshold of how fast the agent can go within one ENV-Step 
+            - n > 20 : Basically the same as above, but interms of reference line points (this is, if the lookahead size of reflinepoint manager is too small, then this condition
+                still catches the lag.)
+                
+             TODO : This IS dependent on the actions-per-second, however should only fail (it at all) if the APS decrease"""
+            #print("Setting to zero")
+            accum_dist_reward = 0
+        self.last_pos = currpos
+        return accum_dist_reward
+
     
     def reset(self):
         self.current_refline_idx = 0
+        self.last_pos = None
     
 class LateralDistanceReward(RewardTerm):
     THEORETICAL_MAX_VALUE = np.inf

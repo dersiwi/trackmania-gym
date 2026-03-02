@@ -46,7 +46,7 @@ class TMICommunicationFaildException(Exception):
 class TMNF_Single_Agent_Env(gym.Env):
     """The reinforcement learning environment for Trackmania Nations Forever"""
 
-    metadata = {"render.modes": ["human", "rgb_array"], "video.frames_per_second": 30}
+    metadata = {"render_modes": ["rgb_array","human"], "render_fps": 30}
 
     # init, step and reset have to be implemented for the class to be gym compatible
     def __init__(
@@ -67,6 +67,7 @@ class TMNF_Single_Agent_Env(gym.Env):
             startposition_accuracy_threshold:float,
             gamma:float,
             is_discrete:bool = True,
+            render_mode:str | None = None,
             **kwargs):
         
         """
@@ -153,6 +154,12 @@ class TMNF_Single_Agent_Env(gym.Env):
         self.obs_manager.set_env(self)
         self.rew_calculator.set_env(self)
         self.termination_manager.set_env(self)
+
+        self.current_img: np.ndarray | None = None #NOTE: we only need this for the render func  
+        self.img_shape = (128,128,3) #NOTE:this is ugly but got no time
+
+        assert render_mode is None or render_mode in self.metadata["render_modes"]
+        self.render_mode = render_mode
 
     def set_respawn_manager(self, respawn_manager : OrientationlessRespawnManager):
         self.orientationless_respawn_manager = respawn_manager
@@ -243,11 +250,11 @@ class TMNF_Single_Agent_Env(gym.Env):
             self.__log_reset_reason(terminated_info)
 
         info = self._get_info(ssD=ssD) 
-
+        info["race_finished"] = race_finished
         processed_obs, obs_info = self.obs_manager.get_observation(raw_obs)
         reward, reward_info = self.rew_calculator.calculate_reward(raw_obs, processed_obs, race_finished, terminated_info)
 
-        self.rt.add_reward(reward)
+        self.rt.add_reward(reward_info["total"])
         
 
         info.update(obs_info)
@@ -255,11 +262,16 @@ class TMNF_Single_Agent_Env(gym.Env):
         info["terminated"] = terminated
         info["truncated"] = truncated
         info["action"] = action
+        
         if terminated or truncated:
             info[ReturnTracker.LOG_NAME] = self.rt.get_return()
+            info["episode_length"] = self.n_steps
 
         self.n_steps += 1
         self.total_steps += 1
+
+        self.current_img = raw_obs[IPCFields.IMG]
+
         return processed_obs, reward, terminated, truncated, info
     
     def reset(self, seed = None, options = None)-> Tuple[gym.spaces.Dict,Dict[str,Any]]:
@@ -325,6 +337,8 @@ class TMNF_Single_Agent_Env(gym.Env):
             self.start_position = np.array(raw_obs[IPCFields.SIMSTATE].position)
             self.start_position_set = True
             
+        
+        self.current_img = raw_obs[IPCFields.IMG]
 
         return observation, info
     
@@ -371,11 +385,14 @@ class TMNF_Single_Agent_Env(gym.Env):
         This defines the render method. It supports:            
             - mode="rgb_array": Return a single frame representing the current state
             of the environment. A frame is a np.ndarray with shape (x, y, 3) .
+         NOTE: Rendering is independent of agent observations; we always return the human-view frame.
         """
-        if mode == "rgb_array":
-            # TODO retun the actual frame
-            return np.zeros(shape = self.img_shape)
-        
+        if self.current_img is None:  # This should never happen
+            return np.zeros((*self.img_shape[:2], 3), dtype=np.uint8)
+
+        # Convert BGRA → RGB (drop alpha, flip BGR to RGB)
+        rgb = self.current_img[:, :, :3][:, :, ::-1].copy()  # (H, W, 3)
+        return rgb.astype(np.uint8)
 
     def store_actions(self, filename : str):
         with open(filename, "w") as file:
@@ -394,12 +411,12 @@ class ContinuousTMNF_Single_Agent_Env(TMNF_Single_Agent_Env):
     def __init__(self, ipcommandsender, obs_manager, reward_calculator, termination_manger, 
                  track, reset_mode, n_previous_actions, position_buffer_size, position_moved_threshold, 
                  ignore_stuck_for_n_steps_after_reset, game_speed, countdown_speed, waitforstep_timeout_in_s, 
-                 startposition_accuracy_threshold, gamma, actiondim : int, **kwargs):
+                 startposition_accuracy_threshold, gamma, actiondim : int, render_mode:str|None, **kwargs):
         
         super().__init__(ipcommandsender, obs_manager, reward_calculator, termination_manger, 
                          track, reset_mode, n_previous_actions, position_buffer_size, position_moved_threshold,
                           ignore_stuck_for_n_steps_after_reset, game_speed, countdown_speed, waitforstep_timeout_in_s, 
-                          startposition_accuracy_threshold, gamma, is_discrete=False, **kwargs)
+                          startposition_accuracy_threshold, gamma, is_discrete=False, render_mode= render_mode, **kwargs)
         
         self.action_space = gym.spaces.Box(low=-1, high = 1, shape = (actiondim,), dtype=np.float32)
         self.actionmode = ActionMode.get_mode(continuous=True, dim = actiondim)

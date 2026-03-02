@@ -14,6 +14,16 @@ img_dump_freq: 1e6 # this is only relevant if debug=True
 img_dump_path: null # this is only relevant if debug=True
 headless: False
 
+eval:
+  n_eval_episodes: 5
+  eval_freq: 50000
+  deterministic: True
+  render: True
+  render_mode: "rgb_array"
+  verbose: 1
+  warn: True
+  save_vecnormalize: True
+
 learn_args:
   total_timesteps: 8000000
   log_interval: 1

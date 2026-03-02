@@ -39,14 +39,14 @@ def main(cfg : TrainConfig):
     # tm_env.add_env_test_calback(plot_callback.Plot_ReferenceLine_Callback(reference_line= tm_env.reference_line.reference_line))
 
     # Plotting lateral distance 
-    tm_env.add_env_test_calback(plot_callback.Plot_Lateral_Distance_Callback(reference_line_manager=tm_env.env.reference_line))
+    #tm_env.add_env_test_calback(plot_callback.Plot_Lateral_Distance_Callback(reference_line_manager=tm_env.env.reference_line))
     
     # Plotting Images
     obs_manager = cfg.rl_env.obs_manager 
-    tm_env.add_env_test_calback(plot_callback.Plot_Obs_Images_Callback(img_size= (obs_manager.img_width, obs_manager.img_height), color_space= obs_manager.colorspace, backend ="matplotlib"))
+    #tm_env.add_env_test_calback(plot_callback.Plot_Obs_Images_Callback(img_size= (obs_manager.img_width, obs_manager.img_height), color_space= obs_manager.colorspace, backend ="matplotlib"))
     
     # Plotting Rewards 
-    # tm_env.add_env_test_calback(plot_callback.Plot_Rewards_Callback(env = tm_env))
+    tm_env.add_env_test_calback(plot_callback.Plot_Rewards_Callback(env = tm_env))
 
     # Plotting arbitrary 1D values
     # keys_to_plot = ["last_has_any_lateral_contact_time","gas","display_speed"]

@@ -37,6 +37,7 @@ platforms:
   plugin: .../TMInterface/Plugins/python_link.as  # path to plugin
   map_dir: .../TmForever/Tracks/Challenges        # path to challenges folder
   device: cuda / cpu                              # device; either cpu or cuda
+  wineprefix : /home/..../TMNF                    # Optional argument for linux users, if wine is installed in a speciifc prefix
 ```
 The default location for this file is in `configs/platforms.yaml`, but you can chance this by changing the `platforms_config_path` attribute of `configs/train.yaml` file to the desired path.
 

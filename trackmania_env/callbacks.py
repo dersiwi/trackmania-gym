@@ -37,13 +37,14 @@ class AccumRewardLogCallback(BaseCallback):
     def _on_step(self) -> bool:
         # have to call self.locals["infos"][0], because sb3 has an info-dict for each environment, since currently we only train with one environment, this index is always 0
         #infos : list[dict] = self.locals["infos"][0]
+
         for env_idx in range(len(self.locals["infos"])):
             env_infos = self.locals["infos"][env_idx]
 
             if "rewards" in env_infos and not len(env_infos["rewards"]) == 0:
 
                 for rewterm in env_infos["rewards"]:
-                    if rewterm in self.rewardterms_to_log[env_idx]:
+                    if rewterm + str(env_idx) in self.rewardterms_to_log[env_idx]:
                         self.rewardterms_to_log[env_idx][rewterm + str(env_idx)] += env_infos["rewards"][rewterm]
                     else:
                         self.rewardterms_to_log[env_idx][rewterm + str(env_idx)] = env_infos["rewards"][rewterm]
@@ -59,11 +60,44 @@ class ReturnCallback(BaseCallback):
     """This callback listens to the environment wirting its episode-return into the infos and then logs this return per episode"""
     def __init__(self, verbose=0):
         super().__init__(verbose)
-    
+
     def _on_step(self):
         infos : list[dict] = self.locals["infos"][0]
         if ReturnTracker.LOG_NAME in infos:
             wandb.log({"episode_return" : infos[ReturnTracker.LOG_NAME]})
+        return True # always return true.
+    
+class FurtherStatisticsCallback(BaseCallback):
+    def __init__(self, verbose=0):
+        super().__init__(verbose)
+    
+    def _on_step(self):
+        logdict = {}
+        infos : list[dict] = self.locals["infos"][0]
+        if ("terminated" in infos and infos["terminated"]):
+            # Log steps only if the race was finished.
+            # Using 0 for unfinished races would falsely suggest very fast completion.
+            if infos["race_finished"]:
+                logdict["steps_until_race_finished"] = infos["episode_length"]
+
+        if len(logdict) > 0:
+            wandb.log(logdict)
+
+        return True # always return true.
+
+class BinaryRaceFinished(BaseCallback):
+    def __init__(self, verbose=0):
+        super().__init__(verbose)
+    
+    def _on_step(self):
+        logdict = {}
+        infos : list[dict] = self.locals["infos"][0]
+        if ("terminated" in infos and infos["terminated"]):
+            logdict["binary_race_finished"] = int(infos["race_finished"])
+
+        if len(logdict) > 0:
+            wandb.log(logdict)
+
         return True # always return true.
     
 
