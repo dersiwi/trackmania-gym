@@ -102,6 +102,8 @@ class Sb3ExperimentManager(ExperimentManager):
             self.callbacks.append(AccumRewardLogCallback(n_envs=self.n_envs))
             self.callbacks.append(ReturnCallback())
             self.callbacks.append(FurtherStatisticsCallback())
+            self.callbacks.append(BinaryRaceFinished())
+
 
             if self.cfg.rl_env.env.continuous_actions:
                 self.callbacks.append(ContinuousActionLogCallback(log_minmax=self.cfg.wandb.logminmax_continuous))

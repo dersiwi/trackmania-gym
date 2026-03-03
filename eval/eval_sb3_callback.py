@@ -189,9 +189,9 @@ class TMNFEvalCallback(EventCallback):
                 )
 
             # Best Model Logic
-            if results["mean_total_reward"] > self.best_mean_reward:
+            if results["mean_undis_mod_return"] > self.best_mean_reward:
                 if self.verbose >= 1:
-                    print(f"New best reward: {results['mean_total_reward']:.2f}")
+                    print(f"New best reward: {results['mean_undis_mod_return']:.2f}")
                 if self.best_model_save_path is not None:
                     self.model.save(os.path.join(self.best_model_save_path, "best_model"))
                     if self.save_vecnormalize and self.model.get_vec_normalize_env() is not None:
@@ -201,7 +201,7 @@ class TMNFEvalCallback(EventCallback):
                         save_rms_stats(vec_normalizer, vec_normalize_path)
                         if self.verbose >= 1:
                             print(f"Saving VecNormalize stats to {vec_normalize_path}")
-                self.best_mean_reward = float(results["mean_total_reward"])
+                self.best_mean_reward = float(results["mean_undis_mod_return"])
 
             self.logger.dump(self.num_timesteps)
             if self.callback:
