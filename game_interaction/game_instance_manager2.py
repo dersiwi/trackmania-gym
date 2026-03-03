@@ -116,6 +116,54 @@ class GameInstanceManager:
         """Sets focus on the specified game window ."""
         raise NotImplementedError()
 
+
+    def get_processes_by_name(self, process_name):
+        """Returns a list of PIDs for processes matching the given name or cmdline."""
+        pids = []
+        for proc in psutil.process_iter(['pid', 'name', 'cmdline']):
+            try:
+                # Check name OR check if the process_name exists in the cmdline list
+                name_match = proc.info['name'] == process_name
+                cmd_match = proc.info['cmdline'] and any(process_name in arg for arg in proc.info['cmdline'])
+                
+                if name_match or cmd_match:
+                    pids.append(proc.info['pid'])
+            except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.ZombieProcess):
+                continue
+        return pids
+
+    def get_launch_cmds_from_pids(self,pids: list[int]) -> dict[int, str]:
+        """
+        Takes a list of PIDs and returns a dictionary mapping 
+        each PID to its full command-line string.
+        """
+        pid_to_cmd = {}
+        
+        for pid in pids:
+            try:
+                proc = psutil.Process(pid)
+                # cmdline() returns a list of arguments, e.g., ['wine', 'TmForever.exe']
+                # join them with a space to get the full string
+                full_cmd = " ".join(proc.cmdline())
+                pid_to_cmd[pid] = full_cmd
+            except (psutil.NoSuchProcess, psutil.AccessDenied):
+                pid_to_cmd[pid] = "Access Denied / Process Ended"
+                
+        return pid_to_cmd
+    
+    def extract_ports(self,process_dict):
+        ports_map = {}
+    
+        for pid, cmd in process_dict.items():
+            # Search for 'custom_port' followed by one or more digits (\d+)
+            match = re.search(r"custom_port\s+(\d+)", cmd)
+        
+            if match:
+                # group(1) grabs the part in the parentheses: the digits
+                ports_map[pid] = int(match.group(1))
+            
+        return ports_map
+
     def assign_unique_tmi_port(self, ports: list[int]) -> None:
         """Sets the TMI port to max(ports) + 1, respecting TCP/UDP limits."""
         if not ports:
@@ -216,6 +264,15 @@ class GameInstanceManagerWindows(GameInstanceManager):
             time.sleep(0.5)
 
     def launch_game(self):
+
+        tmf_pids = list(set(
+            self.get_processes_by_name("TMLoader.exe") + 
+            self.get_processes_by_name("TmForever.exe")
+        ))
+        tmf_cmds = self.get_launch_cmds_from_pids(tmf_pids)
+        used_ports = self.extract_ports(tmf_cmds)
+        self.assign_unique_tmi_port(list(used_ports.values()))
+
         self.tm_process_id = None
         self._run_launchstring_and_set_process_id()
 
@@ -383,52 +440,6 @@ class GameInstanceMangerLinux(GameInstanceManager):
             xdo_instance.raise_window(self.tm_window_id)
             self.game_activated= True
     
-    def get_processes_by_name(self, process_name):
-        """Returns a list of PIDs for processes matching the given name or cmdline."""
-        pids = []
-        for proc in psutil.process_iter(['pid', 'name', 'cmdline']):
-            try:
-                # Check name OR check if the process_name exists in the cmdline list
-                name_match = proc.info['name'] == process_name
-                cmd_match = proc.info['cmdline'] and any(process_name in arg for arg in proc.info['cmdline'])
-                
-                if name_match or cmd_match:
-                    pids.append(proc.info['pid'])
-            except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.ZombieProcess):
-                continue
-        return pids
-
-    def get_launch_cmds_from_pids(self,pids: list[int]) -> dict[int, str]:
-        """
-        Takes a list of PIDs and returns a dictionary mapping 
-        each PID to its full command-line string.
-        """
-        pid_to_cmd = {}
-        
-        for pid in pids:
-            try:
-                proc = psutil.Process(pid)
-                # cmdline() returns a list of arguments, e.g., ['wine', 'TmForever.exe']
-                # join them with a space to get the full string
-                full_cmd = " ".join(proc.cmdline())
-                pid_to_cmd[pid] = full_cmd
-            except (psutil.NoSuchProcess, psutil.AccessDenied):
-                pid_to_cmd[pid] = "Access Denied / Process Ended"
-                
-        return pid_to_cmd
-    
-    def extract_ports(self,process_dict):
-        ports_map = {}
-    
-        for pid, cmd in process_dict.items():
-            # Search for 'custom_port' followed by one or more digits (\d+)
-            match = re.search(r"custom_port\s+(\d+)", cmd)
-        
-            if match:
-                # group(1) grabs the part in the parentheses: the digits
-                ports_map[pid] = int(match.group(1))
-            
-        return ports_map
 
 if __name__ == "__main__":
 
