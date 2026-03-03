@@ -13,8 +13,8 @@ env:
   position_buffer_size : 20
   position_moved_threshold : 0.2
 
-  normalize_rewards : True
-  normalize_obs : True
+  normalize_rewards : False
+  normalize_obs : False
 
   game_speed : 70
   countdown_speed : 70

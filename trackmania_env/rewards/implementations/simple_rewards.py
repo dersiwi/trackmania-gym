@@ -38,14 +38,14 @@ class RaceFinishedRewards(RewradCalculator):
         super().__init__(normalize=normalize, **kwargs)
 
         self.terms: list[RewardTerm] = [# TODO : Revert!!!!
-            #RaceFinished(race_finished_reward_weight, scaled_by_steps_taken=scaled_by_steps_taken),
+            RaceFinished(race_finished_reward_weight, scaled_by_steps_taken=scaled_by_steps_taken),
             AccumulatedDistanceReward(
                 accum_distance_weight,
                 enhanced_by_amount_travelled=accum_enhanced_by_amount_travelled,
                 exponential_factor=accum_exp_factor,
             ),
-            #TerminationPunishment(other_termination_punishment),
-            #HasWallConatact(wall_contact_weight),
+            TerminationPunishment(other_termination_punishment),
+            HasWallConatact(wall_contact_weight),
         ]
 
         if use_punishment:
