@@ -21,6 +21,7 @@ else:
     from xdo import Xdo
     from Xlib import X
 from pathlib import Path
+import re
 
 
 from multiprocessing import Lock
@@ -28,7 +29,7 @@ from game_interaction.tminterface2 import TMInterface
 
 class GameInstanceManager:
     
-
+    MAX_UD_PORT = 65535
 
     @staticmethod
     def get_instance(TMLoader_path : str, path_to_plugin : str, TMLoader_profile_name : str = "default", linux : bool = False, 
@@ -114,6 +115,30 @@ class GameInstanceManager:
     def _set_window_focus(self):
         """Sets focus on the specified game window ."""
         raise NotImplementedError()
+
+    def assign_unique_tmi_port(self, ports: list[int]) -> None:
+        """Sets the TMI port to max(ports) + 1, respecting TCP/UDP limits."""
+        if not ports:
+            return
+        
+        old_port = self.tmi_port
+        if self.tmi_port in ports:
+            max_port = max(ports)
+            
+            # TCP/UDP Ports cannot exceed 65535
+            if max_port < self.MAX_UD_PORT:
+                self.tmi_port = max_port + 1
+            else:
+                # If we hit the 65535 ceiling, find the first 
+                # available port starting from a safe range (e.g., 8000)
+                candidate = 8001
+                while candidate in ports:
+                    if candidate == 8000: #throw an error if we could not occupie a port
+                        raise Exception("Could not find any free port to start the instance")
+                    candidate = (candidate+1) % self.MAX_UD_PORT
+                self.tmi_port = candidate
+                
+            print(f"Port collision detected. Mapped port ({old_port}) to: {self.tmi_port}")
 
 class GameInstanceManagerWindows(GameInstanceManager):
 
@@ -218,6 +243,7 @@ class GameInstanceMangerLinux(GameInstanceManager):
 
     launched_xvfb : bool = False
     xvfb_launch_dict : dict[str, str] = None
+    TMF_PROCESS_NAME = "TmForever.exe"
 
     @staticmethod
     def launch_xvfb(display_number : str = ":99", screen_number : str = "0", resolution : str = "1280x720x24") -> None:
@@ -314,8 +340,16 @@ class GameInstanceMangerLinux(GameInstanceManager):
         if self.game_spawning_lock: self.game_spawning_lock.acquire()
 
         pid_before = set(self._get_tm_pids())
+
+        # Get all running TMForever instances and collect their ports
+        # to prevent port conflicts and reuse of stale ports from improperly closed games.
+        tmf_pids = self.get_processes_by_name(self.TMF_PROCESS_NAME)
+        tmf_cmds = self.get_launch_cmds_from_pids(tmf_pids)
+        used_ports = self.extract_ports(tmf_cmds)
+        self.assign_unique_tmi_port(list(used_ports.values()))
+        print(used_ports)
+
         launch_cmds = self.__get_launch_cmds()
-        
         env = os.environ.copy()
         if not self.wineprefix is None:
             env["WINEPREFIX"] = self.wineprefix
@@ -348,6 +382,53 @@ class GameInstanceMangerLinux(GameInstanceManager):
             xdo_instance.activate_window(self.tm_window_id)
             xdo_instance.raise_window(self.tm_window_id)
             self.game_activated= True
+    
+    def get_processes_by_name(self, process_name):
+        """Returns a list of PIDs for processes matching the given name or cmdline."""
+        pids = []
+        for proc in psutil.process_iter(['pid', 'name', 'cmdline']):
+            try:
+                # Check name OR check if the process_name exists in the cmdline list
+                name_match = proc.info['name'] == process_name
+                cmd_match = proc.info['cmdline'] and any(process_name in arg for arg in proc.info['cmdline'])
+                
+                if name_match or cmd_match:
+                    pids.append(proc.info['pid'])
+            except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.ZombieProcess):
+                continue
+        return pids
+
+    def get_launch_cmds_from_pids(self,pids: list[int]) -> dict[int, str]:
+        """
+        Takes a list of PIDs and returns a dictionary mapping 
+        each PID to its full command-line string.
+        """
+        pid_to_cmd = {}
+        
+        for pid in pids:
+            try:
+                proc = psutil.Process(pid)
+                # cmdline() returns a list of arguments, e.g., ['wine', 'TmForever.exe']
+                # join them with a space to get the full string
+                full_cmd = " ".join(proc.cmdline())
+                pid_to_cmd[pid] = full_cmd
+            except (psutil.NoSuchProcess, psutil.AccessDenied):
+                pid_to_cmd[pid] = "Access Denied / Process Ended"
+                
+        return pid_to_cmd
+    
+    def extract_ports(self,process_dict):
+        ports_map = {}
+    
+        for pid, cmd in process_dict.items():
+            # Search for 'custom_port' followed by one or more digits (\d+)
+            match = re.search(r"custom_port\s+(\d+)", cmd)
+        
+            if match:
+                # group(1) grabs the part in the parentheses: the digits
+                ports_map[pid] = int(match.group(1))
+            
+        return ports_map
 
 if __name__ == "__main__":
 
