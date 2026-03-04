@@ -147,7 +147,7 @@ class TMNFEvalCallback(EventCallback):
                 warn=self.warn,
                 image_save_path=video_path,
                 use_vec_normalize=self.save_vecnormalize,
-                norm_class_name=policy_name,
+                norm_class_name=self.policy_name,
             )
             self.logger.record("tmnf_eval/mean_undis_mod_return", float(results["mean_undis_mod_return"]))
             self.logger.record("tmnf_eval/std_undis_mod_return", float(results["std_undis_mod_return"]))
