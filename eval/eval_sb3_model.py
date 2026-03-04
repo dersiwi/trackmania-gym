@@ -96,7 +96,9 @@ def simba_sync_envs_normalization(env: VecEnv, eval_env: VecEnv) -> None:
 
 
 def tmnf_evaluate_policy(
-    cfg: TrainConfig,
+    env: gym.Env,
+    model: type_aliases.PolicyPredictor,
+    train_env: gym.Env | None = None,
     n_eval_episodes: int = 10,
     deterministic: bool = True,
     render: bool = False,
@@ -105,11 +107,9 @@ def tmnf_evaluate_policy(
     max_video_len: int = 800,
     return_episode_rewards: bool = False,
     warn: bool = True,
-    model: type_aliases.PolicyPredictor | None = None,
-    model_path: str | None = None,
     vec_normalize_path: str | None = None,
-    train_env: gym.Env | None = None,
     use_vec_normalize: bool = False,
+    norm_class_name: str | None = None,
     render_mode: str | None = "rgb_array",
 ) -> dict[str, np.ndarray | str | list[int] | float]:
     """
@@ -132,32 +132,11 @@ def tmnf_evaluate_policy(
     :param use_vec_normalize: Whether to apply observation/reward normalization.
     :return: Dictionary containing mean/std rewards, success rate, and metadata.
     """
-    assert not (model_path is None and model is None), (
-        "You have to either provide the path to a model (e.g. a .zip) or parse an already build model"
-    )
-
     is_monitor_wrapped = False
     # Avoid circular import
     from stable_baselines3.common.monitor import Monitor
-    
-    port = cfg.gmi.port
-    # create environment
-    if cfg.vectorized.vectorize:
-        env = SB3Vectorized(
-            n_envs=cfg.vectorized.n_envs,
-            tracks=cfg.vectorized.tracks,
-            cfg=cfg,
-            obs_as_dict=True,
-            step_parallel=True,
-            lock=Lock(),
-            render_mode=render_mode,
-        )
-    else:
-        env = CrashProofEnvironment(cfg, render_mode=render_mode, port=cfg.gmi.port)
-        env.init_environment()
-        port = env.port
-    env = Monitor(env)
 
+    env = Monitor(env)
     # sb3 needs these wrappers TODO: we need to apply here the different vecnormalizers
     if not isinstance(env, VecEnv):
         env = DummyVecEnv([lambda: env])  # type: ignore[list-item, return-value]
@@ -169,7 +148,7 @@ def tmnf_evaluate_policy(
         if isinstance(env.observation_space, gym.spaces.Dict):
             obs_keys = env.observation_space.spaces.keys()
 
-        normalizer_class: VecNormalize = NORMALIZERS.get(cfg.policy.name, VecNormalize)
+        normalizer_class: VecNormalize = NORMALIZERS.get(norm_class_name, VecNormalize)
         if vec_normalize_path:
             env = normalizer_class.load(load_path=vec_normalize_path, venv=env)
         else:
@@ -193,15 +172,6 @@ def tmnf_evaluate_policy(
             "This may result in reporting modified episode lengths and rewards, if other wrappers happen to modify these. "
             "Consider wrapping environment first with ``Monitor`` wrapper.",
             UserWarning,
-        )
-
-    if model is None:
-        model = get_model_from_config(
-            cfg=cfg,
-            tm_env=env,
-            print_params=True,
-            run_id=" ",
-            load_model_path=model_path,
         )
 
     n_envs = env.num_envs
@@ -324,7 +294,6 @@ def tmnf_evaluate_policy(
         "steps_taken_finish": np.mean(steps_taken_finish),
         "media_path": image_save_path,
         "lengths": episode_lengths,
-        "port": port, # we return the port under which the connection has run to avoid using the initial which may have faulted
     }
 
     if return_episode_rewards:
@@ -333,61 +302,4 @@ def tmnf_evaluate_policy(
 
     print_results_box(results)
 
-    env.close()
     return results
-
-
-run_path_hydra = None
-model_path = None
-# when VecNormalize wrappers got used during traing you want the statistics to be also applied during inference
-vec_normalize_path = None
-
-_HYDRA_PARAMS = {
-    "version_base": "1.3",
-    "config_path": run_path_hydra,
-    "config_name": "config.yaml",
-}
-
-
-@hydra.main(**_HYDRA_PARAMS)
-def main(cfg: TrainConfig):
-    cfg = load_and_merge_platform(cfg)
-
-    try:
-        OmegaConf.register_new_resolver("eval", lambda s: eval(s))
-    except ValueError:
-        pass
-    omegaconf.OmegaConf.resolve(cfg)
-
-    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    log_dir = os.path.join("eval_logs", timestamp)
-    image_save_path = os.path.join(log_dir, "best_run.mp4")
-
-    n_eval_episodes = 5
-    deterministic = True
-    render = True
-    render_mode = "rgb_array"
-    callback = None
-    max_video_len = 800
-    return_episode_rewards = False
-    warn = True
-
-    print(f"DEBUG: Starting evaluation | Episodes: {n_eval_episodes} | Deterministic: {deterministic}")
-
-    tmnf_evaluate_policy(
-        cfg=cfg,
-        n_eval_episodes=n_eval_episodes,
-        deterministic=deterministic,
-        render=render,
-        render_mode=render_mode,
-        callback=callback,
-        image_save_path=image_save_path,
-        max_video_len=max_video_len,
-        return_episode_rewards=return_episode_rewards,
-        warn=warn,
-        model_path=model_path,
-    )
-
-
-if __name__ == "__main__":
-    main()

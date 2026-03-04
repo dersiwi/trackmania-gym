@@ -47,7 +47,7 @@ class TMNFEvalCallback(EventCallback):
 
     def __init__(
         self,
-        cfg,
+        eval_env: gym.Env | VecEnv,
         callback_on_new_best: BaseCallback | None = None,
         callback_after_eval: BaseCallback | None = None,
         n_eval_episodes: int = 5,
@@ -60,6 +60,7 @@ class TMNFEvalCallback(EventCallback):
         verbose: int = 1,
         warn: bool = True,
         save_vecnormalize: bool = True,
+        policy_name: str | None = "simbav2",
     ):
         super().__init__(callback_after_eval, verbose=verbose)
 
@@ -68,7 +69,7 @@ class TMNFEvalCallback(EventCallback):
             # Give access to the parent
             self.callback_on_new_best.parent = self
 
-        self.cfg = cfg
+        self.eval_env = eval_env
         self.n_eval_episodes = n_eval_episodes
         self.eval_freq = eval_freq
         self.best_mean_reward = -np.inf
@@ -78,6 +79,7 @@ class TMNFEvalCallback(EventCallback):
         self.render_mode = render_mode
         self.warn = warn
         self.save_vecnormalize = save_vecnormalize
+        self.policy_name = policy_name
 
         self.best_model_save_path = best_model_save_path
         # Logs will be written in ``evaluations.npz``
@@ -134,7 +136,7 @@ class TMNFEvalCallback(EventCallback):
                 video_path = os.path.join(self.best_model_save_path, f"best_eval_{self.num_timesteps}.mp4")
 
             results = tmnf_evaluate_policy(
-                cfg=self.cfg,
+                env=self.eval_env,
                 train_env=self.training_env,
                 model=self.model,
                 n_eval_episodes=self.n_eval_episodes,
@@ -145,6 +147,7 @@ class TMNFEvalCallback(EventCallback):
                 warn=self.warn,
                 image_save_path=video_path,
                 use_vec_normalize=self.save_vecnormalize,
+                norm_class_name=policy_name,
             )
             self.logger.record("tmnf_eval/mean_undis_mod_return", float(results["mean_undis_mod_return"]))
             self.logger.record("tmnf_eval/std_undis_mod_return", float(results["std_undis_mod_return"]))
@@ -153,7 +156,7 @@ class TMNFEvalCallback(EventCallback):
             self.logger.record("tmnf_eval/success_rate", float(results["success_rate"]))
 
             if float(results["success_rate"]) > 0:
-                # NOTE: when doing more episodes per eval one would want to check succes_rate > 0 since we could 
+                # NOTE: when doing more episodes per eval one would want to check succes_rate > 0 since we could
                 # have anything in [0,1] as succesrate then
                 steps_finish = results["steps_taken_finish"]
                 self.logger.record(
@@ -206,8 +209,6 @@ class TMNFEvalCallback(EventCallback):
             self.logger.dump(self.num_timesteps)
             if self.callback:
                 self._on_event()
-
-            self.cfg.port = results["port"]
 
         return continue_training
 

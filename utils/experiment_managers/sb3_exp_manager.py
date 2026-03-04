@@ -1,5 +1,6 @@
 import os
 from typing import List
+from multiprocessing import Lock
 from stable_baselines3.common.callbacks import EventCallback, CallbackList, EvalCallback, CheckpointCallback
 
 from stable_baselines3.common.base_class import BaseAlgorithm
@@ -8,6 +9,9 @@ from utils.experiment_managers.core import ExperimentManager
 from configs.config import TrainConfig
 from trackmania_env.callbacks import *
 from eval.eval_sb3_callback import TMNFEvalCallback, TMNFCheckpointCallback
+from trackmania_env.envs.sec_env import CrashProofEnvironment
+from trackmania_env.envs.vectorized import SB3Vectorized
+
 
 from omegaconf import OmegaConf
 
@@ -46,11 +50,10 @@ class Sb3ExperimentManager(ExperimentManager):
         self.n_envs = n_envs
 
         self.cfg = cfg
-        self.cfg.gmi.port *= 2 # to prevent port clashes
+        self.cfg.gmi.port *= 2  # to prevent port clashes
 
         self.append_callbacks(env)
         self.add_artifacts()
-
 
     def get_callbacks(self) -> CallbackList:
         """
@@ -61,18 +64,32 @@ class Sb3ExperimentManager(ExperimentManager):
     def append_callbacks(self, env):
         """Append Evaluation-callback and Checkpoint-Callback"""
         # Eval Callback saves best model
+        if self.cfg.vectorized.vectorize:
+            env = SB3Vectorized(
+                n_envs=self.cfg.vectorized.n_envs,
+                tracks=self.cfg.vectorized.tracks,
+                cfg=self.cfg,
+                obs_as_dict=True,
+                step_parallel=True,
+                lock=Lock(),
+                render_mode=self.cfg.eval.render_mode,
+            )
+        else:
+            env = CrashProofEnvironment(self.cfg, render_mode=self.cfg.eval.render_mode, port=self.cfg.gmi.port)
+            env.init_environment()
+
         eval_callback = TMNFEvalCallback(
-            cfg=self.cfg,
+            eval_env=env,
             n_eval_episodes=self.cfg.eval.n_eval_episodes,
             eval_freq=self.cfg.eval.eval_freq,
             best_model_save_path=self.best_model_path,
             log_path=os.path.join(self.hydra_run_dir, "eval_logs"),
             deterministic=self.cfg.eval.deterministic,
-            render= self.cfg.eval.render,
-            render_mode= self.cfg.eval.render_mode,
-            verbose= self.cfg.eval.verbose,
+            render=self.cfg.eval.render,
+            render_mode=self.cfg.eval.render_mode,
+            verbose=self.cfg.eval.verbose,
             warn=self.cfg.eval.warn,
-            save_vecnormalize= self.cfg.eval.save_vecnormalize,
+            save_vecnormalize=self.cfg.eval.save_vecnormalize,
         )
         # eval_callback = EvalCallback(
         #     env,
@@ -90,7 +107,7 @@ class Sb3ExperimentManager(ExperimentManager):
             save_path=self.checkpoint_path,
             name_prefix="checkpoint",
             save_replay_buffer=False,
-            save_vecnormalize= self.cfg.eval.save_vecnormalize
+            save_vecnormalize=self.cfg.eval.save_vecnormalize,
         )
         self.callbacks.append(checkpoint_callback)
 
@@ -99,7 +116,6 @@ class Sb3ExperimentManager(ExperimentManager):
             self.callbacks.append(ReturnCallback())
             self.callbacks.append(FurtherStatisticsCallback())
             self.callbacks.append(BinaryRaceFinished())
-
 
             if self.cfg.rl_env.env.continuous_actions:
                 self.callbacks.append(ContinuousActionLogCallback(log_minmax=self.cfg.wandb.logminmax_continuous))
