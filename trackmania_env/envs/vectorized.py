@@ -1,3 +1,5 @@
+from typing import Optional
+
 import torch
 import numpy as np
 import gymnasium as gym
@@ -13,6 +15,9 @@ from trackmania_env.utils.actionmap import ACTION_MAP
 
 from configs.config import TrainConfig
 
+import math 
+import cv2
+
 class TrackAssignmentManager:
     # TODO - for the future 
     def __init__(self):
@@ -21,13 +26,17 @@ class TrackAssignmentManager:
 
 class VectorizedTMEnvironment(gym.Env):
 
+
+    metadata = {"render_modes": ["rgb_array","human"], "render_fps": 30}
+
     def __init__(self, n_envs : int, tracks : list[str], cfg : TrainConfig, obs_as_dict : bool = False,
                 step_parallel : bool = False,
                 alternation_between_tracks : bool = False, 
                 n_steps_per_track : int = 2048,
                 assign_rangom_track_at_init : bool = False,
                 assign_random_track_at_alternation : bool = False,
-                lock = None):
+                lock = None,
+                render_mode:str|None = None):
         """
         This instanciates a Vectorized TMNF-Environment. 
 
@@ -62,10 +71,14 @@ class VectorizedTMEnvironment(gym.Env):
         self.n_steps_per_track = n_steps_per_track
         self.assign_random_track_at_alternation = assign_random_track_at_alternation
 
+        assert render_mode is None or render_mode in self.metadata["render_modes"]
+        self.render_mode = render_mode
+
         port = self.cfg.gmi.port
         self.envs : list[CrashProofEnvironment] = [CrashProofEnvironment(train_cfg=self.cfg, port = port+i, return_obs_as_dict = obs_as_dict, 
                                                                          lock = lock, skip = self.n_envs, suffix=f":idx={i}", 
-                                                                         track = self.tracks[self.curr_track_id[i]]) for i in range(self.n_envs)]
+                                                                         track = self.tracks[self.curr_track_id[i]],
+                                                                         render_mode= self.render_mode) for i in range(self.n_envs)]
 
         # using a threadpool here is much much faster than initializing sequentially, as innit_environment also starts the game
         with ThreadPoolExecutor(max_workers=self.n_envs) as executor:
@@ -196,19 +209,63 @@ class VectorizedTMEnvironment(gym.Env):
             observations.append(observation)
             infos.append(info)
         return self._stack_observations(observations), infos
+    
+
+    def render(self, mode="rgb_array") -> Optional[np.ndarray]:
+        frames = [env.render() for env in self.envs]
+
+        if len(frames) == 0:
+            return None
+
+        h, w, c = frames[0].shape
+        n = self.n_envs
+
+        # Determine grid size (square grid)
+        grid_size = math.ceil(math.sqrt(n))
+        
+        # Downscale factor so final image keeps original size
+        small_h = h // grid_size
+        small_w = w // grid_size
+
+        resized = [
+            cv2.resize(f, (small_w, small_h), interpolation=cv2.INTER_AREA)
+            for f in frames
+        ]
+
+        # Fill missing cells with black images if n is not perfect square
+        while len(resized) < grid_size * grid_size:
+            resized.append(np.zeros((small_h, small_w, c), dtype=np.uint8))
+
+        # Tile images
+        rows = []
+        for i in range(grid_size):
+            row = np.hstack(resized[i * grid_size:(i + 1) * grid_size])
+            rows.append(row)
+
+        tiled = np.vstack(rows)
+
+        return tiled.astype(np.uint8)
+
+
+
 
 
 
 from stable_baselines3.common.vec_env import VecEnv
 
 class SB3Vectorized(VecEnv):
+    metadata = {"render_modes": ["rgb_array","human"], "render_fps": 30}
 
     def __init__(self, n_envs : int, tracks : list[str], cfg : TrainConfig, obs_as_dict : bool = False, step_parallel : bool = False,
                 alternation_between_tracks : bool = False, 
                 n_steps_per_track : int = 2048,
                 assign_rangom_track_at_init : bool = False,
                 assign_random_track_at_alternation : bool = False,
-                 lock = None):
+                lock = None,
+                render_mode:str|None = None):
+
+        assert render_mode is None or render_mode in self.metadata["render_modes"]
+        self.render_mode = render_mode
 
         self.vecenv = VectorizedTMEnvironment(n_envs, tracks, cfg, obs_as_dict, step_parallel, alternation_between_tracks, n_steps_per_track, 
                                               assign_rangom_track_at_init, assign_random_track_at_alternation,lock= lock)
@@ -302,3 +359,6 @@ class SB3Vectorized(VecEnv):
                 wrapped = True
             results.append(wrapped)
         return results
+
+    def render(self, mode: Optional[str] = None) -> Optional[np.ndarray]:
+        return self.vecenv.render(mode=mode)

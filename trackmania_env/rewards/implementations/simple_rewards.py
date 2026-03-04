@@ -37,10 +37,8 @@ class RaceFinishedRewards(RewradCalculator):
         """
         super().__init__(normalize=normalize, **kwargs)
 
-        self.terms: list[RewardTerm] = [
-            RaceFinished(
-                race_finished_reward_weight, scaled_by_steps_taken=scaled_by_steps_taken
-            ),
+        self.terms: list[RewardTerm] = [# TODO : Revert!!!!
+            RaceFinished(race_finished_reward_weight, scaled_by_steps_taken=scaled_by_steps_taken),
             AccumulatedDistanceReward(
                 accum_distance_weight,
                 enhanced_by_amount_travelled=accum_enhanced_by_amount_travelled,

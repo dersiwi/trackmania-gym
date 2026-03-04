@@ -1,4 +1,4 @@
-
+import os
 
 ascii_art = r""".......................::.......................................................................................................
 ...........-##*%+%@@=@@*#@@:....................................................................................................
@@ -108,12 +108,58 @@ Welcome to
 from configs.config import TrainConfig
 from utils.hydra_wandb_utils import secure_attribute_retrieval
 
-def introscreen(cfg : TrainConfig, asciiart = welcome, askstart : bool = False):
+
+
+def print_managemerterms(obs, rew, term):
+
+    col1_width = 15
+    col2_width = 40
+    col3_width = 10
+
+    def print_header(title):
+        total_width = col1_width + col2_width + col3_width + 6
+        print("\n" + "=" * total_width)
+        print(title.center(total_width))
+        print("=" * total_width)
+        print(
+            f"{'Manager'.ljust(col1_width)} | "
+            f"{'Term'.ljust(col2_width)} | "
+            f"{'Weight'.ljust(col3_width)}"
+        )
+        print("-" * total_width)
+
+    def print_rows(manager_name, data):
+        for term, weight in data.items():
+            if term == "_target_": continue
+            print(
+                f"{manager_name.ljust(col1_width)} | "
+                f"{term.ljust(col2_width)} | "
+                f"{str(weight).ljust(col3_width)}"
+            )
+
+         
+
+    # Observation block
+    print_header(f"OBSERVATION MANAGER")
+    print_rows("Observation", obs)
+
+    # Reward block
+    print_header(f"REWARD MANAGER")
+    print_rows("Reward", rew)
+
+    # Termination block
+    print_header(f"TERMINATION MANAGER")
+    print_rows("Termination", term)
+
+
+
+def introscreen(cfg : TrainConfig, asciiart = welcome, askstart : bool = False, run_checks : bool = True):
     """Displays an ascii art and some core configuration-values
     Args:
         cfg (TrainConfig)   : Confgiguration from which values are displayed
         asciiart (str)      : AsciiArt (welcomestring) that is printed
         askstart (bool)     : Asks the user if he wants to start the training. User has to type in [y/Y] to configrm.
+        run_checks (bool)   : If true, runs some sanity checks on the given config, like checking existance of paths.
     """
     print(asciiart)
     print(f"""\n============================= General =============================
@@ -128,6 +174,24 @@ def introscreen(cfg : TrainConfig, asciiart = welcome, askstart : bool = False):
             - continuous-actions    : {cfg.rl_env.env.continuous_actions}, Dimension : {cfg.rl_env.env.actiondim}
           If values are None, the loaded config does not have this attribute.
           """)
-    if askstart and input("[y/Y] to start training.").strip().lower() not in ["y", "yes"]:
-        print("nvm then")
-        exit()
+    
+    if askstart:
+
+        
+        answer = input("[y/Y] to start training. [m/M] to print detailed manager infos.").strip().lower()
+        while not answer in ["y", "yes"]:
+            if answer not in ["y", "yes", "m"]:
+                print("nvm then")
+                exit()
+            if answer in ["m"]:
+                print_managemerterms(cfg.rl_env.obs_manager, cfg.rl_env.reward_manager, cfg.rl_env.termination_manager)
+            answer = input("[y/Y] to start training. [m/M] to print detailed manager infos.").strip().lower()
+
+    if run_checks:
+        print("Running checks...")
+        # check if all tracks exist in the right directory
+        if cfg.vectorized.vectorize:
+            for track in cfg.vectorized.tracks:
+                assert os.path.exists(os.path.join(cfg.platforms.map_dir, track)), f"Track {track} does not exist in expected challenge-folder '{cfg.platforms.map_dir}'. Maybe you forgot to copy the .Gbx file here?"
+        else:
+            assert os.path.exists(os.path.join(cfg.platforms.map_dir, cfg.gmi.track)), f"Track {cfg.gmi.track} does not exist in expected challenge-folder '{cfg.platforms.map_dir}'. Maybe you forgot to copy the .Gbx file here?"

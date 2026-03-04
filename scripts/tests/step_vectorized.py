@@ -19,6 +19,8 @@ from utils.hydra_wandb_utils import load_and_merge_platform, secure_attribute_re
 from trackmania_env.utils.actionmap import ActionMode, ACTION_MAP
 from trackmania_env.utils.spacetransform import SpaceTransformer
 
+from multiprocessing import Lock
+
 _HYDRA_PARAMS = {
     "version_base": "1.3",
     "config_path": "../../configs",
@@ -35,10 +37,11 @@ def main(cfg : TrainConfig, run_id : Optional[str] = None):
     """
     cfg = load_and_merge_platform(cfg)
 
-    N_ENVS = 2
+    N_ENVS = 3
     tracks = ["very_long_checkpoints.Challenge.Gbx", "curvy.Challenge.Gbx", "Level1.Challenge.Gbx"]
     obs_as_dict = False
-    tm_env = VectorizedTMEnvironment(n_envs = N_ENVS, tracks=tracks[0:N_ENVS], cfg=cfg, obs_as_dict=obs_as_dict, alternation_between_tracks=True, n_steps_per_track=1024, assign_random_track_at_alternation=True)
+    lock = Lock()
+    tm_env = VectorizedTMEnvironment(n_envs = N_ENVS, tracks=tracks[0:N_ENVS], cfg=cfg, obs_as_dict=obs_as_dict, alternation_between_tracks=True, n_steps_per_track=1024, assign_random_track_at_alternation=True,lock=lock)
     obstransform = SpaceTransformer.get_instance() # == tm_env.transformer
     print(tm_env.observation_space)
     print(tm_env.action_space)

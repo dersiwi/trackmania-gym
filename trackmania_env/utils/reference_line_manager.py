@@ -208,6 +208,11 @@ class ReferenceLineManager:
         if refline_idx == 0:
             return 0
         return self.relative_accumulated_distances[refline_idx] - self.relative_accumulated_distances[refline_idx - 1]
+    
+    def get_discrete_distances(self, refline_idx : int, n_passed : int) -> float:
+        if refline_idx == 0:
+            return 0
+        return np.cumsum(self.relative_accumulated_distances[refline_idx] - self.relative_accumulated_distances[np.max(refline_idx - n_passed, 0) : refline_idx])
 
     def reset(self):
         """Resets the current point-index to 0."""

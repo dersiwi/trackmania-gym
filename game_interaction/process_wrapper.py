@@ -28,7 +28,8 @@ class TMIProcessWrapper:
                  use_rewind:bool = True,
                  camera_id:int = 2,
                  disable_waitforstep_after_n_consecutive_timeouts:int= 5,
-                 debug:bool = False):
+                 debug:bool = False,
+                 set_window_focus : bool = True):
         """
         Parameters
         ---------
@@ -40,6 +41,7 @@ class TMIProcessWrapper:
         - img_width         : Image width of images queried from game
         - img_height        : Image height of images queried from game
         - config : Environment config; contains more configuration
+        - set_window_focus :   If true, sets window to focus via gameinstancemanager at connect event.
         """
         self.launch_game : bool = launch_game
         self.gim = gim
@@ -72,6 +74,7 @@ class TMIProcessWrapper:
         self.map = track
         self.logdir = "logs"
 
+        self.set_window_focus = set_window_focus
 
         self.waitforstep : bool = False
 
@@ -507,7 +510,8 @@ class TMIProcessWrapper:
             elif msgtype == int(MessageType.SC_REQUESTED_FRAME_SYNC):
                 frame_and_state = self.__receive_frame()
                 self.iface._respond_to_call(msgtype)
-                self.gim._set_window_focus()
+                if self.set_window_focus:
+                    self.gim._set_window_focus()
 
             elif msgtype == int(MessageType.C_SHUTDOWN):
 
