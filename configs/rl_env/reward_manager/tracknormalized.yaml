@@ -1,0 +1,7 @@
+_target_: trackmania_env.rewards.implementations.basic_rewards.TrackNormalized
+
+accum_distance_weight: 0.1
+total_reward : 10
+accum_enhanced_by_amount_travelled: false
+accum_exp_factor: 0
+race_finished_weight : 20
