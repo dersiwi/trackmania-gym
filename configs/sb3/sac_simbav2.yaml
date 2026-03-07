@@ -1,0 +1,32 @@
+constructor:
+  _partial_: true
+  _target_: tmn_sb3.simbav2.sb3_simbav2_policies.SACSimbaV2
+  verbose: 1
+
+algorithm_params:
+  learning_rate: 0.0003              # Learning rate or scheduler for the policy and Q-networks
+  buffer_size: 5_000              # Maximum size of the replay buffer
+  learning_starts: 5_000               # Number of steps before training starts (buffer warm-up)
+  batch_size: 256                    # Size of minibatch sampled from replay buffer
+  tau: 0.005                         # Soft update coefficient for the target network (Polyak averaging)
+  gamma: 0.99                        # Discount factor
+  train_freq: 1                      # How often to train (every `n` environment steps)
+  gradient_steps: 2                  # Number of gradient steps per update (set higher for off-policy speed)
+  action_noise: null                 # Optional noise added to actions (not used by default)
+  replay_buffer_class: null          # Custom replay buffer class (use default if null)
+  replay_buffer_kwargs: null         # Arguments for custom replay buffer (ignored if null)
+  optimize_memory_usage: false       # If true, reduces memory use in replay buffer (but disables HER)
+  ent_coef: "auto_0.01"                   # Entropy coefficient or "auto" to learn it automatically (for exploration)
+  target_update_interval: 1          # Frequency of target network update (in training steps)
+  target_entropy: "auto"             # Target entropy for entropy tuning ("auto" or float)
+  use_sde: false                     # Use State-Dependent Exploration (SDE) instead of Gaussian noise
+  sde_sample_freq: -1                # Frequency of resampling SDE noise (-1 = only at episode start)
+  use_sde_at_warmup: false           # Whether to apply SDE before learning starts
+  stats_window_size: 100             # Number of episodes to average stats over
+  seed: null                         # Random seed for reproducibility
+  #device: "auto"                     # Device to use: "cpu", "cuda", or "auto"
+  _init_setup_model: true            # Whether to initialize the model immediately (usually true)
+  n_steps: 1
+  num_bins: 101
+  min_v: -5.0
+  max_v: 5.0

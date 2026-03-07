@@ -1,3 +1,4 @@
+
 import sys, os
 # TODO : <- i don't want this here and it shouldnt have to be here!!!
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))) 
@@ -5,19 +6,31 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 # Hydra related imports
 import hydra
 import traceback
-import os
+
 from hydra.core.hydra_config import HydraConfig
 from typing import Optional
 
 
 from configs.config import TrainConfig
 
+from trackmania_env.envs.vectorized import SB3Vectorized
+from trackmania_env.envs.sec_env import CrashProofEnvironment
+
 from utils.hydra_wandb_utils import load_and_merge_platform, secure_attribute_retrieval
 from utils.introscreen import introscreen
 from utils.experiment_managers.sb3_exp_manager import Sb3ExperimentManager
 
 from tmn_sb3.utils.from_cfg import get_model_from_config
-from trackmania_env.envs.make_env import make_env
+from multiprocessing import Lock
+
+import omegaconf
+import math #this will be used by the omegaconf resolver later
+
+from tmn_sb3.simbav2.normalizers import SimbaVecNormalize
+from stable_baselines3.common.vec_env import DummyVecEnv
+from stable_baselines3.common.monitor import Monitor
+
+from gymnasium.spaces import Dict
 
 _HYDRA_PARAMS = {
     "version_base": "1.3",
@@ -34,10 +47,38 @@ def main(cfg : TrainConfig, run_id : Optional[str] = None):
         run_id (str)        : Run id if weights and biases run is to be resumed
     """
     cfg = load_and_merge_platform(cfg)
+
+    def eval_resolver(s: str):
+        return eval(s)
+
+    omegaconf.OmegaConf.register_new_resolver("eval", eval_resolver)
+    omegaconf.OmegaConf.resolve(cfg)
+
+    assert not cfg.rl_env.env.normalize_obs, "Turn of the obs normalization of the env simbav2 uses its own"
+    assert not cfg.rl_env.env.normalize_rewards, "Turn of the reward normalization of the env simbav2 uses its own"
+    assert cfg.rl_env.env.continuous_actions, "The current implementation of sac simbav2 works only with continuous actions"
+
+
     introscreen(cfg, askstart=secure_attribute_retrieval(lambda : cfg.ask_start, default=True))
     
-    tm_env = make_env(cfg)
-    tm_env.init_environment()
+    if cfg.vectorized.vectorize:
+        tm_env = SB3Vectorized(n_envs = cfg.vectorized.n_envs, 
+                               tracks=cfg.vectorized.tracks, 
+                               cfg=cfg, obs_as_dict=True, step_parallel=True, 
+                               lock = Lock())
+    else:
+        def make_env():
+            env = CrashProofEnvironment(cfg)
+            env.init_environment()
+            env = Monitor(env)
+            return env
+        
+        tm_env = DummyVecEnv([make_env])
+        # the SimbaVecNormalize chnages every dtype to float32 -> this leads to the image extractor not checking that the image obs space is an image
+        obs_keys = None
+        if isinstance(tm_env.observation_space,Dict):
+            obs_keys = tm_env.observation_space.spaces.keys()
+        tm_env = SimbaVecNormalize(tm_env,g_max=cfg.sb3.algorithm_params.max_v,norm_obs_keys=obs_keys)
     
     try:
         exp_manager = Sb3ExperimentManager(
@@ -63,10 +104,10 @@ def main(cfg : TrainConfig, run_id : Optional[str] = None):
         # Finalize training and close game all processes.
         if cfg.vectorized.vectorize:
             tm_env.close()
-            if cfg.vectorized.normalize_per_batch:
-                tm_env.save(os.path.join(HydraConfig.get().runtime.output_dir, "vec_normalize_stats.pkl"))
         else:
-            tm_env.finalize_process(reinit=False)
+            for env in tm_env.venv.envs:
+                env.env.finalize_process(reinit=False)
+        
 
 if __name__ == "__main__": 
     main()

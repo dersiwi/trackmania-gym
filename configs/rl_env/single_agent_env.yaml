@@ -13,8 +13,8 @@ env:
   position_buffer_size : 20
   position_moved_threshold : 0.2
 
-  normalize_rewards : True
-  normalize_obs : True
+  normalize_rewards : False
+  normalize_obs : False
 
   game_speed : 70
   countdown_speed : 70
@@ -30,8 +30,17 @@ env:
   waitforstep_timeout_in_s : 1.2 # this HAS to be smaller than the timeout of TMInterface
   use_rewind : True
 
-  continuous_actions : False
+  continuous_actions : True
   actiondim : 3    #only relevant when continuous_actions == True
+
+  use_filmnet: False
+  filmnet_kwargs:
+    feature_dim_per_block: [128,64,32,16]
+    film_net_out_dim_before_linear: 333
+    final_linear_hidden_dim: 222
+    film_gen_hidden_dim: 434
+    simba_mode: False #if set to True then every Linear and Conv2d will be replaced by simbav2 equivalents which always have weight norm 1
+    
 
 
 wrappers:
