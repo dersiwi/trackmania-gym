@@ -5,7 +5,7 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 # Hydra related imports
 import hydra
 import traceback
-
+import os
 from hydra.core.hydra_config import HydraConfig
 from typing import Optional
 
@@ -64,7 +64,7 @@ def main(cfg : TrainConfig, run_id : Optional[str] = None):
         if cfg.vectorized.vectorize:
             tm_env.close()
             if cfg.vectorized.normalize_per_batch:
-                tm_env.save("vec_normalize_stats.pkl")
+                tm_env.save(os.path.join(HydraConfig.get().runtime.output_dir, "vec_normalize_stats.pkl"))
         else:
             tm_env.finalize_process(reinit=False)
 
