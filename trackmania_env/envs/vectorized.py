@@ -248,6 +248,9 @@ class SB3Vectorized(VecEnv):
             method = getattr(env, method_name)
             results.append(method(*method_args, **method_kwargs))
         return results
+    
+    def init_environment(self):
+        pass
 
     def get_attr(self, attr_name, indices=None):
         """

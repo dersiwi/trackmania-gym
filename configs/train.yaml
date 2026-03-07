@@ -24,8 +24,10 @@ learn_args:
 vectorized:
   vectorize : True
   obs_as_dict : True
-  step_parallel : True 
-  n_envs : 5
+  step_parallel : True
+  n_envs : 5 
+  normalize_per_batch : False
+  training : False
   tracks : ["another1.Challenge.Gbx", "another2.Challenge.Gbx", "another3.Challenge.Gbx", "simple1_validated.Challenge.Gbx", "curvy.Challenge.Gbx"]
 
 gmi:

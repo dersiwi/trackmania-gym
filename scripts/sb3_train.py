@@ -12,16 +12,12 @@ from typing import Optional
 
 from configs.config import TrainConfig
 
-from trackmania_env.envs.vectorized import SB3Vectorized
-from trackmania_env.envs.sec_env import CrashProofEnvironment
-
 from utils.hydra_wandb_utils import load_and_merge_platform, secure_attribute_retrieval
 from utils.introscreen import introscreen
 from utils.experiment_managers.sb3_exp_manager import Sb3ExperimentManager
 
 from tmn_sb3.utils.from_cfg import get_model_from_config
-from multiprocessing import Lock
-
+from trackmania_env.envs.make_env import make_env
 
 _HYDRA_PARAMS = {
     "version_base": "1.3",
@@ -40,14 +36,8 @@ def main(cfg : TrainConfig, run_id : Optional[str] = None):
     cfg = load_and_merge_platform(cfg)
     introscreen(cfg, askstart=secure_attribute_retrieval(lambda : cfg.ask_start, default=True))
     
-    if cfg.vectorized.vectorize:
-        tm_env = SB3Vectorized(n_envs = cfg.vectorized.n_envs, 
-                               tracks=cfg.vectorized.tracks, 
-                               cfg=cfg, obs_as_dict=True, step_parallel=True, 
-                               lock = Lock())
-    else:
-        tm_env = CrashProofEnvironment(cfg)
-        tm_env.init_environment()
+    tm_env = make_env(cfg)
+    tm_env.init_environment()
     
     try:
         exp_manager = Sb3ExperimentManager(
@@ -73,9 +63,10 @@ def main(cfg : TrainConfig, run_id : Optional[str] = None):
         # Finalize training and close game all processes.
         if cfg.vectorized.vectorize:
             tm_env.close()
+            if cfg.vectorized.normalize_per_batch:
+                tm_env.save("vec_normalize_stats.pkl")
         else:
             tm_env.finalize_process(reinit=False)
-        
 
 if __name__ == "__main__": 
     main()

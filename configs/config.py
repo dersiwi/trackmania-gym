@@ -200,7 +200,9 @@ class Vectorized:
     n_envs : int
     tracks : list[str]
     obs_as_dict : bool
-    step_parallel : bool 
+    step_parallel : bool
+    normalize_per_batch : bool
+    training : bool
 
 @dataclass
 class PolicyCfg:
