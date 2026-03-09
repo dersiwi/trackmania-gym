@@ -160,6 +160,10 @@ class TMNF_Single_Agent_Env(gym.Env):
 
         assert render_mode is None or render_mode in self.metadata["render_modes"]
         self.render_mode = render_mode
+        
+        self.set_start_state = False
+        self.start_position = self.reference_line.reference_line[0]
+        self.start_state = None
 
     def set_respawn_manager(self, respawn_manager : OrientationlessRespawnManager):
         self.orientationless_respawn_manager = respawn_manager
@@ -358,7 +362,11 @@ class TMNF_Single_Agent_Env(gym.Env):
         if self.reset_mode == "respawn"or self.reset_mode == "random_no_orientation":
             self.__respawn_car()
         elif self.reset_mode == "position" :
-            self.__reset_car_position()
+            if not self.default_set:
+                self.__reset_car_position() #if for what ever reason the defautl ssd (where the tracks starts) is not set just use the first ref line point
+            else:
+                self.cmd_sender.send_command(IPCCommands.rewind_state(self.default_ssD))
+
         else:
             raise ValueError(f"Mode '{self.reset_mode}' for car-resetting unknown.")
         
