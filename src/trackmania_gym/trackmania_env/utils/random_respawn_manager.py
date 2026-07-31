@@ -1,6 +1,6 @@
 from matplotlib import pyplot as plt
 import numpy as np
-from scipy.spatial.transform import Rotation as rot
+
 from tminterface.structs import CheckpointData, SimStateData, CheckpointTime
 from scipy.spatial.transform import Rotation 
 import random

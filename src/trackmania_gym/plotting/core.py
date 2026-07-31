@@ -1,16 +1,16 @@
 from __future__ import annotations
 import multiprocessing as mp
 from queue import Empty
-from plotting.test_environment_callbacks.core import TestEnvironmentCallback
 from typing import Type, Dict
-from plotting.backends import matplot, pyqtgraph, tmnf_cv2
-from plotting.plotter import EnvPlotter
+
+from trackmania_gym.plotting.backends import matplot, tmnf_cv2
+from trackmania_gym.plotting.plotter import EnvPlotter
+from trackmania_gym.plotting.test_environment_callbacks.core import TestEnvironmentCallback
 
 
 factories: Dict[str,dict[str,Type[EnvPlotter]]] = {
         "image" : {
             "matplotlib" : matplot.Plot_Obs_Images,
-            "pyqtgraph" : pyqtgraph.Plot_Obs_Images,
             "cv2": tmnf_cv2.Plot_Obs_Images,
             },
         "lines" : {

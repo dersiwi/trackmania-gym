@@ -3,10 +3,10 @@ import numpy as np
 from gymnasium.spaces import Box
 from tminterface.structs import SimStateData, RealTimeState, SimulationWheel, SceneVehicleCar, Engine
 
-from trackmania_env.observations.observation_term import ObservationTerm, VectorlikeTerm
-from trackmania_env.utils.constants import MAX_SPEED, ObsNormalizationFactors
-from trackmania_env.utils.contact_materials import physics_behavior_fromint, NUM_SURFACE_CATEGORIES
-from game_interaction.ipc_fields import IPCFields
+from trackmania_gym.trackmania_env.observations.observation_term import ObservationTerm, VectorlikeTerm
+from trackmania_gym.trackmania_env.utils.constants import MAX_SPEED, ObsNormalizationFactors
+from trackmania_gym.trackmania_env.utils.contact_materials import physics_behavior_fromint, NUM_SURFACE_CATEGORIES
+from trackmania_gym.game_interaction.ipc_fields import IPCFields
 
 
 class SpeedTerm(VectorlikeTerm):

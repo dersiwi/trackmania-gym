@@ -1,5 +1,5 @@
-from trackmania_env.terminations.termination_manager import TerminationManager
-from trackmania_env.terminations.implemented_managers import NoProgressTerminationManager
+from trackmania_gym.trackmania_env.terminations.termination_manager import TerminationManager
+from trackmania_gym.trackmania_env.terminations.implemented_managers import NoProgressTerminationManager
 from configs.config import TerminationManagerCfg
 
 def get_termination_manager(termination_cfg : TerminationManagerCfg) -> TerminationManager:

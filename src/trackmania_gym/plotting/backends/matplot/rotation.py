@@ -1,6 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
-from plotting.plotter import EnvPlotter
+from trackmania_gym.plotting.plotter import EnvPlotter
 
 class Rotation_Plotter(EnvPlotter):
     def __init__(self):

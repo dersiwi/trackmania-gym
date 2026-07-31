@@ -1,19 +1,9 @@
-import sys, os
+from trackmania_gym.game_interaction.process_management import ProcessManagement
+from trackmania_gym.trackmania_env.envs.enivonrments import get_environment
+from trackmania_gym.trackmania_env.envs.testenv_single_agent import TestEnvironment
+from trackmania_gym.utils.hydra_wandb_utils import load_and_merge_platform
 
-sys.path.append(os.path.abspath(os.path.join(
-    os.path.join(os.path.dirname(__file__), '..'), '..'))) # TODO : <- i don't want this here and it shouldnt have to be here!!!
-
-from game_interaction.ipc_fields import IPCCommands
-
-from game_interaction.process_management import ProcessManagement
-from trackmania_env.envs.enivonrments import get_environment
-
-from trackmania_env.envs.testenv_single_agent import TestEnvironment
-
-import plotting.test_environment_callbacks.plotting as plot_callback
-import plotting.test_environment_callbacks.printing as print_callback
-
-from utils.hydra_wandb_utils import load_and_merge_platform
+import trackmania_gym.plotting.test_environment_callbacks.plotting as plot_callback
 
 import hydra
 

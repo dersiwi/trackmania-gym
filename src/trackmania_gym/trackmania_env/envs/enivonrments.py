@@ -2,15 +2,15 @@ from multiprocessing import Queue
 import gymnasium as gym
 
 
-from trackmania_env.envs.single_agent_env2 import TMNF_Single_Agent_Env, ContinuousTMNF_Single_Agent_Env
-from trackmania_env.envs.testenv_single_agent import TestEnvironment
+from trackmania_gym.trackmania_env.envs.single_agent_env2 import TMNF_Single_Agent_Env, ContinuousTMNF_Single_Agent_Env
+from trackmania_gym.trackmania_env.envs.testenv_single_agent import TestEnvironment
 
-from trackmania_env.observations.observations import get_observation_manager_from_cfg
-from trackmania_env.rewards.getrewards import get_reward_calculator_from_cfg
-from trackmania_env.terminations.get_termination_manager import get_termination_manager
+from trackmania_gym.trackmania_env.observations.observations import get_observation_manager_from_cfg
+from trackmania_gym.trackmania_env.rewards.getrewards import get_reward_calculator_from_cfg
+from trackmania_gym.trackmania_env.terminations.get_termination_manager import get_termination_manager
 
-from trackmania_env.utils.orientationless_random_respawn_manager import OrientationlessRespawnManager
-from game_interaction.ipc_command_sender import IPCommandSender
+from trackmania_gym.trackmania_env.utils.orientationless_random_respawn_manager import OrientationlessRespawnManager
+from trackmania_gym.game_interaction.ipc_command_sender import IPCommandSender
 from configs.config import TrainConfig
 
 

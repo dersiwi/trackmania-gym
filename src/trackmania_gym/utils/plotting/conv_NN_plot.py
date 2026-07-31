@@ -1,7 +1,3 @@
-import sys, os
-sys.path.append(os.path.abspath(os.path.join(
-    os.path.join(os.path.dirname(__file__), '..'), '..'))) # TODO : <- i don't want this here and it shouldnt have to be here!!!
-
 import torch
 import torch.nn as nn
 import matplotlib

@@ -1,31 +1,35 @@
-import sys, os
-# TODO : <- i don't want this here and it shouldnt have to be here!!!
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))) 
+import sys
+from pathlib import Path
 
-# Hydra related imports
+REPO_ROOT = Path(__file__).resolve().parents[1]
+SRC_ROOT = REPO_ROOT / "src" / "trackmania_gym"
+for candidate in [REPO_ROOT, SRC_ROOT]:
+    candidate_str = str(candidate)
+    if candidate_str not in sys.path:
+        sys.path.append(candidate_str)
+
 import hydra
 import traceback
 
 from hydra.core.hydra_config import HydraConfig
 from typing import Optional
 
-
 from configs.config import TrainConfig
 
-from trackmania_env.envs.vectorized import SB3Vectorized
-from trackmania_env.envs.sec_env import CrashProofEnvironment
+from trackmania_gym.trackmania_env.envs.vectorized import SB3Vectorized
+from trackmania_gym.trackmania_env.envs.sec_env import CrashProofEnvironment
 
-from utils.hydra_wandb_utils import load_and_merge_platform, secure_attribute_retrieval
-from utils.introscreen import introscreen
-from utils.experiment_managers.sb3_exp_manager import Sb3ExperimentManager
+from trackmania_gym.utils.hydra_wandb_utils import load_and_merge_platform, secure_attribute_retrieval
+from trackmania_gym.utils.introscreen import introscreen
+from trackmania_gym.utils.experiment_managers.sb3_exp_manager import Sb3ExperimentManager
 
-from tmn_sb3.utils.from_cfg import get_model_from_config
+from trackmania_gym.tmn_sb3.utils.from_cfg import get_model_from_config
 from multiprocessing import Lock
 
 
 _HYDRA_PARAMS = {
     "version_base": "1.3",
-    "config_path": "../configs",
+    "config_path": str(REPO_ROOT / "configs"),
     "config_name": "train.yaml",
 }
 

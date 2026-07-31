@@ -1,7 +1,7 @@
 import numpy as np
 import os
-from plotting.test_environment_callbacks.core import TestEnvironmentCallback
-from trackmania_env.utils.reference_line_manager import ReferenceLineManager
+from trackmania_gym.plotting.test_environment_callbacks.core import TestEnvironmentCallback
+from trackmania_gym.trackmania_env.utils.reference_line_manager import ReferenceLineManager
 
 class PretrainingDataCollection(TestEnvironmentCallback):
     def __init__(self, reference_line_manager : ReferenceLineManager, logging_directory : str, continuation_idx : int = -1):

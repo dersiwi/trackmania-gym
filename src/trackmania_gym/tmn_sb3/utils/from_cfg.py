@@ -5,29 +5,20 @@ import torch.nn as nn
 import hydra
 
 from omegaconf import DictConfig, OmegaConf,ListConfig
-from itertools import chain
-
-
-
-from sb3_contrib.qrdqn.qrdqn import QRDQN
 
 from stable_baselines3.common.base_class import BaseAlgorithm
-from stable_baselines3.common.policies import ActorCriticPolicy
 from stable_baselines3.common.off_policy_algorithm import OffPolicyAlgorithm
 
-
 from configs.config import TrainConfig
-from typing import Any, Dict
 
 from dataclasses import replace as data_cls_replace
-from tmn_sb3.policies.async_policy import build_async_actor_critic_policy
-from utils.hydra_wandb_utils import secure_attribute_retrieval
+from trackmania_gym.tmn_sb3.policies.async_policy import build_async_actor_critic_policy
+from trackmania_gym.utils.hydra_wandb_utils import secure_attribute_retrieval
 
-from trackmania_env.envs.single_agent_env2 import TMNF_Single_Agent_Env
-from tmn_sb3.policies.async_policy import AsyncActorCriticPolicy
-from neural_networks.lr_schedulers import LR_Scheduler
-from neural_networks.extractors.extractors import ExtractorConfig
-from neural_networks.extractors import make_tmn_extractor,get_extractor_class
+from trackmania_gym.trackmania_env.envs.single_agent_env2 import TMNF_Single_Agent_Env
+from trackmania_gym.neural_networks.lr_schedulers import LR_Scheduler
+from trackmania_gym.neural_networks.extractors.extractors import ExtractorConfig
+from trackmania_gym.neural_networks.extractors import get_extractor_class
 
 
 def print_model_params(model : BaseAlgorithm):

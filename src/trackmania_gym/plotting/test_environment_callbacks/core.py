@@ -1,5 +1,5 @@
 from matplotlib import pyplot as plt
-from trackmania_env.envs.testenv_single_agent import TestEnvironmentCallback
+from trackmania_gym.trackmania_env.envs.testenv_single_agent import TestEnvironmentCallback
 
 
 class Live3dPlotEnvironmentCallback(TestEnvironmentCallback):

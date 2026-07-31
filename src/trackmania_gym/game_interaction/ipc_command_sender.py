@@ -2,8 +2,8 @@ import logging
 import time
 
 from queue import Queue, Empty
-from game_interaction.ipc_fields import IPCCommands, IPCFields
-from game_interaction.tminterface_commands import TMInterfaceCommands
+from trackmania_gym.game_interaction.ipc_fields import IPCCommands, IPCFields
+from trackmania_gym.game_interaction.tminterface_commands import TMInterfaceCommands
 
 class TMICommunicationFaildException(Exception):
     """Custom exception for the error repeatedely encountered during training."""

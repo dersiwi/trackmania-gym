@@ -1,4 +1,6 @@
 import os
+from configs.config import TrainConfig
+from trackmania_gym.utils.hydra_wandb_utils import secure_attribute_retrieval
 
 ascii_art = r""".......................::.......................................................................................................
 ...........-##*%+%@@=@@*#@@:....................................................................................................
@@ -105,8 +107,6 @@ Welcome to
                                     |___/                          
 
 """
-from configs.config import TrainConfig
-from utils.hydra_wandb_utils import secure_attribute_retrieval
 
 
 

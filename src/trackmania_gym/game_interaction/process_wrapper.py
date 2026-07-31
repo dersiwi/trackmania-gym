@@ -4,12 +4,12 @@ import logging, os
 from multiprocessing import Queue as MultiprocessingQueue
 from queue import Empty, Queue 
 
-from game_interaction.tminterface2 import MessageType, TMInterface
-from game_interaction.game_instance_manager2 import GameInstanceManager
-from game_interaction.ipc_fields import IPCFields, IPCCommands
-from game_interaction.tminterface_commands import TMInterfaceCommands
+from trackmania_gym.game_interaction.tminterface2 import MessageType, TMInterface
+from trackmania_gym.game_interaction.game_instance_manager2 import GameInstanceManager
+from trackmania_gym.game_interaction.ipc_fields import IPCFields, IPCCommands
+from trackmania_gym.game_interaction.tminterface_commands import TMInterfaceCommands
 
-from trackmania_env.utils.actionmap import ActionMode, merge_action_sequences
+from trackmania_gym.trackmania_env.utils.actionmap import ActionMode, merge_action_sequences
 class TMIProcessWrapper:
 
     """

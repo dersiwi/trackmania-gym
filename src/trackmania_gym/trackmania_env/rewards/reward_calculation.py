@@ -1,10 +1,10 @@
 from __future__ import annotations
 import numpy as np
 
-from trackmania_env.utils.reference_line_manager import ReferenceLineManager
-from trackmania_env.utils.position_buffer import PositionBuffer
-from trackmania_env.rewards.normalizer import RewardNormalizer
-from trackmania_env.manager import Manager, ManagerTerm
+from trackmania_gym.trackmania_env.utils.reference_line_manager import ReferenceLineManager
+from trackmania_gym.trackmania_env.utils.position_buffer import PositionBuffer
+from trackmania_gym.trackmania_env.rewards.normalizer import RewardNormalizer
+from trackmania_gym.trackmania_env.manager import Manager, ManagerTerm
 
 class RewardTerm(ManagerTerm):
 

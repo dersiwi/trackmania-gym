@@ -1,11 +1,11 @@
 from typing import List
 import numpy as np
 
-from trackmania_env.utils import constants
+from trackmania_gym.trackmania_env.utils import constants
 from tminterface.structs import  SimStateData,SimulationWheel
-from game_interaction.ipc_fields import IPCFields
-from trackmania_env.rewards.reward_calculation import BoundedRewardterm
-from trackmania_env.utils.contact_materials import physics_behavior_fromint,SurfaceCategory
+from trackmania_gym.game_interaction.ipc_fields import IPCFields
+from trackmania_gym.trackmania_env.rewards.reward_calculation import BoundedRewardterm
+from trackmania_gym.trackmania_env.utils.contact_materials import physics_behavior_fromint,SurfaceCategory
 
 
 class OffTrackConditionedRewardTerm(BoundedRewardterm):

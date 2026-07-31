@@ -7,7 +7,7 @@ from gymnasium import spaces
 from PIL import Image
 from stable_baselines3.common.callbacks import BaseCallback
 
-from trackmania_env.utils.return_tracker import ReturnTracker
+from trackmania_gym.trackmania_env.utils.return_tracker import ReturnTracker
 
 class RewardLogCallback(BaseCallback):
     """

@@ -10,10 +10,10 @@ Contains basic reward terms
     - OffTrackPunishment
     """
 
-from trackmania_env.rewards.reward_calculation import RewardTerm, BoundedRewardterm
-from trackmania_env.utils import constants
-from trackmania_env.utils.lateral_distance_manager import LateralDistanceManager
-from game_interaction.ipc_fields import IPCFields
+from trackmania_gym.trackmania_env.rewards.reward_calculation import RewardTerm, BoundedRewardterm
+from trackmania_gym.trackmania_env.utils import constants
+from trackmania_gym.trackmania_env.utils.lateral_distance_manager import LateralDistanceManager
+from trackmania_gym.game_interaction.ipc_fields import IPCFields
 from tminterface.structs import SimStateData, SceneVehicleCar
 import numpy as np
 class AccumulatedDistanceReward(RewardTerm):

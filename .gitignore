@@ -4,6 +4,7 @@
 __pycache__/
 *.py[cod]
 *$py.class
+uv.lock
 
 # C extensions
 *.so
@@ -192,8 +193,6 @@ cython_debug/
 ###############################################
 # here are other things we dont want to include 
 frames/
-z_playground.py
-logs/
 .vscode/ 
 *.txt/
 

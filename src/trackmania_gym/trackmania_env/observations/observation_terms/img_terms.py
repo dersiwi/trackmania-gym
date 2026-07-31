@@ -3,8 +3,8 @@ import numpy as np
 
 from gymnasium.spaces import Box
 
-from trackmania_env.observations.observation_term import ObservationTerm
-from game_interaction.ipc_fields import IPCFields
+from trackmania_gym.trackmania_env.observations.observation_term import ObservationTerm
+from trackmania_gym.game_interaction.ipc_fields import IPCFields
 
 
 class ImgConverter:

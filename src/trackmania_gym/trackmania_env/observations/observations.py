@@ -1,6 +1,6 @@
 import hydra.utils
-from trackmania_env.observations.observation_manager import ObservationManager
-from trackmania_env.observations.observation_test import ObservationTest
+from trackmania_gym.trackmania_env.observations.observation_manager import ObservationManager
+from trackmania_gym.trackmania_env.observations.observation_test import ObservationTest
 from configs.config import TrainConfig
 
 def get_observation_manager_from_cfg(cfg : TrainConfig, wrap_obs_in_test : bool = False, normalize : bool = False, ) -> ObservationManager:

@@ -3,11 +3,11 @@ import numpy as np
 from gymnasium.spaces import Box
 from tminterface.structs import SimStateData, HmsDynaStateStruct
 
-from trackmania_env.envs.info import EnvironmentInfo
-from trackmania_env.observations.observation_term import ObservationTerm, VectorlikeTerm
-from trackmania_env.utils.constants import ObsNormalizationFactors
-from game_interaction.ipc_fields import IPCFields
-from trackmania_env.utils.reference_line_manager import ReferenceLineManager
+from trackmania_gym.trackmania_env.envs.info import EnvironmentInfo
+from trackmania_gym.trackmania_env.observations.observation_term import ObservationTerm, VectorlikeTerm
+from trackmania_gym.trackmania_env.utils.constants import ObsNormalizationFactors
+from trackmania_gym.game_interaction.ipc_fields import IPCFields
+from trackmania_gym.trackmania_env.utils.reference_line_manager import ReferenceLineManager
 
 class NextReflinePoint(ObservationTerm):
     """

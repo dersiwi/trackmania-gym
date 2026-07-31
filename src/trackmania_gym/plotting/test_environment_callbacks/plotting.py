@@ -1,11 +1,10 @@
 import numpy as np
 import matplotlib
 matplotlib.use("TkAgg")
-from trackmania_env.envs.info import EnvironmentInfo
-from matplotlib import pyplot as plt
-from trackmania_env.envs.single_agent_env2 import TMNF_Single_Agent_Env
-from plotting.test_environment_callbacks.core import TestEnvironmentCallback, Live3dPlotEnvironmentCallback
-from plotting.core import NonBlockingPlot
+
+from trackmania_gym.trackmania_env.envs.info import EnvironmentInfo
+from trackmania_gym.trackmania_env.envs.single_agent_env2 import TMNF_Single_Agent_Env
+from trackmania_gym.plotting.core import NonBlockingPlot
 
 
 

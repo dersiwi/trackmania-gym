@@ -6,17 +6,12 @@ import logging
 import traceback
 
 from typing import Optional
-from multiprocessing import Process, Queue
-
-
 from configs.config import TrainConfig
 
-from trackmania_env.envs.single_agent_env2 import TMNF_Single_Agent_Env
-
-from game_interaction.ipc_command_sender import TMICommunicationFaildException, IPCommandSender
-
-from game_interaction.process_management import ProcessManagement
-from trackmania_env.envs.enivonrments import get_environment
+from trackmania_gym.trackmania_env.envs.single_agent_env2 import TMNF_Single_Agent_Env
+from trackmania_gym.game_interaction.ipc_command_sender import TMICommunicationFaildException, IPCommandSender
+from trackmania_gym.game_interaction.process_management import ProcessManagement
+from trackmania_gym.trackmania_env.envs.enivonrments import get_environment
 
 class CrashProofEnvironment(gym.Env):
     """

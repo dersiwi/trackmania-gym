@@ -13,6 +13,10 @@ from stable_baselines3.common.preprocessing import preprocess_obs
 from stable_baselines3.common.torch_layers import BaseFeaturesExtractor
 from stable_baselines3.common.utils import get_device 
 
+from gymnasium import spaces
+from stable_baselines3.common.policies import BasePolicy
+from trackmania_gym.neural_networks.extractors import make_tmn_extractor
+
 class AsyncMLPExtractor(nn.Module):
     """
     This module defines separate MLP architectures for the actor and critic networks,
@@ -306,11 +310,6 @@ class AsyncActorCriticPolicy(ActorCriticPolicy):
         latent_vf = self.mlp_extractor.forward_critic(value_features)
         return self.value_net(latent_vf)
 
-### just some helper functions ###
-
-from gymnasium import spaces
-from stable_baselines3.common.policies import BasePolicy
-from neural_networks.extractors import make_tmn_extractor
 
 def build_async_actor_critic_policy(
     observation_space: spaces.Dict,

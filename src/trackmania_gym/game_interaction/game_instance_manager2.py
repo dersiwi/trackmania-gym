@@ -24,7 +24,7 @@ from pathlib import Path
 
 
 from multiprocessing import Lock
-from game_interaction.tminterface2 import TMInterface
+from trackmania_gym.game_interaction.tminterface2 import TMInterface
 
 class GameInstanceManager:
     

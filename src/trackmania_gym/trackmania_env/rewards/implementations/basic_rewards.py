@@ -1,9 +1,9 @@
 
-from tminterface.structs import CheckpointData, SimStateData, CheckpointTime
+from tminterface.structs import SimStateData
 
-from trackmania_env.rewards.reward_calculation import RewradCalculator
-from trackmania_env.rewards.reward_terms.basic_terms import DriveForwardReward
-from game_interaction.ipc_fields import IPCFields
+from trackmania_gym.trackmania_env.rewards.reward_calculation import RewradCalculator
+from trackmania_gym.trackmania_env.rewards.reward_terms.basic_terms import DriveForwardReward
+from trackmania_gym.game_interaction.ipc_fields import IPCFields
 import numpy as np
 
 class BasicRewardCalculation(RewradCalculator):

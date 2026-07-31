@@ -1,19 +1,15 @@
 import numpy as np
-import os
 
 from gymnasium import spaces
 from gymnasium.spaces import Space
-from abc import ABC, abstractmethod
-from collections import Counter
-from typing import Any, Dict, List, Optional, Tuple, Union
+from abc import ABC
+from typing import Any, Dict, Optional, Tuple, Union
 
 from tminterface.structs import SimStateData
-from trackmania_env.utils.reference_line_manager import ReferenceLineManager
-from trackmania_env.observations.observation_term import ObservationTerm
-from trackmania_env.observations.observation_terms.img_terms import ImageObservationTerm
-from trackmania_env.utils.spacetransform import SpaceTransformer
+from trackmania_gym.trackmania_env.observations.observation_term import ObservationTerm
+from trackmania_gym.trackmania_env.utils.spacetransform import SpaceTransformer
+from trackmania_gym.trackmania_env.manager import Manager
 
-from trackmania_env.manager import Manager
 class ObservationManager(ABC, Manager):
     def __init__(self, observation_terms : list[ObservationTerm], convert_torch : bool = True, normalize : bool = False, return_as_dict : bool = True):
         """

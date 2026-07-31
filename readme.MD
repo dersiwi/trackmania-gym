@@ -41,6 +41,12 @@ These agents are also able to generalize to unseen tracks, although with some  r
 
 This is one of the agents we traied using Trackmania-Gym, in only around 5 hours on the map simple_validated1. Beware this was not our final agent, much rather an example.
 
+## Qucikstart
+
+This is a uv-managed repository; `uv sync` is mandatory. To train, run `uv run sb3train`.
+
+Follow the [setup-instructions](trackmania-gym-docs/docs/installation.md) for setting up the game and platform file correctly.
+
 ## License
 This project is licensed under the GNU General Public License v3.0.
 See the LICENSE file for details.

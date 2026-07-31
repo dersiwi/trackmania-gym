@@ -1,14 +1,14 @@
 import logging
 
-from game_interaction.process_wrapper import TMIProcessWrapper
-from game_interaction.game_instance_manager2 import GameInstanceManager
-from game_interaction.ipc_fields import IPCCommands, IPCFields
-from game_interaction.ipc_command_sender import IPCommandSender
+from trackmania_gym.game_interaction.process_wrapper import TMIProcessWrapper
+from trackmania_gym.game_interaction.game_instance_manager2 import GameInstanceManager
+from trackmania_gym.game_interaction.ipc_fields import IPCCommands, IPCFields
+from trackmania_gym.game_interaction.ipc_command_sender import IPCommandSender
+from trackmania_gym.utils.hydra_wandb_utils import secure_attribute_retrieval
 
 from multiprocessing import Process, Queue
 from configs.config import TrainConfig, EnvConfig
 
-from utils.hydra_wandb_utils import secure_attribute_retrieval
 
 def run_wrapper(gmi, launch_game : bool, cmd_q : Queue, res_q : Queue, track : str, img_w : int, img_h : int, camera_id:int ,env_cfg : EnvConfig, debug: bool, set_window_focus: True): # apparently its better to run process like this to avoid pickel issues or smth?
     """

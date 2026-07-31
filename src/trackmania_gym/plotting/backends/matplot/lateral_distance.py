@@ -1,10 +1,10 @@
 import numpy as np
 from scipy.stats import norm
-from plotting.plotter import EnvPlotter
+from trackmania_gym.plotting.plotter import EnvPlotter
 import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
 from matplotlib.axes import Axes
-# from trackmania_env.utils.reference_line_manager import refline
+
 
 class Plot_Lateral_Distance(EnvPlotter):
 

@@ -16,15 +16,7 @@ RAM using PPO (on-policy), but for off-policy we had 64 GB of ram.
 
 ## Project Installation
 
-Clone the repository and check that you have fulfilled all Prerequisits. We highly recommend to use a virtual environment like [conda](https://www.anaconda.com/docs/getting-started/miniconda/main).
-
-```sh
-git clone https://github.com/dersiwi/trackmania-gym.git && cd trackmania-gym
-conda env create -f conda_env.yaml
-conda activate tmenv
-# now install correct pytorch version (see website), should look something like
-# pip install torch torchvision torchaudio --index-url https://download.pytorch...
-```
+Clone the repository and check that you have fulfilled all Prerequisits. This repository is [uv](https://docs.astral.sh/uv/) managed. To get started call `uv sync`.
 
 ### Platform-CFG
 

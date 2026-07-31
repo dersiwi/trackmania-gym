@@ -1,5 +1,5 @@
-from plotting.test_environment_callbacks.core import TestEnvironmentCallback
-from trackmania_env.envs.info import EnvironmentInfo
+from trackmania_gym.plotting.test_environment_callbacks.core import TestEnvironmentCallback
+from trackmania_gym.trackmania_env.envs.info import EnvironmentInfo
 class PrintRewardsToConsole(TestEnvironmentCallback):
 
     def __init__(self):

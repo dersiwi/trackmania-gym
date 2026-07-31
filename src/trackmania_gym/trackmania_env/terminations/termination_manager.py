@@ -1,6 +1,6 @@
 from tminterface.structs import CheckpointData, SimStateData, CheckpointTime
-from trackmania_env.terminations.termination_terms import TerminationTerm
-from trackmania_env.manager import Manager
+from trackmania_gym.trackmania_env.terminations.termination_terms import TerminationTerm
+from trackmania_gym.trackmania_env.manager import Manager
 
 class TerminationManager(Manager):
 

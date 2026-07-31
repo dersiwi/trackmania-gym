@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from trackmania_env.manager import ManagerTerm
+from trackmania_gym.trackmania_env.manager import ManagerTerm
 
 class TerminationTerm(ABC, ManagerTerm):
 

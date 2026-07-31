@@ -4,7 +4,7 @@ import wandb
 from typing import Any, List
 from dataclasses import dataclass
 from configs.config import TrainConfig
-from utils.hydra_wandb_utils import init_and_login_wandb
+from trackmania_gym.utils.hydra_wandb_utils import init_and_login_wandb
 
 @dataclass
 class LoggingWandbArtifact:

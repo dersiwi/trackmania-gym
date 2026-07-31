@@ -1,8 +1,8 @@
 import numpy as np
 
-from trackmania_env.observations.observation_manager import ObservationManager
-from trackmania_env.observations.observation_terms.img_terms import ImageObservationTerm
-from trackmania_env.observations.observation_terms.sophy_terms import PropriocentricTerm,GlobalFeaturesTerm
+from trackmania_gym.trackmania_env.observations.observation_manager import ObservationManager
+from trackmania_gym.trackmania_env.observations.observation_terms.img_terms import ImageObservationTerm
+from trackmania_gym.trackmania_env.observations.observation_terms.sophy_terms import PropriocentricTerm,GlobalFeaturesTerm
 
 IMAGE_SIZE = 64
 """Image size as specified in sophy paper."""

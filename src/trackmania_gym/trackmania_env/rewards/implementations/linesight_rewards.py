@@ -7,10 +7,10 @@ for the foundational implementation; refactloring changes made here.
 from __future__ import annotations
 import numpy as np
 
-from tminterface.structs import CheckpointData, SimStateData, CheckpointTime
-from game_interaction.ipc_fields import IPCFields
-from trackmania_env.rewards.reward_calculation import RewradCalculator
-from trackmania_env.utils.speedslide_quality import speedslide_quality_tarmac
+from tminterface.structs import SimStateData, CheckpointTime
+from trackmania_gym.game_interaction.ipc_fields import IPCFields
+from trackmania_gym.trackmania_env.rewards.reward_calculation import RewradCalculator
+from trackmania_gym.trackmania_env.utils.speedslide_quality import speedslide_quality_tarmac
 
 
 class LinesightRewardCalculator(RewradCalculator):

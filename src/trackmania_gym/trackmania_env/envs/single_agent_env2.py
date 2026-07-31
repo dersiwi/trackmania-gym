@@ -16,23 +16,23 @@ from queue import Queue, Empty
 
 from tminterface.structs import SimStateData
 
-from game_interaction.ipc_fields import IPCCommands, IPCFields
-from game_interaction.tminterface_commands import TMInterfaceCommands
-from game_interaction.ipc_command_sender import IPCommandSender
+from trackmania_gym.game_interaction.ipc_fields import IPCCommands, IPCFields
+from trackmania_gym.game_interaction.tminterface_commands import TMInterfaceCommands
+from trackmania_gym.game_interaction.ipc_command_sender import IPCommandSender
 
-from trackmania_env.observations.observation_manager import ObservationManager 
-from trackmania_env.rewards.reward_calculation import RewradCalculator
-from trackmania_env.terminations.termination_manager import TerminationManager
+from trackmania_gym.trackmania_env.observations.observation_manager import ObservationManager 
+from trackmania_gym.trackmania_env.rewards.reward_calculation import RewradCalculator
+from trackmania_gym.trackmania_env.terminations.termination_manager import TerminationManager
 
 
-from trackmania_env.utils.reference_line_manager import ReferenceLineManager
-from trackmania_env.utils.random_respawn_manager import RandomRespawnManager
-from trackmania_env.utils.orientationless_random_respawn_manager import OrientationlessRespawnManager
-from trackmania_env.utils.return_tracker import ReturnTracker
-from trackmania_env.utils.position_buffer import PositionBuffer
-from trackmania_env.utils.actionmap import ACTION_MAP, ActionMode
+from trackmania_gym.trackmania_env.utils.reference_line_manager import ReferenceLineManager
+from trackmania_gym.trackmania_env.utils.random_respawn_manager import RandomRespawnManager
+from trackmania_gym.trackmania_env.utils.orientationless_random_respawn_manager import OrientationlessRespawnManager
+from trackmania_gym.trackmania_env.utils.return_tracker import ReturnTracker
+from trackmania_gym.trackmania_env.utils.position_buffer import PositionBuffer
+from trackmania_gym.trackmania_env.utils.actionmap import ACTION_MAP, ActionMode
 
-from trackmania_env.envs.info import EnvironmentInfo
+from trackmania_gym.trackmania_env.envs.info import EnvironmentInfo
 
 
 class TMICommunicationFaildException(Exception):

@@ -5,16 +5,16 @@ import time
 from abc import abstractmethod
 from typing import Callable
 
-from game_interaction.ipc_command_sender import IPCommandSender
+from trackmania_gym.game_interaction.ipc_command_sender import IPCommandSender
 
-from trackmania_env.envs.single_agent_env2 import TMNF_Single_Agent_Env, ContinuousTMNF_Single_Agent_Env
-from trackmania_env.utils.actionmap import REVERSE_ACTION_MAP
+from trackmania_gym.trackmania_env.envs.single_agent_env2 import TMNF_Single_Agent_Env, ContinuousTMNF_Single_Agent_Env
+from trackmania_gym.trackmania_env.utils.actionmap import REVERSE_ACTION_MAP
 
-from trackmania_env.observations.observation_manager import ObservationManager 
-from trackmania_env.rewards.reward_calculation import RewradCalculator
-from trackmania_env.terminations.termination_manager import TerminationManager
+from trackmania_gym.trackmania_env.observations.observation_manager import ObservationManager 
+from trackmania_gym.trackmania_env.rewards.reward_calculation import RewradCalculator
+from trackmania_gym.trackmania_env.terminations.termination_manager import TerminationManager
 
-from utils.keyboardwrapper import KEYS, KeyboardWrapper
+from trackmania_gym.utils.keyboardwrapper import KEYS, KeyboardWrapper
 
 class TestEnvironmentCallback():
     """TestEnviornmentCallbacks are used to track, log, do whatever with data obtained by an environment per setp."""

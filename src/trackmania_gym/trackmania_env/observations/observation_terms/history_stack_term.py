@@ -4,10 +4,10 @@ from typing import Any, Dict, Tuple, Union, Deque
 import numpy as np
 from gymnasium.spaces import Box
 
-from trackmania_env.observations.observation_term import ObservationTerm
-from game_interaction.ipc_fields import IPCFields
+from trackmania_gym.trackmania_env.observations.observation_term import ObservationTerm
+from trackmania_gym.game_interaction.ipc_fields import IPCFields
 from tminterface.structs import SimStateData
-from trackmania_env.utils.actionmap import ACTION_MAP,REVERSE_ACTION_MAP
+from trackmania_gym.trackmania_env.utils.actionmap import ACTION_MAP,REVERSE_ACTION_MAP
 
 class HistoryObservationTerm(ObservationTerm, ABC):
     """

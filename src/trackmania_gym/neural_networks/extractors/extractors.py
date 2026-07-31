@@ -2,23 +2,23 @@ from __future__ import annotations
 import torch
 import torch.nn as nn
 import gymnasium as gym
+import torch.nn as nn
+import hydra
 
 from abc import ABC, abstractmethod
-from stable_baselines3.common.torch_layers import BaseFeaturesExtractor
-from typing import Optional, List, Type, Dict, Any, Union
+from typing import Optional, List, Type, Dict, Any
 from dataclasses import dataclass, asdict
 from stable_baselines3.common.preprocessing import is_image_space
 from stable_baselines3.common.torch_layers import create_mlp
+from stable_baselines3.common.torch_layers import BaseFeaturesExtractor
+from configs.config import TrainConfig, PolicyCfg, ModelCfg
 
-from neural_networks.extractors.utils import build_vision_model
 
-from functools import partial
 
-import torch.nn as nn
-import hydra
-from configs.config import TrainConfig, PolicyCfg
-from utils.hydra_wandb_utils import secure_attribute_retrieval
-from configs.config import ModelCfg
+
+
+from trackmania_gym.utils.hydra_wandb_utils import secure_attribute_retrieval
+from trackmania_gym.neural_networks.extractors.utils import build_vision_model
 
 
 

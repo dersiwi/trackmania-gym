@@ -5,7 +5,7 @@ import os
 
 class ReferenceLineManager:
 
-    REFLINE_DIR = "tracks/reference_line/"
+    REFLINE_DIR = "resources/tracks/reference_line/"
 
     @staticmethod
     def load_dynamically(trackname : str, lookahead_size : int = 120, 

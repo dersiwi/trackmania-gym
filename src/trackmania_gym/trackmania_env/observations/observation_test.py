@@ -1,12 +1,12 @@
-from trackmania_env.observations.observation_manager import ObservationManager
-from gymnasium import spaces
 import numpy as np
-from configs.config import LinesightObsCfg
-from tminterface.structs import SimStateData
 import torch
-from game_interaction.ipc_fields import IPCFields
+
 import os
 from PIL import Image
+from tminterface.structs import SimStateData
+
+from trackmania_gym.game_interaction.ipc_fields import IPCFields
+from trackmania_gym.trackmania_env.observations.observation_manager import ObservationManager
 
 
 class ObservationTest(ObservationManager):

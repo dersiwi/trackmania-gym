@@ -8,12 +8,12 @@ from collections import deque
 import numpy as np
 import gymnasium as gym
 
-from trackmania_env.observations.observation_term import ObservationTerm
-from trackmania_env.utils import constants
-from game_interaction.ipc_fields import IPCFields
+from trackmania_gym.trackmania_env.observations.observation_term import ObservationTerm
+from trackmania_gym.trackmania_env.utils import constants
+from trackmania_gym.game_interaction.ipc_fields import IPCFields
 from tminterface.structs import SimStateData, HmsDynaStateStruct
 
-from trackmania_env.utils.map_loader import (
+from trackmania_gym.trackmania_env.utils.map_loader import (
     load_map_with_extrapolated_centers,
     precalculate_virtual_checkpoints_information,
     sync_virtual_and_real_checkpoints)

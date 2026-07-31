@@ -1,15 +1,15 @@
 import numpy as np
 
-from trackmania_env.observations.observation_manager import ObservationManager
-from trackmania_env.observations.observation_term import GroupedObservationTerm
+from trackmania_gym.trackmania_env.observations.observation_manager import ObservationManager
+from trackmania_gym.trackmania_env.observations.observation_term import GroupedObservationTerm
 
-from trackmania_env.observations.observation_terms.img_terms import ImageObservationTerm
-from trackmania_env.observations.observation_terms.basic_terms import (
+from trackmania_gym.trackmania_env.observations.observation_terms.img_terms import ImageObservationTerm
+from trackmania_gym.trackmania_env.observations.observation_terms.basic_terms import (
     SpeedTerm,
     SurfaceFloats,
     MobileStatesTerm,
 )
-from trackmania_env.observations.observation_terms.reference_line_terms import (
+from trackmania_gym.trackmania_env.observations.observation_terms.reference_line_terms import (
     NextReflinePoint,
     RelativeDistance,
     LateralDistance,

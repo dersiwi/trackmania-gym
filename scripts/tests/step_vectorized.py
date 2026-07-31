@@ -1,23 +1,14 @@
-import sys, os
-# TODO : <- i don't want this here and it shouldnt have to be here!!!
-sys.path.append(os.path.abspath(os.path.join(
-    os.path.join(os.path.dirname(__file__), '..'), '..'))) # TODO : <- i don't want this here and it shouldnt have to be here!!!
-
-# Hydra related imports
 import hydra
 import traceback
-import random
-import numpy as np
-from hydra.core.hydra_config import HydraConfig
 from typing import Optional
 
 
 from configs.config import TrainConfig
 
-from trackmania_env.envs.vectorized import VectorizedTMEnvironment
-from utils.hydra_wandb_utils import load_and_merge_platform, secure_attribute_retrieval
-from trackmania_env.utils.actionmap import ActionMode, ACTION_MAP
-from trackmania_env.utils.spacetransform import SpaceTransformer
+from trackmania_gym.trackmania_env.envs.vectorized import VectorizedTMEnvironment
+from trackmania_gym.utils.hydra_wandb_utils import load_and_merge_platform
+from trackmania_gym.trackmania_env.utils.actionmap import ActionMode
+from trackmania_gym.trackmania_env.utils.spacetransform import SpaceTransformer
 
 _HYDRA_PARAMS = {
     "version_base": "1.3",
@@ -59,9 +50,6 @@ def main(cfg : TrainConfig, run_id : Optional[str] = None):
                     print(obsterm, obsdict[obsterm].shape)
                 backtonumpy = obstransform.dict_to_numpy_vectorized(obsdict)
                 print(f"----------Obs shape back_from_obs : {backtonumpy.shape}----------")
-            
-                
-
 
 
     except Exception as e:

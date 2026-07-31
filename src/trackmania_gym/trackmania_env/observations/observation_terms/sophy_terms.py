@@ -3,11 +3,11 @@ from collections import deque
 import numpy as np
 import gymnasium as gym
 
-from trackmania_env.observations.observation_term import ObservationTerm, VectorlikeTerm
-from trackmania_env.utils import constants
-from game_interaction.ipc_fields import IPCFields
+from trackmania_gym.trackmania_env.observations.observation_term import ObservationTerm, VectorlikeTerm
+from trackmania_gym.trackmania_env.utils import constants
+from trackmania_gym.game_interaction.ipc_fields import IPCFields
 from tminterface.structs import SimStateData, HmsDynaStateStruct
-from trackmania_env.utils.interpolation import interpolate_points
+from trackmania_gym.trackmania_env.utils.interpolation import interpolate_points
 
 class PropriocentricTerm(VectorlikeTerm):
     # === Class-level constants ===

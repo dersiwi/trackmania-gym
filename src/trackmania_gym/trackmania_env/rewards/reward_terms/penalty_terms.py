@@ -1,9 +1,9 @@
 from typing import Any
 from collections import deque
 
-from trackmania_env.rewards.reward_calculation import RewardTerm, BoundedRewardterm
-from trackmania_env.utils import constants
-from game_interaction.ipc_fields import IPCFields
+from trackmania_gym.trackmania_env.rewards.reward_calculation import RewardTerm, BoundedRewardterm
+from trackmania_gym.trackmania_env.utils import constants
+from trackmania_gym.game_interaction.ipc_fields import IPCFields
 from tminterface.structs import SimStateData
 import numpy as np
 

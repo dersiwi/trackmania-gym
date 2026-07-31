@@ -1,5 +1,5 @@
-from trackmania_env.terminations.termination_manager import TerminationManager
-from trackmania_env.terminations.termination_terms import NoProgressTerminationTerm
+from trackmania_gym.trackmania_env.terminations.termination_manager import TerminationManager
+from trackmania_gym.trackmania_env.terminations.termination_terms import NoProgressTerminationTerm
 
 class NoProgressTerminationManager(TerminationManager):
     """This terminatio manager measures the progress of the agent along the centerline, and if there has not been any progress for 

@@ -11,7 +11,7 @@ from bytefield import (
     ByteArrayFieldProxy, 
     ByteStruct)
 from typing import List
-from tminterface.structs import SimStateData,SimulationWheel,WheelState
+from tminterface.structs import SimStateData
 banned = ["last_field","input_steer_event.time_field","internal_input_state","last"]
 
 def is_list_of_strings(obj):

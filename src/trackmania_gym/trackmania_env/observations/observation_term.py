@@ -22,7 +22,7 @@ class ObservationTerm(ABC):
         self.name = name
         self.normalize = normalize
         
-        from trackmania_env.envs.enivonrments import TMNF_Single_Agent_Env
+        from trackmania_gym.trackmania_env.envs.enivonrments import TMNF_Single_Agent_Env
         self.env: TMNF_Single_Agent_Env = None
         self.observation_space: Optional[Space] = None
         self.info : Dict[str,Any] = {}
@@ -31,7 +31,7 @@ class ObservationTerm(ABC):
         """
         Assign the environment to the observation term.
         """
-        from trackmania_env.envs.single_agent_env2 import TMNF_Single_Agent_Env
+        from trackmania_gym.trackmania_env.envs.single_agent_env2 import TMNF_Single_Agent_Env
         self.env : TMNF_Single_Agent_Env = env
 
     def set_observation_space_as_box(self, low : float, high : float, shape : tuple[int]):

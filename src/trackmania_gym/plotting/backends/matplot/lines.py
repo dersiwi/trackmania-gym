@@ -1,4 +1,4 @@
-from plotting.plotter import EnvPlotter
+from trackmania_gym.plotting.plotter import EnvPlotter
 import matplotlib.pyplot as plt
 
 class LinePlotter(EnvPlotter):

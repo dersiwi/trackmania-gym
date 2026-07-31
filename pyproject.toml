@@ -1,7 +1,43 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
 [project]
 name = "trackmania-gym"
 version = "0.1.0"
-description = "Add your description here"
-readme = "README.md"
+description = "Training environment and tooling for Trackmania gym agents"
+readme = "readme.MD"
 requires-python = ">=3.12"
-dependencies = []
+dependencies = [
+    "torch>=2.13.0",
+    "stable-baselines3",
+    "sb3-contrib",
+    "gymnasium",
+    "wandb",
+    "omegaconf",
+    "torchvision",
+    "einops",
+    "hydra-core>=1.3.4",
+    "tminterface>=1.0.2",
+    "matplotlib>=3.11.1",
+    "scipy>=1.18.0",
+    "keyboard>=0.13.5",
+    "numba>=0.66.0",
+    "psutil>=7.2.2",
+    "pywin32>=312",
+    "pynput>=1.8.2",
+    "tensorboard>=2.21.0",
+    "opencv-python>=5.0.0.93",
+]
+
+[project.scripts]
+sb3train = "scripts.sb3_train:main"
+replay = "scripts.replay:main"
+manual = "scripts.tests.manual_stepping:main"
+
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/trackmania_gym", "scripts"]
+
+[tool.uv]
+package = true

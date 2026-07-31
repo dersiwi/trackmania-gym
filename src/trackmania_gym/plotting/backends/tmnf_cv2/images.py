@@ -1,6 +1,8 @@
-from plotting.plotter import EnvPlotter
 import cv2
 import numpy as np
+
+from trackmania_gym.plotting.plotter import EnvPlotter
+
 class Plot_Obs_Images(EnvPlotter):
     cmaps = {
         "rgb": cv2.COLOR_RGB2BGR,

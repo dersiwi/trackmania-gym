@@ -9,9 +9,9 @@ from stable_baselines3.common.callbacks import (
 
 from stable_baselines3.common.base_class import BaseAlgorithm
 from gymnasium import Env
-from utils.experiment_managers.core import ExperimentManager 
+from trackmania_gym.utils.experiment_managers.core import ExperimentManager 
 from configs.config import TrainConfig
-from trackmania_env.callbacks import *
+from trackmania_gym.trackmania_env.callbacks import *
 
 from omegaconf import OmegaConf
 

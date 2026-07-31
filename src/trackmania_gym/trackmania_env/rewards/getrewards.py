@@ -1,4 +1,4 @@
-from trackmania_env.rewards.reward_calculation import RewradCalculator
+from trackmania_gym.trackmania_env.rewards.reward_calculation import RewradCalculator
 from configs.config import RewardManagerCfg
 
 import hydra.utils
