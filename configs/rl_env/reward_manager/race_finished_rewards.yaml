@@ -1,4 +1,4 @@
-_target_: trackmania_env.rewards.implementations.simple_rewards.RaceFinishedRewards
+_target_: trackmania_gym.trackmania_env.rewards.implementations.simple_rewards.RaceFinishedRewards
 
 race_finished_reward_weight: 300
 scaled_by_steps_taken: True            

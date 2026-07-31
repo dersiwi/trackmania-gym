@@ -1,4 +1,4 @@
-_target_: trackmania_env.observations.implementations.linesight_obs_wrapper.LinesightObservationManager
+_target_: trackmania_gym.trackmania_env.observations.implementations.linesight_obs_wrapper.LinesightObservationManager
 name: "linesight"
 
 obs_have_imgs: True

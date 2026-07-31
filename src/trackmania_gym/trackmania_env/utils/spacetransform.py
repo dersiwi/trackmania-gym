@@ -17,7 +17,7 @@ class SpaceTransformer:
     
 
     def __init__(self, obsterms):
-        from trackmania_env.observations.observation_term import ObservationTerm
+        from trackmania_gym.trackmania_env.observations.observation_term import ObservationTerm
         self.obsterms : list[ObservationTerm] = obsterms
         self.expected_dim : int = sum([term.get_flatten_dim() for term in self.obsterms])
         """Size of the flattened observation per environment"""

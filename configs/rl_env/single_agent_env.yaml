@@ -1,11 +1,11 @@
 defaults:
   - obs_manager: next_point_obs.yaml
-  - reward_manager: race_finished_rewards.yaml
+  - reward_manager: next_point_rewards.yaml
   - termination_manager: timeout.yaml
 
 env:
   _partial_: True
-  _target_: trackmania_env.envs.single_agent_env2.TMNF_Single_Agent_Env
+  _target_: trackmania_gym.trackmania_env.envs.single_agent_env2.TMNF_Single_Agent_Env
 
   n_previous_actions : 10
 

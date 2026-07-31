@@ -1,4 +1,4 @@
-_target_: trackmania_env.rewards.implementations.sophy_rewards.SophyRewards
+_target_: trackmania_gym.trackmania_env.rewards.implementations.sophy_rewards.SophyRewards
 progress_weight: 3.0        
 off_course_penalty_weight: 10.0
 wall_penalty_weight: 10.0       

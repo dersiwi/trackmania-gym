@@ -1,4 +1,4 @@
-_target_: trackmania_env.rewards.implementations.nextpointrewards.NextPointRewards
+_target_: trackmania_gym.trackmania_env.rewards.implementations.nextpointrewards.NextPointRewards
 
 accum_distance_weight : 1200
 race_not_finished_weight : 0.05

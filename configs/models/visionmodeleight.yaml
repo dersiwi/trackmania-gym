@@ -1,1 +1,1 @@
-_target_: neural_networks.vision_encoder.conv_NNs.VisionModelEight
+_target_: trackmania_gym.neural_networks.vision_encoder.conv_NNs.VisionModelEight

@@ -7,9 +7,9 @@ import logging
 
 from concurrent.futures import ThreadPoolExecutor
 
-from trackmania_env.envs.sec_env import CrashProofEnvironment
-from trackmania_env.utils.spacetransform import SpaceTransformer
-from trackmania_env.utils.actionmap import ACTION_MAP
+from trackmania_gym.trackmania_env.envs.sec_env import CrashProofEnvironment
+from trackmania_gym.trackmania_env.utils.spacetransform import SpaceTransformer
+from trackmania_gym.trackmania_env.utils.actionmap import ACTION_MAP
 
 from configs.config import TrainConfig
 

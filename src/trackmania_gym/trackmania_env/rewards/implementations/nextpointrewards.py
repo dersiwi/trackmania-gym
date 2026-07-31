@@ -1,9 +1,9 @@
 from __future__ import annotations
 from typing import Literal
 
-from trackmania_env.rewards.reward_calculation import RewradCalculator, RewardTerm
+from trackmania_gym.trackmania_env.rewards.reward_calculation import RewradCalculator, RewardTerm
 
-from trackmania_env.rewards.reward_terms.basic_terms import (
+from trackmania_gym.trackmania_env.rewards.reward_terms.basic_terms import (
     AccumulatedDistanceReward,
     RaceFinished,
     ConstantRewardTerm,
@@ -12,7 +12,7 @@ from trackmania_env.rewards.reward_terms.basic_terms import (
     TerminationPunishment,
     NoProgressPunishment,
 )
-from trackmania_env.rewards.reward_terms.penalty_terms import HasWallConatact
+from trackmania_gym.trackmania_env.rewards.reward_terms.penalty_terms import HasWallConatact
 class NextPointRewards(RewradCalculator):
     def __init__(
         self,

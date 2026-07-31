@@ -26,7 +26,7 @@
 # - vit_l_32
 # for the available weights see https://docs.pytorch.org/vision/main/_modules/torchvision/models/vision_transformer.html#vit_b_16
 
-_target_: neural_networks.vision_encoder.prebuilt_nets.PrebuiltnetImplementation
+_target_: trackmania_gym.neural_networks.vision_encoder.prebuilt_nets.PrebuiltnetImplementation
 model_name: "vit_b_16"
 modeltype : "vit"
 pretrained: True

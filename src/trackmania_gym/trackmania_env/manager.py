@@ -9,7 +9,7 @@ class ManagerTerm:
 
     def set_env(self, env) -> None:
         """Sets the environment for the term."""
-        from trackmania_env.envs.single_agent_env2 import TMNF_Single_Agent_Env
+        from trackmania_gym.trackmania_env.envs.single_agent_env2 import TMNF_Single_Agent_Env
         self.env : TMNF_Single_Agent_Env = env
 
     def reset(self):
@@ -29,7 +29,7 @@ class Manager:
 
     def set_env(self, env) -> None:
         """Sets the environment for the manager and also propagates the environment to each term."""
-        from trackmania_env.envs.single_agent_env2 import TMNF_Single_Agent_Env
+        from trackmania_gym.trackmania_env.envs.single_agent_env2 import TMNF_Single_Agent_Env
         self.env : TMNF_Single_Agent_Env = env
         for term in self.terms:
             term.set_env(env)

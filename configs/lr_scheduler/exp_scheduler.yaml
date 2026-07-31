@@ -1,3 +1,3 @@
-_target_: neural_networks.lr_schedulers.ExponentialScheduler
+_target_: trackmania_gym.neural_networks.lr_schedulers.ExponentialScheduler
 initial_value: 2.5e-4 
 k: 3.0

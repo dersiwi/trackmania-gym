@@ -10,7 +10,7 @@ readme = "readme.MD"
 requires-python = ">=3.12"
 dependencies = [
     "torch>=2.13.0",
-    "stable-baselines3",
+    "stable-baselines3[extra]",
     "sb3-contrib",
     "gymnasium",
     "wandb",

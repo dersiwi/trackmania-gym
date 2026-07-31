@@ -1,7 +1,7 @@
-from trackmania_env.rewards.reward_calculation import RewardTerm, RewradCalculator
+from trackmania_gym.trackmania_env.rewards.reward_calculation import RewardTerm, RewradCalculator
 
-from trackmania_env.rewards.reward_terms.basic_terms import AccumulatedDistanceReward
-from trackmania_env.rewards.reward_terms.penalty_terms import (
+from trackmania_gym.trackmania_env.rewards.reward_terms.basic_terms import AccumulatedDistanceReward
+from trackmania_gym.trackmania_env.rewards.reward_terms.penalty_terms import (
     AccumulatedWallPenalty,
     OffTrackPunishment,
     SteeringChangePenalty,

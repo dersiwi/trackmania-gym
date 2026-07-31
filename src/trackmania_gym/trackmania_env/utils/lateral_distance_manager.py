@@ -4,7 +4,7 @@ from scipy.stats import norm
 import sys, os
 sys.path.append(os.path.abspath(os.path.join(
     os.path.join(os.path.dirname(__file__), '..'), '..'))) # TODO : <- i don't want this here and it shouldnt have to be here!!!
-from trackmania_env.utils.constants import MAX_LATERAL_DISTANCE
+from trackmania_gym.trackmania_env.utils.constants import MAX_LATERAL_DISTANCE
 
 class LateralDistanceManager:
 

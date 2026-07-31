@@ -1,2 +1,2 @@
-_target_ : neural_networks.vision_encoder.conv_NNs.LinesightVisionModel
+_target_ : trackmania_gym.neural_networks.vision_encoder.conv_NNs.LinesightVisionModel
 img_head_channels : [1,16,32,64,32]
