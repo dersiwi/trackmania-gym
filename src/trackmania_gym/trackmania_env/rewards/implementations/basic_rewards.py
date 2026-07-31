@@ -4,22 +4,6 @@ from tminterface.structs import SimStateData
 from trackmania_gym.trackmania_env.rewards.reward_calculation import RewradCalculator
 from trackmania_gym.trackmania_env.rewards.reward_terms.basic_terms import DriveForwardReward
 from trackmania_gym.game_interaction.ipc_fields import IPCFields
-import numpy as np
-
-class BasicRewardCalculation(RewradCalculator):
-
-    def __init__(self, normalize : bool = False):
-        super().__init__(normalize)
-
-    def get_sum_of_weighted_rewards(self, observations, processed_obs, race_finished, other_terminations):
-        ssD : SimStateData = observations[IPCFields.SIMSTATE]
-        velocity = ssD.velocity
-        reward = np.linalg.norm(velocity[0:1]) + self.pos_buffer.distance_moved()
-
-        if race_finished:
-            reward += 10000
-        return reward, {}
-    
 
 class ForwardReward(RewradCalculator):
 

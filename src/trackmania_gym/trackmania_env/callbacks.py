@@ -1,10 +1,11 @@
 import os
-from datetime import datetime
 import wandb
 import numpy as np
 import torch
+
 from gymnasium import spaces
 from PIL import Image
+from datetime import datetime
 from stable_baselines3.common.callbacks import BaseCallback
 
 from trackmania_gym.trackmania_env.utils.return_tracker import ReturnTracker
@@ -43,7 +44,7 @@ class AccumRewardLogCallback(BaseCallback):
             if "rewards" in env_infos and not len(env_infos["rewards"]) == 0:
 
                 for rewterm in env_infos["rewards"]:
-                    if rewterm in self.rewardterms_to_log[env_idx]:
+                    if rewterm + str(env_idx) in self.rewardterms_to_log[env_idx]:
                         self.rewardterms_to_log[env_idx][rewterm + str(env_idx)] += env_infos["rewards"][rewterm]
                     else:
                         self.rewardterms_to_log[env_idx][rewterm + str(env_idx)] = env_infos["rewards"][rewterm]
