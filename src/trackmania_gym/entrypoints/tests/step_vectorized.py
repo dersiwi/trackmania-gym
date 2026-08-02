@@ -5,14 +5,14 @@ from typing import Optional
 
 from configs.config import TrainConfig
 
-from trackmania_gym.trackmania_env.envs.vectorized import VectorizedTMEnvironment
 from trackmania_gym.utils.hydra_wandb_utils import load_and_merge_platform
 from trackmania_gym.trackmania_env.utils.actionmap import ActionMode
 from trackmania_gym.trackmania_env.utils.spacetransform import SpaceTransformer
+from trackmania_gym.trackmania_env.envs.vectorized import VectorizedTMEnvironment
 
 _HYDRA_PARAMS = {
     "version_base": "1.3",
-    "config_path": "../../configs",
+    "config_path": "../../../../../configs",
     "config_name": "train.yaml",
 }
 

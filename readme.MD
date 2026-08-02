@@ -18,7 +18,7 @@ In this student research-project by the [ALR](https://alr.iar.kit.edu/) the goal
 
 Trackmania-Gym is a Gymnasium Compatible Reinforcement Learning Framework for Trackmania Nations Forever, designed for real-time racing, agent analysis and autonomous driving research.
 
-This framework offers a modular design for experimenting with observations, rewards and terminations, allowing you to focus on actually designing your agent, and not getting lost in annoying implementation-details.
+This framework offers a [modular design](https://dersiwi.github.io/trackmania-gym/project-structure/) for experimenting with observations, rewards and terminations, allowing you to focus on actually designing your agent, and not getting lost in annoying implementation-details.
 
 ## Advancements
 
@@ -28,18 +28,16 @@ We are still actively working on this project and would appreciate any hints or 
 
 Thank you for your interest and have fun.
 
-## Experimental Results
+## Vision based results 
 
-Our experiments show that Trackmania-Gym can train agents that reach at least human-like performance.
-These agents are also able to generalize to unseen tracks, although with some  reduction in performance.
+Our experiments show that Trackmania-Gym can train agents that reach at least human-like performance; our agents were furthermore able to generalize to unseen tracks.
 
 
 <p align="center">
     <img src="trackmania-gym-docs/docs/images/simple-validated-run.gif", width="400" class="center">
 </p>
 
-
-This is one of the agents we traied using Trackmania-Gym, in only around 5 hours on the map simple_validated1. Beware this was not our final agent, much rather an example.
+This is one of the agents (End-to-End Vision->Control Policy, Continuous Action-Space) we trained using an using Trackmania-Gym, in only around 5 hours on the map simple_validated1.
 
 ## Qucikstart
 

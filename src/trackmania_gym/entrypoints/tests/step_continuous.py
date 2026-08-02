@@ -7,12 +7,11 @@ from configs.config import TrainConfig
 
 from trackmania_gym.utils.hydra_wandb_utils import load_and_merge_platform
 from trackmania_gym.trackmania_env.envs.sec_env import CrashProofEnvironment
-from trackmania_gym.utils.hydra_wandb_utils import load_and_merge_platform
 from trackmania_gym.trackmania_env.utils.actionmap import ActionMode
 
 _HYDRA_PARAMS = {
     "version_base": "1.3",
-    "config_path": "../../configs",
+    "config_path": "../../../../../configs",
     "config_name": "train.yaml",
 }
 

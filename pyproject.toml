@@ -31,13 +31,13 @@ dependencies = [
 ]
 
 [project.scripts]
-sb3train = "scripts.sb3_train:main"
-replay = "scripts.replay:main"
-manual = "scripts.tests.manual_stepping:main"
+sb3train = "trackmania_gym.entrypoints.sb3_train:main"
+replay = "trackmania_gym.entrypoints.replay:main"
+manual = "trackmania_gym.entrypoints.tests.manual_stepping:main"
 
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/trackmania_gym", "scripts"]
+packages = ["src/trackmania_gym", "configs"]
 
 [tool.uv]
 package = true

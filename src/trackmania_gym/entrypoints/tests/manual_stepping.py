@@ -1,17 +1,20 @@
+import hydra
+
+
 from trackmania_gym.game_interaction.process_management import ProcessManagement
-from trackmania_gym.trackmania_env.envs.enivonrments import get_environment
 from trackmania_gym.trackmania_env.envs.testenv_single_agent import TestEnvironment
+
+from trackmania_gym.trackmania_env.envs.enivonrments import get_environment
 from trackmania_gym.utils.hydra_wandb_utils import load_and_merge_platform
+from configs.config import TrainConfig
 
 import trackmania_gym.plotting.test_environment_callbacks.plotting as plot_callback
 
-import hydra
 
-from configs.config import TrainConfig
 
 _HYDRA_PARAMS = {
     "version_base": "1.3",
-    "config_path": "../../configs",
+    "config_path": "../../../../../configs",
     "config_name": "train.yaml",
 }
 

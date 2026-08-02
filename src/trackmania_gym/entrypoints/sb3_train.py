@@ -1,13 +1,3 @@
-import sys
-from pathlib import Path
-
-REPO_ROOT = Path(__file__).resolve().parents[1]
-SRC_ROOT = REPO_ROOT / "src" / "trackmania_gym"
-for candidate in [REPO_ROOT, SRC_ROOT]:
-    candidate_str = str(candidate)
-    if candidate_str not in sys.path:
-        sys.path.append(candidate_str)
-
 import hydra
 import traceback
 
@@ -29,7 +19,7 @@ from multiprocessing import Lock
 
 _HYDRA_PARAMS = {
     "version_base": "1.3",
-    "config_path": str(REPO_ROOT / "configs"),
+    "config_path": "../../../../configs",
     "config_name": "train.yaml",
 }
 
