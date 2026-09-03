@@ -18,6 +18,22 @@ In this student research-project by the [ALR](https://alr.iar.kit.edu/) the goal
 
 Trackmania-Gym is a Gymnasium Compatible Reinforcement Learning Framework for Trackmania Nations Forever, designed for real-time racing, agent analysis and autonomous driving research.
 
+We provide our research reports, [the first report](Make_Car_Go_Fast_Lab_Report.pdf) focussing on validation of the framework and general applicability of on- and off-policy algorithms,  
+
+<p align="center">
+    <a href="Make_Car_Go_Fast_Lab_Report.pdf">
+        <img src="trackmania-gym-docs/docs/images/reports/Make_Car_Go_Fast_Lab_Report_unroll.png", width="400" class="center">
+    </a>
+</p>
+
+while [the second one](Make_Car_Go_Fast_Lab_Report.pdf) explores novel algorithmic ideas, domain randomization and vectorized training on multiple tracks
+<p align="center">
+    <a href="Make_Car_Go_Fast_Lab_Report2.pdf">
+        <img src="trackmania-gym-docs/docs/images/reports/Make_Car_Go_Fast_Lab_Report2_unroll.png", width="400" class="center">
+    </a>
+</p>
+
+
 This framework offers a [modular design](https://dersiwi.github.io/trackmania-gym/project-structure/) for experimenting with observations, rewards and terminations, allowing you to focus on actually designing your agent, and not getting lost in annoying implementation-details.
 
 ## Advancements
